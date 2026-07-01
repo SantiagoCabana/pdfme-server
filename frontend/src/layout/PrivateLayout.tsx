@@ -80,39 +80,48 @@ export function PrivateLayout() {
     <Box sx={{ height: '100%', width: currentDrawerWidth, bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', overflowX: 'hidden', transition: sidebarTransition }}>
       <Box
         sx={{
-          position: 'relative',
           display: 'flex',
           alignItems: 'center',
           height: 74,
           px: collapsed ? 0 : 3,
           justifyContent: collapsed ? 'center' : 'flex-start',
           transition: sidebarTransition,
-          '&:hover .sidebarToggle, &:focus-within .sidebarToggle': { opacity: 1 },
         }}
       >
-        <RouterLink aria-label="Logo" to="/templates" style={{ textDecoration: 'none' }}>
-          <Box sx={{ display: 'grid', placeItems: collapsed ? 'center' : 'start', width: collapsed ? 35 : 118, overflow: 'hidden', transition: sidebarTransition }}><Box sx={{ transformOrigin: 'left center', transform: collapsed ? 'scale(0.92)' : 'scale(1)', transition: sidebarTransition }}><MantisLogo /></Box></Box>
-        </RouterLink>
         <Tooltip title={open ? 'Ocultar sidebar' : 'Mostrar sidebar'}>
-          <IconButton
-            className="sidebarToggle"
-            color="secondary"
+          <Box
+            aria-label={open ? 'Ocultar sidebar' : 'Mostrar sidebar'}
+            component="button"
             onClick={() => setOpen((value) => !value)}
-            size="small"
             sx={{
-              position: 'absolute',
-              right: collapsed ? 2 : 16,
-              display: { xs: 'none', lg: 'inline-flex' },
-              opacity: 0,
-              transition: theme.transitions.create(['opacity', 'right'], {
-                easing: theme.transitions.easing.sharp,
-                duration: theme.transitions.duration.shorter,
-              }),
+              display: { xs: 'none', lg: 'grid' },
+              placeItems: collapsed ? 'center' : 'start',
+              width: collapsed ? 40 : 118,
+              height: 40,
+              p: 0,
+              border: 0,
+              color: 'primary.dark',
+              bgcolor: 'transparent',
+              cursor: 'pointer',
+              overflow: 'hidden',
+              position: 'relative',
+              transition: sidebarTransition,
+              '& .logoMark': { opacity: 1, transform: 'scale(1)', transition: theme.transitions.create(['opacity', 'transform'], { duration: theme.transitions.duration.shorter }) },
+              '& .toggleMark': { opacity: 0, transform: 'scale(0.86)', transition: theme.transitions.create(['opacity', 'transform'], { duration: theme.transitions.duration.shorter }) },
+              '&:hover .logoMark, &:focus-visible .logoMark': { opacity: 0, transform: 'scale(0.86)' },
+              '&:hover .toggleMark, &:focus-visible .toggleMark': { opacity: 1, transform: 'scale(1)' },
             }}
+            type="button"
           >
-            {open ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
-          </IconButton>
+            <Box className="logoMark" sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: collapsed ? 'center' : 'start' }}><MantisLogo /></Box>
+            <Box className="toggleMark" sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: collapsed ? 'center' : 'start', fontSize: 20 }}>
+              {open ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
+            </Box>
+          </Box>
         </Tooltip>
+        <RouterLink aria-label="Logo" to="/templates" style={{ textDecoration: 'none' }}>
+          <Box sx={{ display: { xs: 'grid', lg: 'none' }, placeItems: 'start', width: 118, overflow: 'hidden', transition: sidebarTransition }}><MantisLogo /></Box>
+        </RouterLink>
       </Box>
       <Divider />
       <Box sx={{ flex: 1, overflowY: 'auto', py: 1.5, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
@@ -130,9 +139,10 @@ export function PrivateLayout() {
                     borderRadius: 0,
                     minHeight: 40,
                     mb: 0,
+                    width: '100%',
                     px: collapsed ? 0 : 2,
                     pl: collapsed ? 0 : 3.5,
-                    justifyContent: 'flex-start',
+                    justifyContent: collapsed ? 'center' : 'flex-start',
                     color: selected ? 'primary.main' : 'text.secondary',
                     borderRight: '2px solid transparent',
                     '&:hover': { bgcolor: 'action.hover' },
@@ -148,7 +158,7 @@ export function PrivateLayout() {
                     '& .MuiTypography-root': { color: 'inherit', fontWeight: selected ? 500 : 400 },
                   }}
                 >
-                  <ListItemIcon sx={{ minWidth: 36, width: 36, color: 'inherit', fontSize: 16, justifyContent: 'center', transition: sidebarTransition }}>{item.icon}</ListItemIcon>
+                  <ListItemIcon sx={{ minWidth: 36, width: 36, color: 'inherit', fontSize: 16, justifyContent: 'center', mx: collapsed ? 'auto' : 0, transition: sidebarTransition }}>{item.icon}</ListItemIcon>
                   <ListItemText
                     primary={<Typography variant="h6" color="inherit" noWrap>{item.label}</Typography>}
                     sx={{
