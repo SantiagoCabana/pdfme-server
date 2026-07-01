@@ -59,7 +59,7 @@ export function PrivateLayout() {
 
   useEffect(() => {
     setHeaderActionOpen(false);
-  }, [location.pathname, headerAction]);
+  }, [location.pathname]);
 
   const activeItem = items.find((item) => (
     location.pathname === item.path || (location.pathname === '/' && item.path === '/templates')
