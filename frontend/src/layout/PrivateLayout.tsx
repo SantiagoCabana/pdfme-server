@@ -84,8 +84,8 @@ export function PrivateLayout() {
           alignItems: 'center',
           height: 74,
           px: collapsed ? 0 : 3,
-          justifyContent: collapsed ? 'center' : 'flex-start',
-          gap: collapsed ? 0 : 1,
+          justifyContent: collapsed ? 'center' : 'space-between',
+          gap: collapsed ? 0 : 1.5,
           transition: sidebarTransition,
         }}
       >
@@ -125,7 +125,7 @@ export function PrivateLayout() {
               <Box sx={{ display: 'grid', placeItems: 'start', width: 118, overflow: 'hidden', transition: sidebarTransition }}><MantisLogo /></Box>
             </RouterLink>
             <Tooltip title="Ocultar sidebar">
-              <IconButton color="secondary" onClick={() => setOpen(false)} size="small" sx={{ display: { xs: 'none', lg: 'inline-flex' }, ml: 0.5 }}>
+              <IconButton color="secondary" onClick={() => setOpen(false)} size="small" sx={{ display: { xs: 'none', lg: 'inline-flex' }, flexShrink: 0, mr: -0.5 }}>
                 <MenuFoldOutlined />
               </IconButton>
             </Tooltip>
@@ -192,22 +192,47 @@ export function PrivateLayout() {
       </Box>
 
       <Divider />
-      <Box sx={{ p: collapsed ? 1 : 2, transition: sidebarTransition }}>
-        <Tooltip disableHoverListener={!collapsed} placement="right" title={`Modo ${mode === 'dark' ? 'oscuro' : 'claro'}`}>
-          <IconButton color="secondary" onClick={toggleMode} sx={{ width: collapsed ? '100%' : 40, justifyContent: 'center', mb: 1 }}>
-            {mode === 'dark' ? <MoonOutlined /> : <SunOutlined />}
-          </IconButton>
-        </Tooltip>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minHeight: 40, justifyContent: collapsed ? 'center' : 'flex-start' }}>
-          <Tooltip disableHoverListener={!collapsed} placement="right" title={user.email}>
-            <Avatar sx={{ width: 34, height: 34 }}>{user.displayName.slice(0, 1).toUpperCase()}</Avatar>
-          </Tooltip>
-          <Box sx={{ minWidth: 0, width: collapsed ? 0 : 132, opacity: collapsed ? 0 : 1, overflow: 'hidden', transition: sidebarTransition }}>
-            <Typography variant="subtitle2" noWrap>{user.displayName}</Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>{user.roles.join(', ') || user.email}</Typography>
+      <Box sx={{ p: collapsed ? 1 : 1.5, transition: sidebarTransition }}>
+        {collapsed ? (
+          <Box sx={{ display: 'grid', gap: 1, justifyItems: 'center' }}>
+            <Tooltip placement="right" title={`Modo ${mode === 'dark' ? 'oscuro' : 'claro'}`}>
+              <IconButton color="secondary" onClick={toggleMode} sx={{ width: 40, height: 40 }}>
+                {mode === 'dark' ? <MoonOutlined /> : <SunOutlined />}
+              </IconButton>
+            </Tooltip>
+            <Tooltip placement="right" title={user.email}>
+              <Avatar sx={{ width: 34, height: 34 }}>{user.displayName.slice(0, 1).toUpperCase()}</Avatar>
+            </Tooltip>
           </Box>
-          {!collapsed ? <Tooltip title="Cerrar sesion"><IconButton color="secondary" onClick={logout} size="small"><LogoutOutlined /></IconButton></Tooltip> : null}
-        </Box>
+        ) : (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'auto minmax(0, 1fr) auto auto',
+              alignItems: 'center',
+              gap: 1,
+              minHeight: 52,
+              p: 1,
+              border: `1px solid ${theme.palette.divider}`,
+              borderRadius: 1.5,
+              bgcolor: 'background.default',
+            }}
+          >
+            <Avatar sx={{ width: 34, height: 34 }}>{user.displayName.slice(0, 1).toUpperCase()}</Avatar>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="subtitle2" noWrap>{user.displayName}</Typography>
+              <Typography variant="caption" color="text.secondary" noWrap>{user.roles.join(', ') || user.email}</Typography>
+            </Box>
+            <Tooltip title={`Modo ${mode === 'dark' ? 'oscuro' : 'claro'}`}>
+              <IconButton color="secondary" onClick={toggleMode} size="small">
+                {mode === 'dark' ? <MoonOutlined /> : <SunOutlined />}
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Cerrar sesion">
+              <IconButton color="secondary" onClick={logout} size="small"><LogoutOutlined /></IconButton>
+            </Tooltip>
+          </Box>
+        )}
       </Box>
     </Box>
   );
