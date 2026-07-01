@@ -65,12 +65,14 @@ export async function updateUser(input: {
   displayName?: string;
   status?: 'ACTIVE' | 'INVITED' | 'SUSPENDED';
   roleCode?: string;
+  password?: string;
 }) {
   await prisma.userAccount.update({
     where: { id: input.id },
     data: {
       displayName: input.displayName,
       status: input.status,
+      passwordHash: input.password ? await hashPassword(input.password) : undefined,
       tokenVersion: { increment: 1 },
     },
   });
@@ -80,4 +82,8 @@ export async function updateUser(input: {
   }
 
   return (await listUsers()).find((entry) => entry.id === input.id);
+}
+
+export async function deleteUser(id: string) {
+  await prisma.userAccount.delete({ where: { id } });
 }

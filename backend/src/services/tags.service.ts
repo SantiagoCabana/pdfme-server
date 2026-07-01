@@ -35,6 +35,16 @@ export async function createTag(name: string) {
   return mapTag(tag);
 }
 
+export async function updateTag(id: string, name: string) {
+  const tag = await prisma.tag.update({
+    where: { id },
+    data: { name: name.trim() },
+    include: { templates: { select: { templateId: true } } },
+  });
+
+  return mapTag(tag);
+}
+
 export async function deleteTag(id: string) {
   await prisma.tag.delete({ where: { id } });
 }

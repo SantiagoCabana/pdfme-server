@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
-import { PlusOutlined } from '@ant-design/icons';
-import { Alert, Button, Card, Chip, MenuItem, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from '@mui/material';
+import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { Alert, Button, Card, Chip, CircularProgress, Dialog, DialogContent, DialogTitle, MenuItem, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from '@mui/material';
 
 import { formatDate, statusLabel } from '../../app/session';
 import type { InternalUser } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
+
+const roleOptions = ['VIEWER', 'EDITOR', 'MANAGER', 'ADMIN'];
+const statusOptions = ['ACTIVE', 'INVITED', 'SUSPENDED'];
 
 export function UsersPage() {
   const { setHeaderAction, closeHeaderAction } = useAppContext();
@@ -14,18 +17,32 @@ export function UsersPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [roleCode, setRoleCode] = useState('VIEWER');
+  const [editingUser, setEditingUser] = useState<InternalUser | null>(null);
+  const [editDisplayName, setEditDisplayName] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editRoleCode, setEditRoleCode] = useState('VIEWER');
+  const [editStatus, setEditStatus] = useState('ACTIVE');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState('');
 
   async function load() {
-    const payload = await apiRequest<{ data: InternalUser[] }>('/api/users');
-    setUsers(payload.data);
+    setLoading(true);
+    try {
+      const payload = await apiRequest<{ data: InternalUser[] }>('/api/users');
+      setUsers(payload.data);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { void load().catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar.')); }, []);
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError('');
     setCreating(true);
     try {
       await apiRequest('/api/users', { method: 'POST', body: JSON.stringify({ displayName, email, password, roleCode }) });
@@ -39,6 +56,50 @@ export function UsersPage() {
     }
   }
 
+  function openEdit(user: InternalUser) {
+    setEditingUser(user);
+    setEditDisplayName(user.displayName);
+    setEditPassword('');
+    setEditRoleCode(user.roles[0] ?? 'VIEWER');
+    setEditStatus(user.status);
+  }
+
+  async function update(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingUser) return;
+    setSaving(true);
+    setError('');
+    try {
+      await apiRequest('/api/users/' + editingUser.id, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          displayName: editDisplayName,
+          status: editStatus,
+          roleCode: editRoleCode,
+          ...(editPassword ? { password: editPassword } : {}),
+        }),
+      });
+      setEditingUser(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar el usuario.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove(id: string) {
+    setError('');
+    setDeletingId(id);
+    try {
+      await apiRequest('/api/users/' + id, { method: 'DELETE' });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo eliminar el usuario.');
+    } finally {
+      setDeletingId('');
+    }
+  }
 
   useEffect(() => {
     setHeaderAction({
@@ -51,10 +112,7 @@ export function UsersPage() {
           <TextField fullWidth label="Correo" onChange={(event) => setEmail(event.target.value)} type="email" value={email} />
           <TextField fullWidth label="Contrasena inicial" onChange={(event) => setPassword(event.target.value)} type="password" value={password} />
           <TextField fullWidth label="Rol" onChange={(event) => setRoleCode(event.target.value)} select value={roleCode}>
-            <MenuItem value="VIEWER">Viewer</MenuItem>
-            <MenuItem value="EDITOR">Editor</MenuItem>
-            <MenuItem value="MANAGER">Manager</MenuItem>
-            <MenuItem value="ADMIN">Admin</MenuItem>
+            {roleOptions.map((role) => <MenuItem key={role} value={role}>{role}</MenuItem>)}
           </TextField>
           <Button disabled={creating} startIcon={<PlusOutlined />} type="submit" variant="contained">{creating ? 'Creando...' : 'Crear usuario'}</Button>
         </Stack>
@@ -67,7 +125,48 @@ export function UsersPage() {
   return (
     <Stack spacing={2}>
       {error ? <Alert severity="error">{error}</Alert> : null}
-      <Card><TableContainer><Table><TableHead><TableRow><TableCell>Usuario</TableCell><TableCell>Rol</TableCell><TableCell>Estado</TableCell><TableCell>Ultimo acceso</TableCell></TableRow></TableHead><TableBody>{users.length === 0 ? <TableRow><TableCell colSpan={4}>No hay usuarios.</TableCell></TableRow> : users.map((item) => <TableRow key={item.id}><TableCell><strong>{item.displayName}</strong><br /><small>{item.email}</small></TableCell><TableCell>{item.roles.join(', ') || 'Sin rol'}</TableCell><TableCell><Chip label={statusLabel(item.status)} size="small" /></TableCell><TableCell>{formatDate(item.lastLoginAt)}</TableCell></TableRow>)}</TableBody></Table></TableContainer></Card>
+      <Card>
+        <TableContainer>
+          <Table>
+            <TableHead><TableRow><TableCell>Usuario</TableCell><TableCell>Rol</TableCell><TableCell>Estado</TableCell><TableCell>Ultimo acceso</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
+            <TableBody>
+              {loading ? <TableRow><TableCell colSpan={5} align="center"><CircularProgress size={24} /></TableCell></TableRow> : null}
+              {!loading && users.length === 0 ? <TableRow><TableCell colSpan={5}>No hay usuarios.</TableCell></TableRow> : null}
+              {!loading ? users.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell><strong>{item.displayName}</strong><br /><small>{item.email}</small></TableCell>
+                  <TableCell>{item.roles.join(', ') || 'Sin rol'}</TableCell>
+                  <TableCell><Chip label={statusLabel(item.status)} size="small" /></TableCell>
+                  <TableCell>{formatDate(item.lastLoginAt)}</TableCell>
+                  <TableCell align="right">
+                    <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+                      <Button onClick={() => openEdit(item)} size="small" startIcon={<EditOutlined />}>Editar</Button>
+                      <Button color="error" disabled={deletingId === item.id} onClick={() => void remove(item.id)} size="small" startIcon={<DeleteOutlined />}>{deletingId === item.id ? 'Eliminando...' : 'Eliminar'}</Button>
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              )) : null}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Card>
+
+      <Dialog fullWidth maxWidth="sm" onClose={() => setEditingUser(null)} open={Boolean(editingUser)}>
+        <DialogTitle>Editar usuario</DialogTitle>
+        <DialogContent dividers>
+          <Stack component="form" spacing={2} onSubmit={update}>
+            <TextField autoFocus fullWidth label="Nombre" onChange={(event) => setEditDisplayName(event.target.value)} value={editDisplayName} />
+            <TextField fullWidth label="Nueva contrasena" helperText="Dejalo vacio si no quieres cambiarla." onChange={(event) => setEditPassword(event.target.value)} type="password" value={editPassword} />
+            <TextField fullWidth label="Rol" onChange={(event) => setEditRoleCode(event.target.value)} select value={editRoleCode}>
+              {roleOptions.map((role) => <MenuItem key={role} value={role}>{role}</MenuItem>)}
+            </TextField>
+            <TextField fullWidth label="Estado" onChange={(event) => setEditStatus(event.target.value)} select value={editStatus}>
+              {statusOptions.map((status) => <MenuItem key={status} value={status}>{statusLabel(status)}</MenuItem>)}
+            </TextField>
+            <Button disabled={saving} startIcon={<EditOutlined />} type="submit" variant="contained">{saving ? 'Guardando...' : 'Guardar cambios'}</Button>
+          </Stack>
+        </DialogContent>
+      </Dialog>
     </Stack>
   );
 }

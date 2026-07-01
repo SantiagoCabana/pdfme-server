@@ -2,21 +2,24 @@ import { Router } from 'express';
 import { z } from 'zod';
 
 import { requirePermission } from '../middleware/session-auth.js';
-import { createUser, listRoles, listUsers, updateUser } from '../services/users.service.js';
+import { createUser, deleteUser, listRoles, listUsers, updateUser } from '../services/users.service.js';
 
 export const usersRouter = Router();
+
+const roleCodeSchema = z.enum(['VIEWER', 'EDITOR', 'MANAGER', 'ADMIN']);
 
 const createUserSchema = z.object({
   email: z.string().email(),
   displayName: z.string().min(2),
   password: z.string().min(8),
-  roleCode: z.enum(['VIEWER', 'EDITOR', 'MANAGER', 'ADMIN']),
+  roleCode: roleCodeSchema,
 });
 
 const updateUserSchema = z.object({
   displayName: z.string().min(2).optional(),
   status: z.enum(['ACTIVE', 'INVITED', 'SUSPENDED']).optional(),
-  roleCode: z.enum(['VIEWER', 'EDITOR', 'MANAGER', 'ADMIN']).optional(),
+  roleCode: roleCodeSchema.optional(),
+  password: z.string().min(8).optional(),
 });
 
 usersRouter.get('/users', requirePermission('users.manage'), async (_request, response) => {
@@ -50,6 +53,20 @@ usersRouter.patch('/users/:id', requirePermission('users.manage'), async (reques
   try {
     const user = await updateUser({ id: request.params.id, ...parsed.data });
     response.json({ ok: true, user });
+  } catch {
+    response.status(404).json({ message: 'No se encontro el usuario.' });
+  }
+});
+
+usersRouter.delete('/users/:id', requirePermission('users.manage'), async (request, response) => {
+  if (request.params.id === response.locals.user?.id) {
+    response.status(400).json({ message: 'No puedes eliminar tu propio usuario.' });
+    return;
+  }
+
+  try {
+    await deleteUser(request.params.id);
+    response.json({ ok: true });
   } catch {
     response.status(404).json({ message: 'No se encontro el usuario.' });
   }

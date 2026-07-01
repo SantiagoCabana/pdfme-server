@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { DeleteOutlined, TagsOutlined } from '@ant-design/icons';
-import { Alert, Button, Card, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from '@mui/material';
+import { DeleteOutlined, EditOutlined, TagsOutlined } from '@ant-design/icons';
+import { Alert, Button, Card, CircularProgress, Dialog, DialogContent, DialogTitle, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from '@mui/material';
 
 import type { TagItem } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
@@ -10,12 +10,22 @@ export function TagsPage() {
   const { setHeaderAction, closeHeaderAction } = useAppContext();
   const [tags, setTags] = useState<TagItem[]>([]);
   const [name, setName] = useState('');
+  const [editingTag, setEditingTag] = useState<TagItem | null>(null);
+  const [editName, setEditName] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState('');
 
   async function load() {
-    const payload = await apiRequest<{ data: TagItem[] }>('/api/tags');
-    setTags(payload.data);
+    setLoading(true);
+    try {
+      const payload = await apiRequest<{ data: TagItem[] }>('/api/tags');
+      setTags(payload.data);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { void load().catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar.')); }, []);
@@ -36,10 +46,38 @@ export function TagsPage() {
     }
   }
 
+  function openEdit(tag: TagItem) {
+    setEditingTag(tag);
+    setEditName(tag.name);
+  }
+
+  async function update(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingTag) return;
+    setSaving(true);
+    setError('');
+    try {
+      await apiRequest('/api/tags/' + editingTag.id, { method: 'PATCH', body: JSON.stringify({ name: editName }) });
+      setEditingTag(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar el tag.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function remove(id: string) {
     setError('');
-    await apiRequest(`/api/tags/${id}`, { method: 'DELETE' });
-    await load();
+    setDeletingId(id);
+    try {
+      await apiRequest('/api/tags/' + id, { method: 'DELETE' });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo eliminar el tag.');
+    } finally {
+      setDeletingId('');
+    }
   }
 
   useEffect(() => {
@@ -66,17 +104,34 @@ export function TagsPage() {
           <Table>
             <TableHead><TableRow><TableCell>Tag</TableCell><TableCell>Plantillas</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
             <TableBody>
-              {tags.length === 0 ? <TableRow><TableCell colSpan={3}>No hay tags.</TableCell></TableRow> : tags.map((tag) => (
+              {loading ? <TableRow><TableCell colSpan={3} align="center"><CircularProgress size={24} /></TableCell></TableRow> : null}
+              {!loading && tags.length === 0 ? <TableRow><TableCell colSpan={3}>No hay tags.</TableCell></TableRow> : null}
+              {!loading ? tags.map((tag) => (
                 <TableRow key={tag.id}>
                   <TableCell><strong>{tag.name}</strong></TableCell>
                   <TableCell>{tag.templateCount}</TableCell>
-                  <TableCell align="right"><Button color="error" onClick={() => void remove(tag.id)} size="small" startIcon={<DeleteOutlined />}>Eliminar</Button></TableCell>
+                  <TableCell align="right">
+                    <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+                      <Button onClick={() => openEdit(tag)} size="small" startIcon={<EditOutlined />}>Editar</Button>
+                      <Button color="error" disabled={deletingId === tag.id} onClick={() => void remove(tag.id)} size="small" startIcon={<DeleteOutlined />}>{deletingId === tag.id ? 'Eliminando...' : 'Eliminar'}</Button>
+                    </Stack>
+                  </TableCell>
                 </TableRow>
-              ))}
+              )) : null}
             </TableBody>
           </Table>
         </TableContainer>
       </Card>
+
+      <Dialog fullWidth maxWidth="xs" onClose={() => setEditingTag(null)} open={Boolean(editingTag)}>
+        <DialogTitle>Editar tag</DialogTitle>
+        <DialogContent dividers>
+          <Stack component="form" spacing={2} onSubmit={update}>
+            <TextField autoFocus fullWidth label="Nombre" onChange={(event) => setEditName(event.target.value)} value={editName} />
+            <Button disabled={saving} startIcon={<EditOutlined />} type="submit" variant="contained">{saving ? 'Guardando...' : 'Guardar cambios'}</Button>
+          </Stack>
+        </DialogContent>
+      </Dialog>
     </Stack>
   );
 }
