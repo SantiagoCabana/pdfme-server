@@ -253,7 +253,7 @@ model AuditEvent {
   @@map("audit_event")
 }
 
-model AdminSession {
+model AppSession {
   sid    String   @id @db.VarChar
   sess   Json     @db.Json
   expire DateTime @db.Timestamp(6)

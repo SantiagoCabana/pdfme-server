@@ -56,7 +56,7 @@ session
 _prisma_migrations
 ```
 
-`session` is mapped in Prisma as `AdminSession` because it is created and used by `express-session` with `connect-pg-simple`.
+`session` is mapped in Prisma as `AppSession` because it is created and used by `express-session` with `connect-pg-simple`.
 
 `_prisma_migrations` is managed by Prisma Migrate and must not be modeled, renamed, edited manually or deleted.
 
@@ -67,7 +67,7 @@ _prisma_migrations
 - `TemplatePage.baseFileUrl` is enough for v1; no `file_asset` table yet.
 - `TemplatePage.designerJson` remains the official design source per page.
 - `AuditEvent` stays because it tracks important operational actions, not generated PDF history.
-- AdminJS does not define database architecture; it only consumes Prisma models as CRUD resources.
+- The frontend/backend split does not define database architecture; Prisma models remain the source of truth for API services.
 
 ## Required SQL outside Prisma schema
 

@@ -9,33 +9,10 @@
 
 * { box-sizing: border-box; }
 html, body, #root { min-height: 100%; }
-body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
 a { color: inherit; }
-
-.redirectShell {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-}
-
-.redirectCard {
-  width: min(520px, 100%);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-  box-shadow: 0 14px 34px rgba(22, 34, 46, .08);
-  padding: 28px;
-}
-
-.redirectCard span {
-  color: var(--brand);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-
-.redirectCard h1 { margin: 8px 0; }
-.redirectCard p { margin: 0 0 18px; color: var(--muted); line-height: 1.6; }
-.redirectCard a { color: var(--brand); font-weight: 800; }
