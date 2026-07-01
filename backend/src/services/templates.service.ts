@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 
 import { prisma } from '../prisma.js';
 
@@ -17,17 +18,8 @@ function slugifyCode(value: string) {
   return base || 'template';
 }
 
-async function buildUniqueCode(name: string) {
-  const base = slugifyCode(name);
-  let code = base;
-  let suffix = 1;
-
-  while (await prisma.template.findUnique({ where: { code }, select: { id: true } })) {
-    suffix += 1;
-    code = `${base}_${suffix}`;
-  }
-
-  return code;
+function buildTemplateCode(name: string) {
+  return `${slugifyCode(name)}_${randomUUID().replace(/-/g, '').slice(0, 8)}`;
 }
 
 function mapTemplate(template: Prisma.TemplateGetPayload<{
@@ -43,7 +35,6 @@ function mapTemplate(template: Prisma.TemplateGetPayload<{
     id: template.id,
     name: template.name,
     code: template.code,
-    description: template.description,
     thumbnailUrl: template.thumbnailUrl,
     status: template.status,
     lastPublishedAt: template.lastPublishedAt?.toISOString() ?? null,
@@ -83,18 +74,16 @@ export async function listTemplateCatalog(options?: { publishedOnly?: boolean })
 
 export async function createTemplate(input: {
   name: string;
-  description?: string | null;
   tagNames?: string[];
   createdById?: string | null;
 }) {
-  const code = await buildUniqueCode(input.name);
+  const code = buildTemplateCode(input.name);
   const normalizedTags = Array.from(new Set((input.tagNames ?? []).map((tag) => tag.trim()).filter(Boolean)));
 
   const template = await prisma.template.create({
     data: {
       name: input.name,
       code,
-      description: input.description ?? null,
       status: 'DRAFT',
       createdById: input.createdById ?? null,
       tags: {

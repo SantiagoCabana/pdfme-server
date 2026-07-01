@@ -11,7 +11,6 @@ export function TemplatesPage() {
   const { user, setHeaderAction, closeHeaderAction } = useAppContext();
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
 
@@ -27,8 +26,8 @@ export function TemplatesPage() {
     setError('');
     setCreating(true);
     try {
-      await apiRequest('/api/templates', { method: 'POST', body: JSON.stringify({ name, description: description || null }) });
-      setName(''); setDescription('');
+      await apiRequest('/api/templates', { method: 'POST', body: JSON.stringify({ name }) });
+      setName('');
       await load();
       closeHeaderAction();
     } catch (err) {
@@ -52,14 +51,13 @@ export function TemplatesPage() {
       content: (
         <Stack component="form" spacing={2} onSubmit={create}>
           <TextField autoFocus fullWidth label="Nombre" onChange={(event) => setName(event.target.value)} value={name} />
-          <TextField fullWidth label="Descripcion" minRows={3} multiline onChange={(event) => setDescription(event.target.value)} value={description} />
           <Button disabled={creating} startIcon={<PlusOutlined />} type="submit" variant="contained">{creating ? 'Creando...' : 'Crear plantilla'}</Button>
         </Stack>
       ),
     });
 
     return () => setHeaderAction(null);
-  }, [closeHeaderAction, creating, description, name, setHeaderAction, user]);
+  }, [closeHeaderAction, creating, name, setHeaderAction, user]);
 
   async function publish(id: string) { await apiRequest(`/api/templates/${id}/publish`, { method: 'PATCH' }); await load(); }
   async function remove(id: string) { await apiRequest(`/api/templates/${id}`, { method: 'DELETE' }); await load(); }

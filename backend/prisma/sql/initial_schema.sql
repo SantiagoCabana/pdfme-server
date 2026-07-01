@@ -108,7 +108,6 @@ CREATE TABLE "template" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "code" TEXT NOT NULL,
-    "description" TEXT,
     "status" "template_status" NOT NULL DEFAULT 'DRAFT',
     "created_by_id" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

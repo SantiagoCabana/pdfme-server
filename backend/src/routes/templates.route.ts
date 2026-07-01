@@ -9,7 +9,6 @@ export const templatesRouter = Router();
 
 const createTemplateSchema = z.object({
   name: z.string().min(2),
-  description: z.string().nullish(),
   tagNames: z.array(z.string().min(1)).optional(),
 });
 
@@ -27,7 +26,6 @@ templatesRouter.post('/templates', requirePermission('templates.create'), async 
 
   const template = await createTemplate({
     name: parsed.data.name,
-    description: parsed.data.description ?? null,
     tagNames: parsed.data.tagNames,
     createdById: response.locals.user?.id === 'bootstrap-admin' ? null : response.locals.user?.id ?? null,
   });
