@@ -13,8 +13,9 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Menu,
+  MenuItem,
   OutlinedInput,
-  Stack,
   Toolbar,
   Tooltip,
   Typography,
@@ -40,6 +41,7 @@ import { apiRequest } from '../shared/api/client';
 import { MantisLogo } from './MantisLogo';
 
 const drawerWidth = 260;
+const miniDrawerWidth = 72;
 
 export function PrivateLayout() {
   const { user, setUser, mode, toggleMode } = useAppContext();
@@ -48,104 +50,78 @@ export function PrivateLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(!downLg);
+  const [profileAnchor, setProfileAnchor] = useState<HTMLElement | null>(null);
 
-  const groups = useMemo(() => [
-    {
-      title: 'Navigation',
-      items: [
-        { path: '/templates', label: 'Plantillas', icon: <FileTextOutlined />, visible: can(user, 'templates.view') },
-      ],
-    },
-    {
-      title: 'Management',
-      items: [
-        { path: '/api-keys', label: 'Claves API', icon: <ApiOutlined />, visible: can(user, 'api_keys.manage') },
-        { path: '/users', label: 'Usuarios', icon: <UserOutlined />, visible: can(user, 'users.manage') },
-      ],
-    },
+  const items = useMemo(() => [
+    { path: '/templates', label: 'Plantillas', icon: <FileTextOutlined />, visible: can(user, 'templates.view') },
+    { path: '/api-keys', label: 'Claves API', icon: <ApiOutlined />, visible: can(user, 'api_keys.manage') },
+    { path: '/users', label: 'Usuarios', icon: <UserOutlined />, visible: can(user, 'users.manage') },
   ], [user]);
 
-
-  const activeItem = groups.flatMap((group) => group.items).find((item) => (
+  const activeItem = items.find((item) => (
     location.pathname === item.path || (location.pathname === '/' && item.path === '/templates')
   ));
 
   if (!user) return <Navigate to="/login" replace />;
 
+  const collapsed = !open && !downLg;
+  const currentDrawerWidth = collapsed ? miniDrawerWidth : drawerWidth;
+
   async function logout() {
     await apiRequest('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
     setUser(null);
+    setProfileAnchor(null);
     navigate('/login', { replace: true });
   }
 
   const drawer = (
     <Box sx={{ height: '100%', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', height: 74, px: 3 }}>
-        <RouterLink aria-label="Logo" to="/templates" style={{ textDecoration: 'none' }}><MantisLogo /></RouterLink>
+      <Box sx={{ display: 'flex', alignItems: 'center', height: 74, px: collapsed ? 0 : 3, justifyContent: collapsed ? 'center' : 'flex-start' }}>
+        <RouterLink aria-label="Logo" to="/templates" style={{ textDecoration: 'none' }}>
+          {collapsed ? <Avatar variant="rounded" sx={{ bgcolor: 'primary.main', fontWeight: 700, width: 35, height: 35 }}>M</Avatar> : <MantisLogo />}
+        </RouterLink>
       </Box>
       <Divider />
-      <Box sx={{ flex: 1, overflowY: 'auto', px: 2, py: 1.5, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
-        {groups.map((group) => {
-          const visibleItems = group.items.filter((item) => item.visible);
-          if (visibleItems.length === 0) return null;
-          return (
-            <List key={group.title} subheader={<Typography variant="subtitle2" color="text.secondary" sx={{ px: 1.25, py: 1, fontSize: 12 }}>{group.title}</Typography>} sx={{ py: 0.5 }}>
-              {visibleItems.map((item) => {
-                const selected = location.pathname === item.path || (location.pathname === '/' && item.path === '/templates');
-                return (
-                  <ListItemButton
-                    component={RouterLink}
-                    key={item.path}
-                    selected={selected}
-                    target="_self"
-                    to={item.path}
-                    sx={{
-                      borderRadius: 0,
-                      minHeight: 40,
-                      mx: -2,
-                      mb: 0,
-                      pl: 3.5,
-                      pr: 2,
-                      py: 1,
-                      color: selected ? 'primary.main' : 'text.secondary',
-                      borderRight: '2px solid transparent',
-                      '&:hover': { bgcolor: 'action.hover' },
-                      '&.Mui-selected': {
-                        bgcolor: 'rgba(22, 119, 255, 0.09)',
-                        borderRightColor: 'primary.main',
-                        color: 'primary.main',
-                      },
-                      '&.Mui-selected:hover': {
-                        bgcolor: 'rgba(22, 119, 255, 0.09)',
-                      },
-                      '& .MuiListItemIcon-root': {
-                        color: 'inherit',
-                      },
-                      '& .MuiTypography-root': {
-                        color: 'inherit',
-                        fontWeight: selected ? 500 : 400,
-                      },
-                    }}
-                  >
-                    <ListItemIcon sx={{ minWidth: 36, color: 'inherit', fontSize: 16 }}>{item.icon}</ListItemIcon>
-                    <ListItemText primary={<Typography variant="h6" color="inherit">{item.label}</Typography>} />
-                  </ListItemButton>
-                );
-              })}
-            </List>
-          );
-        })}
-      </Box>
-      <Divider />
-      <Box sx={{ p: 2 }}>
-        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
-          <Avatar sx={{ width: 36, height: 36 }}>{user.displayName.slice(0, 1).toUpperCase()}</Avatar>
-          <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography variant="subtitle2" noWrap>{user.displayName}</Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>{user.roles.join(', ') || user.email}</Typography>
-          </Box>
-          <Tooltip title="Cerrar sesion"><IconButton color="secondary" onClick={logout} size="small"><LogoutOutlined /></IconButton></Tooltip>
-        </Stack>
+      <Box sx={{ flex: 1, overflowY: 'auto', py: 1.5, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
+        <List sx={{ py: 0.5 }}>
+          {items.filter((item) => item.visible).map((item) => {
+            const selected = location.pathname === item.path || (location.pathname === '/' && item.path === '/templates');
+            return (
+              <Tooltip disableHoverListener={!collapsed} key={item.path} placement="right" title={item.label}>
+                <ListItemButton
+                  component={RouterLink}
+                  selected={selected}
+                  target="_self"
+                  to={item.path}
+                  sx={{
+                    borderRadius: 0,
+                    minHeight: 40,
+                    mb: 0,
+                    px: collapsed ? 0 : 2,
+                    pl: collapsed ? 0 : 3.5,
+                    justifyContent: collapsed ? 'center' : 'flex-start',
+                    color: selected ? 'primary.main' : 'text.secondary',
+                    borderRight: '2px solid transparent',
+                    '&:hover': { bgcolor: 'action.hover' },
+                    '&.Mui-selected': {
+                      bgcolor: 'rgba(22, 119, 255, 0.09)',
+                      borderRightColor: 'primary.main',
+                      color: 'primary.main',
+                    },
+                    '&.Mui-selected:hover': {
+                      bgcolor: 'rgba(22, 119, 255, 0.09)',
+                    },
+                    '& .MuiListItemIcon-root': { color: 'inherit' },
+                    '& .MuiTypography-root': { color: 'inherit', fontWeight: selected ? 500 : 400 },
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: collapsed ? 0 : 36, color: 'inherit', fontSize: 16, justifyContent: 'center' }}>{item.icon}</ListItemIcon>
+                  {!collapsed ? <ListItemText primary={<Typography variant="h6" color="inherit">{item.label}</Typography>} /> : null}
+                </ListItemButton>
+              </Tooltip>
+            );
+          })}
+        </List>
       </Box>
     </Box>
   );
@@ -158,8 +134,8 @@ export function PrivateLayout() {
         position="fixed"
         sx={{
           borderBottom: `1px solid ${theme.palette.divider}`,
-          ml: { lg: open ? `${drawerWidth}px` : 0 },
-          width: { lg: open ? `calc(100% - ${drawerWidth}px)` : '100%' },
+          ml: { lg: `${currentDrawerWidth}px` },
+          width: { lg: `calc(100% - ${currentDrawerWidth}px)` },
           transition: theme.transitions.create(['margin', 'width'], { duration: theme.transitions.duration.shorter }),
         }}
       >
@@ -182,16 +158,24 @@ export function PrivateLayout() {
           <Box sx={{ flexGrow: 1 }} />
           <Tooltip title="Tema"><IconButton color="secondary" onClick={toggleMode}>{mode === 'dark' ? <MoonOutlined /> : <SunOutlined />}</IconButton></Tooltip>
           <Tooltip title="Notificaciones"><IconButton color="secondary"><Badge badgeContent={2} color="primary"><BellOutlined /></Badge></IconButton></Tooltip>
-          <Tooltip title={user.email}><IconButton aria-label="open profile" color="secondary"><Avatar sx={{ width: 32, height: 32 }}>{user.displayName.slice(0, 1).toUpperCase()}</Avatar></IconButton></Tooltip>
+          <Tooltip title={user.email}>
+            <IconButton aria-label="open profile" color="secondary" onClick={(event) => setProfileAnchor(event.currentTarget)}>
+              <Avatar sx={{ width: 32, height: 32 }}>{user.displayName.slice(0, 1).toUpperCase()}</Avatar>
+            </IconButton>
+          </Tooltip>
+          <Menu anchorEl={profileAnchor} onClose={() => setProfileAnchor(null)} open={Boolean(profileAnchor)}>
+            <MenuItem disabled>{user.displayName}</MenuItem>
+            <MenuItem onClick={logout}><LogoutOutlined style={{ marginRight: 8 }} />Cerrar sesion</MenuItem>
+          </Menu>
         </Toolbar>
       </AppBar>
-      <Box component="nav" sx={{ width: { lg: open ? drawerWidth : 0 }, flexShrink: { lg: 0 } }}>
+      <Box component="nav" sx={{ width: { lg: currentDrawerWidth }, flexShrink: { lg: 0 } }}>
         <Drawer
           ModalProps={{ keepMounted: true }}
           onClose={() => setOpen(false)}
-          open={open}
-          variant={downLg ? 'temporary' : 'persistent'}
-          slotProps={{ paper: { elevation: 0, sx: { width: drawerWidth, borderRight: `1px solid ${theme.palette.divider}` } } }}
+          open={downLg ? open : true}
+          variant={downLg ? 'temporary' : 'permanent'}
+          slotProps={{ paper: { elevation: 0, sx: { width: currentDrawerWidth, overflowX: 'hidden', borderRight: `1px solid ${theme.palette.divider}`, transition: theme.transitions.create('width', { duration: theme.transitions.duration.shorter }) } } }}
         >
           {drawer}
         </Drawer>
