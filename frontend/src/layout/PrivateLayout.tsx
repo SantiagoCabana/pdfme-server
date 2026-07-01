@@ -158,22 +158,23 @@ export function PrivateLayout() {
                     '& .MuiTypography-root': { color: 'inherit', fontWeight: selected ? 500 : 400 },
                   }}
                 >
-                  <ListItemIcon sx={{ minWidth: 36, width: 36, color: 'inherit', fontSize: 16, justifyContent: 'center', mx: collapsed ? 'auto' : 0, transition: sidebarTransition }}>{item.icon}</ListItemIcon>
-                  <ListItemText
-                    primary={<Typography variant="h6" color="inherit" noWrap>{item.label}</Typography>}
-                    sx={{
-                      m: 0,
-                      opacity: collapsed ? 0 : 1,
-                      width: collapsed ? 0 : 160,
-                      minWidth: 0,
-                      transformOrigin: 'left center',
-                      overflow: 'hidden',
-                      textAlign: 'left',
-                      whiteSpace: 'nowrap',
-                      transition: sidebarTransition,
-                      '& .MuiTypography-root': { textAlign: 'left' },
-                    }}
-                  />
+                  <ListItemIcon sx={{ minWidth: collapsed ? 0 : 36, width: collapsed ? 36 : 36, color: 'inherit', fontSize: 16, justifyContent: 'center', mx: collapsed ? 'auto' : 0, transition: sidebarTransition }}>{item.icon}</ListItemIcon>
+                  {!collapsed ? (
+                    <ListItemText
+                      primary={<Typography variant="h6" color="inherit" noWrap>{item.label}</Typography>}
+                      sx={{
+                        m: 0,
+                        width: 160,
+                        minWidth: 0,
+                        transformOrigin: 'left center',
+                        overflow: 'hidden',
+                        textAlign: 'left',
+                        whiteSpace: 'nowrap',
+                        transition: sidebarTransition,
+                        '& .MuiTypography-root': { textAlign: 'left' },
+                      }}
+                    />
+                  ) : null}
                 </ListItemButton>
               </Tooltip>
             );
