@@ -3,7 +3,6 @@ import { Link as RouterLink, Navigate, Outlet, useLocation, useNavigate } from '
 import {
   AppBar,
   Avatar,
-  Badge,
   Box,
   Divider,
   Drawer,
@@ -13,8 +12,6 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Menu,
-  MenuItem,
   OutlinedInput,
   Toolbar,
   Tooltip,
@@ -24,7 +21,6 @@ import {
 } from '@mui/material';
 import {
   ApiOutlined,
-  BellOutlined,
   FileTextOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -50,7 +46,6 @@ export function PrivateLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(!downLg);
-  const [profileAnchor, setProfileAnchor] = useState<HTMLElement | null>(null);
 
   const items = useMemo(() => [
     { path: '/templates', label: 'Plantillas', icon: <FileTextOutlined />, visible: can(user, 'templates.view') },
@@ -74,7 +69,6 @@ export function PrivateLayout() {
   async function logout() {
     await apiRequest('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
     setUser(null);
-    setProfileAnchor(null);
     navigate('/login', { replace: true });
   }
 
@@ -103,7 +97,7 @@ export function PrivateLayout() {
                     mb: 0,
                     px: collapsed ? 0 : 2,
                     pl: collapsed ? 0 : 3.5,
-                    justifyContent: collapsed ? 'center' : 'flex-start',
+                    justifyContent: 'flex-start',
                     color: selected ? 'primary.main' : 'text.secondary',
                     borderRight: '2px solid transparent',
                     '&:hover': { bgcolor: 'action.hover' },
@@ -119,16 +113,20 @@ export function PrivateLayout() {
                     '& .MuiTypography-root': { color: 'inherit', fontWeight: selected ? 500 : 400 },
                   }}
                 >
-                  <ListItemIcon sx={{ minWidth: collapsed ? 0 : 36, width: collapsed ? '100%' : 36, color: 'inherit', fontSize: 16, justifyContent: 'center', transition: sidebarTransition }}>{item.icon}</ListItemIcon>
+                  <ListItemIcon sx={{ minWidth: 36, width: 36, color: 'inherit', fontSize: 16, justifyContent: 'center', transition: sidebarTransition }}>{item.icon}</ListItemIcon>
                   <ListItemText
                     primary={<Typography variant="h6" color="inherit" noWrap>{item.label}</Typography>}
                     sx={{
                       m: 0,
                       opacity: collapsed ? 0 : 1,
-                      width: collapsed ? 0 : 'auto',
+                      width: collapsed ? 0 : 160,
                       minWidth: 0,
+                      transformOrigin: 'left center',
+                      overflow: 'hidden',
+                      textAlign: 'left',
                       whiteSpace: 'nowrap',
                       transition: sidebarTransition,
+                      '& .MuiTypography-root': { textAlign: 'left' },
                     }}
                   />
                 </ListItemButton>
@@ -136,6 +134,25 @@ export function PrivateLayout() {
             );
           })}
         </List>
+      </Box>
+
+      <Divider />
+      <Box sx={{ p: collapsed ? 1 : 2, transition: sidebarTransition }}>
+        <Tooltip disableHoverListener={!collapsed} placement="right" title={`Modo ${mode === 'dark' ? 'oscuro' : 'claro'}`}>
+          <IconButton color="secondary" onClick={toggleMode} sx={{ width: collapsed ? '100%' : 40, justifyContent: 'center', mb: 1 }}>
+            {mode === 'dark' ? <MoonOutlined /> : <SunOutlined />}
+          </IconButton>
+        </Tooltip>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minHeight: 40, justifyContent: collapsed ? 'center' : 'flex-start' }}>
+          <Tooltip disableHoverListener={!collapsed} placement="right" title={user.email}>
+            <Avatar sx={{ width: 34, height: 34 }}>{user.displayName.slice(0, 1).toUpperCase()}</Avatar>
+          </Tooltip>
+          <Box sx={{ minWidth: 0, width: collapsed ? 0 : 132, opacity: collapsed ? 0 : 1, overflow: 'hidden', transition: sidebarTransition }}>
+            <Typography variant="subtitle2" noWrap>{user.displayName}</Typography>
+            <Typography variant="caption" color="text.secondary" noWrap>{user.roles.join(', ') || user.email}</Typography>
+          </Box>
+          {!collapsed ? <Tooltip title="Cerrar sesion"><IconButton color="secondary" onClick={logout} size="small"><LogoutOutlined /></IconButton></Tooltip> : null}
+        </Box>
       </Box>
     </Box>
   );
@@ -170,17 +187,6 @@ export function PrivateLayout() {
             />
           </Box>
           <Box sx={{ flexGrow: 1 }} />
-          <Tooltip title="Tema"><IconButton color="secondary" onClick={toggleMode}>{mode === 'dark' ? <MoonOutlined /> : <SunOutlined />}</IconButton></Tooltip>
-          <Tooltip title="Notificaciones"><IconButton color="secondary"><Badge badgeContent={2} color="primary"><BellOutlined /></Badge></IconButton></Tooltip>
-          <Tooltip title={user.email}>
-            <IconButton aria-label="open profile" color="secondary" onClick={(event) => setProfileAnchor(event.currentTarget)}>
-              <Avatar sx={{ width: 32, height: 32 }}>{user.displayName.slice(0, 1).toUpperCase()}</Avatar>
-            </IconButton>
-          </Tooltip>
-          <Menu anchorEl={profileAnchor} onClose={() => setProfileAnchor(null)} open={Boolean(profileAnchor)}>
-            <MenuItem disabled>{user.displayName}</MenuItem>
-            <MenuItem onClick={logout}><LogoutOutlined style={{ marginRight: 8 }} />Cerrar sesion</MenuItem>
-          </Menu>
         </Toolbar>
       </AppBar>
       <Box component="nav" sx={{ width: { lg: currentDrawerWidth }, flexShrink: { lg: 0 }, transition: sidebarTransition }}>
