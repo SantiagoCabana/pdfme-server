@@ -1,18 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   AppBar,
   Avatar,
   Box,
+  Button,
+  Collapse,
   Divider,
   Drawer,
   IconButton,
-  InputAdornment,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  OutlinedInput,
   Toolbar,
   Tooltip,
   Typography,
@@ -26,7 +26,6 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MoonOutlined,
-  SearchOutlined,
   SunOutlined,
   UserOutlined,
 } from '@ant-design/icons';
@@ -40,18 +39,23 @@ const drawerWidth = 260;
 const miniDrawerWidth = 72;
 
 export function PrivateLayout() {
-  const { user, setUser, mode, toggleMode } = useAppContext();
+  const { user, setUser, mode, toggleMode, headerAction } = useAppContext();
   const theme = useTheme();
   const downLg = useMediaQuery(theme.breakpoints.down('lg'));
   const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(!downLg);
+  const [headerActionOpen, setHeaderActionOpen] = useState(false);
 
   const items = useMemo(() => [
     { path: '/templates', label: 'Plantillas', icon: <FileTextOutlined />, visible: can(user, 'templates.view') },
     { path: '/api-keys', label: 'Claves API', icon: <ApiOutlined />, visible: can(user, 'api_keys.manage') },
     { path: '/users', label: 'Usuarios', icon: <UserOutlined />, visible: can(user, 'users.manage') },
   ], [user]);
+
+  useEffect(() => {
+    setHeaderActionOpen(false);
+  }, [location.pathname, headerAction]);
 
   const activeItem = items.find((item) => (
     location.pathname === item.path || (location.pathname === '/' && item.path === '/templates')
@@ -74,10 +78,41 @@ export function PrivateLayout() {
 
   const drawer = (
     <Box sx={{ height: '100%', width: currentDrawerWidth, bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', overflowX: 'hidden', transition: sidebarTransition }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', height: 74, px: collapsed ? 0 : 3, justifyContent: collapsed ? 'center' : 'flex-start', transition: sidebarTransition }}>
+      <Box
+        sx={{
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          height: 74,
+          px: collapsed ? 0 : 3,
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          transition: sidebarTransition,
+          '&:hover .sidebarToggle, &:focus-within .sidebarToggle': { opacity: 1 },
+        }}
+      >
         <RouterLink aria-label="Logo" to="/templates" style={{ textDecoration: 'none' }}>
           <Box sx={{ display: 'grid', placeItems: collapsed ? 'center' : 'start', width: collapsed ? 35 : 118, overflow: 'hidden', transition: sidebarTransition }}><Box sx={{ transformOrigin: 'left center', transform: collapsed ? 'scale(0.92)' : 'scale(1)', transition: sidebarTransition }}><MantisLogo /></Box></Box>
         </RouterLink>
+        <Tooltip title={open ? 'Ocultar sidebar' : 'Mostrar sidebar'}>
+          <IconButton
+            className="sidebarToggle"
+            color="secondary"
+            onClick={() => setOpen((value) => !value)}
+            size="small"
+            sx={{
+              position: 'absolute',
+              right: collapsed ? 2 : 16,
+              display: { xs: 'none', lg: 'inline-flex' },
+              opacity: 0,
+              transition: theme.transitions.create(['opacity', 'right'], {
+                easing: theme.transitions.easing.sharp,
+                duration: theme.transitions.duration.shorter,
+              }),
+            }}
+          >
+            {open ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
+          </IconButton>
+        </Tooltip>
       </Box>
       <Divider />
       <Box sx={{ flex: 1, overflowY: 'auto', py: 1.5, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
@@ -171,23 +206,26 @@ export function PrivateLayout() {
         }}
       >
         <Toolbar sx={{ minHeight: '74px !important', gap: 1.5 }}>
-          <IconButton aria-label="open drawer" color="secondary" edge="start" onClick={() => setOpen((value) => !value)}>
+          <IconButton aria-label="open drawer" color="secondary" edge="start" onClick={() => setOpen((value) => !value)} sx={{ display: { xs: 'inline-flex', lg: 'none' } }}>
             {open ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
           </IconButton>
           <Typography variant="h4" color="text.primary" sx={{ minWidth: { xs: 0, md: 180 }, display: { xs: 'none', sm: 'block' } }} noWrap>
             {activeItem?.label ?? 'Plantillas'}
           </Typography>
-          <Box sx={{ width: { xs: 1, sm: 260 }, display: { xs: 'none', md: 'block' } }}>
-            <OutlinedInput
-              fullWidth
-              id="header-search"
-              placeholder="Ctrl + K"
-              size="small"
-              startAdornment={<InputAdornment position="start"><SearchOutlined /></InputAdornment>}
-            />
-          </Box>
           <Box sx={{ flexGrow: 1 }} />
+          {headerAction ? (
+            <Button onClick={() => setHeaderActionOpen((value) => !value)} variant={headerActionOpen ? 'outlined' : 'contained'}>
+              {headerActionOpen ? 'Ocultar' : headerAction.label}
+            </Button>
+          ) : null}
         </Toolbar>
+        {headerAction ? (
+          <Collapse in={headerActionOpen} timeout={220} unmountOnExit>
+            <Box sx={{ borderTop: `1px solid ${theme.palette.divider}`, px: { xs: 2, md: 3 }, py: 2, bgcolor: 'background.paper' }}>
+              {headerAction.content}
+            </Box>
+          </Collapse>
+        ) : null}
       </AppBar>
       <Box component="nav" sx={{ width: { lg: currentDrawerWidth }, flexShrink: { lg: 0 }, transition: sidebarTransition }}>
         <Drawer
@@ -200,7 +238,7 @@ export function PrivateLayout() {
           {drawer}
         </Drawer>
       </Box>
-      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 }, pt: { xs: 11, md: 12 }, transition: sidebarTransition }}>
+      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 }, pt: headerActionOpen ? { xs: 25, md: 21 } : { xs: 11, md: 12 }, transition: sidebarTransition }}>
         <Outlet />
       </Box>
     </Box>

@@ -1,6 +1,11 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import type { SessionUser } from './types';
 import type { ThemeMode } from '../theme/mantisTheme';
+
+type HeaderAction = {
+  label: string;
+  content: ReactNode;
+} | null;
 
 type AppContextValue = {
   user: SessionUser | null;
@@ -9,6 +14,8 @@ type AppContextValue = {
   bumpReloadDataToken: () => void;
   mode: ThemeMode;
   toggleMode: () => void;
+  headerAction: HeaderAction;
+  setHeaderAction: (action: HeaderAction) => void;
 };
 
 export const AppContext = createContext<AppContextValue | null>(null);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import '@fontsource/public-sans/400.css';
@@ -21,6 +21,7 @@ export default function App() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [reloadDataToken, setReloadDataToken] = useState(0);
+  const [headerAction, setHeaderAction] = useState<{ label: string; content: ReactNode } | null>(null);
   const [mode, setMode] = useState<ThemeMode>(() => localStorage.getItem('pdfme-theme') === 'dark' ? 'dark' : 'light');
 
   useEffect(() => {
@@ -43,7 +44,9 @@ export default function App() {
     bumpReloadDataToken: () => setReloadDataToken((value) => value + 1),
     mode,
     toggleMode: () => setMode((value) => value === 'dark' ? 'light' : 'dark'),
-  }), [mode, reloadDataToken, user]);
+    headerAction,
+    setHeaderAction,
+  }), [headerAction, mode, reloadDataToken, user]);
 
   const router = useMemo(() => createBrowserRouter([
     { path: '/login', element: <LoginPage /> },
