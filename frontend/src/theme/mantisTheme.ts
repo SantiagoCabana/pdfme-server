@@ -8,7 +8,7 @@ export function createMantisTheme(mode: ThemeMode) {
   return createTheme({
     palette: {
       mode,
-      primary: { main: isDark ? '#1677ff' : '#1677ff' },
+      primary: { main: '#1677ff', light: '#69c0ff', dark: '#0958d9', contrastText: '#ffffff' },
       secondary: { main: '#8c8c8c' },
       background: {
         default: isDark ? '#111936' : '#f0f2f8',
