@@ -85,43 +85,52 @@ export function PrivateLayout() {
           height: 74,
           px: collapsed ? 0 : 3,
           justifyContent: collapsed ? 'center' : 'flex-start',
+          gap: collapsed ? 0 : 1,
           transition: sidebarTransition,
         }}
       >
-        <Tooltip title={open ? 'Ocultar sidebar' : 'Mostrar sidebar'}>
-          <Box
-            aria-label={open ? 'Ocultar sidebar' : 'Mostrar sidebar'}
-            component="button"
-            onClick={() => setOpen((value) => !value)}
-            sx={{
-              display: { xs: 'none', lg: 'grid' },
-              placeItems: collapsed ? 'center' : 'start',
-              width: collapsed ? 40 : 118,
-              height: 40,
-              p: 0,
-              border: 0,
-              color: 'primary.dark',
-              bgcolor: 'transparent',
-              cursor: 'pointer',
-              overflow: 'hidden',
-              position: 'relative',
-              transition: sidebarTransition,
-              '& .logoMark': { opacity: 1, transform: 'scale(1)', transition: theme.transitions.create(['opacity', 'transform'], { duration: theme.transitions.duration.shorter }) },
-              '& .toggleMark': { opacity: 0, transform: 'scale(0.86)', transition: theme.transitions.create(['opacity', 'transform'], { duration: theme.transitions.duration.shorter }) },
-              '&:hover .logoMark, &:focus-visible .logoMark': { opacity: 0, transform: 'scale(0.86)' },
-              '&:hover .toggleMark, &:focus-visible .toggleMark': { opacity: 1, transform: 'scale(1)' },
-            }}
-            type="button"
-          >
-            <Box className="logoMark" sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: collapsed ? 'center' : 'start' }}><MantisLogo /></Box>
-            <Box className="toggleMark" sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: collapsed ? 'center' : 'start', fontSize: 20 }}>
-              {open ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
+        {collapsed ? (
+          <Tooltip title="Mostrar sidebar">
+            <Box
+              aria-label="Mostrar sidebar"
+              component="button"
+              onClick={() => setOpen(true)}
+              sx={{
+                display: { xs: 'none', lg: 'grid' },
+                placeItems: 'center',
+                width: 40,
+                height: 40,
+                p: 0,
+                border: 0,
+                color: 'primary.dark',
+                bgcolor: 'transparent',
+                cursor: 'pointer',
+                overflow: 'hidden',
+                position: 'relative',
+                transition: sidebarTransition,
+                '& .logoMark': { opacity: 1, transform: 'scale(1)', transition: theme.transitions.create(['opacity', 'transform'], { duration: theme.transitions.duration.shorter }) },
+                '& .toggleMark': { opacity: 0, transform: 'scale(0.86)', transition: theme.transitions.create(['opacity', 'transform'], { duration: theme.transitions.duration.shorter }) },
+                '&:hover .logoMark, &:focus-visible .logoMark': { opacity: 0, transform: 'scale(0.86)' },
+                '&:hover .toggleMark, &:focus-visible .toggleMark': { opacity: 1, transform: 'scale(1)' },
+              }}
+              type="button"
+            >
+              <Box className="logoMark" sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}><MantisLogo /></Box>
+              <Box className="toggleMark" sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 20 }}><MenuUnfoldOutlined /></Box>
             </Box>
-          </Box>
-        </Tooltip>
-        <RouterLink aria-label="Logo" to="/templates" style={{ textDecoration: 'none' }}>
-          <Box sx={{ display: { xs: 'grid', lg: 'none' }, placeItems: 'start', width: 118, overflow: 'hidden', transition: sidebarTransition }}><MantisLogo /></Box>
-        </RouterLink>
+          </Tooltip>
+        ) : (
+          <>
+            <RouterLink aria-label="Logo" to="/templates" style={{ textDecoration: 'none' }}>
+              <Box sx={{ display: 'grid', placeItems: 'start', width: 118, overflow: 'hidden', transition: sidebarTransition }}><MantisLogo /></Box>
+            </RouterLink>
+            <Tooltip title="Ocultar sidebar">
+              <IconButton color="secondary" onClick={() => setOpen(false)} size="small" sx={{ display: { xs: 'none', lg: 'inline-flex' }, ml: 0.5 }}>
+                <MenuFoldOutlined />
+              </IconButton>
+            </Tooltip>
+          </>
+        )}
       </Box>
       <Divider />
       <Box sx={{ flex: 1, overflowY: 'auto', py: 1.5, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
