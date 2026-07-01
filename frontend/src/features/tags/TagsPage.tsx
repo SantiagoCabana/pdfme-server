@@ -7,10 +7,11 @@ import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
 
 export function TagsPage() {
-  const { setHeaderAction } = useAppContext();
+  const { setHeaderAction, closeHeaderAction } = useAppContext();
   const [tags, setTags] = useState<TagItem[]>([]);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [creating, setCreating] = useState(false);
 
   async function load() {
     const payload = await apiRequest<{ data: TagItem[] }>('/api/tags');
@@ -22,9 +23,17 @@ export function TagsPage() {
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
-    await apiRequest('/api/tags', { method: 'POST', body: JSON.stringify({ name }) });
-    setName('');
-    await load();
+    setCreating(true);
+    try {
+      await apiRequest('/api/tags', { method: 'POST', body: JSON.stringify({ name }) });
+      setName('');
+      await load();
+      closeHeaderAction();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo crear el tag.');
+    } finally {
+      setCreating(false);
+    }
   }
 
   async function remove(id: string) {
@@ -41,13 +50,13 @@ export function TagsPage() {
       content: (
         <Stack component="form" spacing={2} onSubmit={create}>
           <TextField autoFocus fullWidth label="Nombre" onChange={(event) => setName(event.target.value)} value={name} />
-          <Button startIcon={<TagsOutlined />} type="submit" variant="contained">Crear tag</Button>
+          <Button disabled={creating} startIcon={<TagsOutlined />} type="submit" variant="contained">{creating ? 'Creando...' : 'Crear tag'}</Button>
         </Stack>
       ),
     });
 
     return () => setHeaderAction(null);
-  }, [name, setHeaderAction]);
+  }, [closeHeaderAction, creating, name, setHeaderAction]);
 
   return (
     <Stack spacing={2}>

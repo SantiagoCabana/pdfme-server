@@ -8,13 +8,14 @@ import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
 
 export function UsersPage() {
-  const { setHeaderAction } = useAppContext();
+  const { setHeaderAction, closeHeaderAction } = useAppContext();
   const [users, setUsers] = useState<InternalUser[]>([]);
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [roleCode, setRoleCode] = useState('VIEWER');
   const [error, setError] = useState('');
+  const [creating, setCreating] = useState(false);
 
   async function load() {
     const payload = await apiRequest<{ data: InternalUser[] }>('/api/users');
@@ -25,9 +26,17 @@ export function UsersPage() {
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await apiRequest('/api/users', { method: 'POST', body: JSON.stringify({ displayName, email, password, roleCode }) });
-    setDisplayName(''); setEmail(''); setPassword(''); setRoleCode('VIEWER');
-    await load();
+    setCreating(true);
+    try {
+      await apiRequest('/api/users', { method: 'POST', body: JSON.stringify({ displayName, email, password, roleCode }) });
+      setDisplayName(''); setEmail(''); setPassword(''); setRoleCode('VIEWER');
+      await load();
+      closeHeaderAction();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo crear el usuario.');
+    } finally {
+      setCreating(false);
+    }
   }
 
 
@@ -47,13 +56,13 @@ export function UsersPage() {
             <MenuItem value="MANAGER">Manager</MenuItem>
             <MenuItem value="ADMIN">Admin</MenuItem>
           </TextField>
-          <Button startIcon={<PlusOutlined />} type="submit" variant="contained">Crear usuario</Button>
+          <Button disabled={creating} startIcon={<PlusOutlined />} type="submit" variant="contained">{creating ? 'Creando...' : 'Crear usuario'}</Button>
         </Stack>
       ),
     });
 
     return () => setHeaderAction(null);
-  }, [displayName, email, password, roleCode, setHeaderAction]);
+  }, [closeHeaderAction, creating, displayName, email, password, roleCode, setHeaderAction]);
 
   return (
     <Stack spacing={2}>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import '@fontsource/public-sans/400.css';
@@ -23,6 +23,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [reloadDataToken, setReloadDataToken] = useState(0);
   const [headerAction, setHeaderAction] = useState<{ label: string; title?: string; content: ReactNode; maxWidth?: 'xs' | 'sm' | 'md' | 'lg' } | null>(null);
+  const [headerActionOpen, setHeaderActionOpen] = useState(false);
   const [mode, setMode] = useState<ThemeMode>(() => localStorage.getItem('pdfme-theme') === 'dark' ? 'dark' : 'light');
 
   useEffect(() => {
@@ -38,16 +39,24 @@ export default function App() {
   }, []);
 
   const theme = useMemo(() => createMantisTheme(mode), [mode]);
+  const bumpReloadDataToken = useCallback(() => setReloadDataToken((value) => value + 1), []);
+  const toggleMode = useCallback(() => setMode((value) => value === 'dark' ? 'light' : 'dark'), []);
+  const openHeaderAction = useCallback(() => setHeaderActionOpen(true), []);
+  const closeHeaderAction = useCallback(() => setHeaderActionOpen(false), []);
+
   const contextValue = useMemo(() => ({
     user,
     setUser,
     reloadDataToken,
-    bumpReloadDataToken: () => setReloadDataToken((value) => value + 1),
+    bumpReloadDataToken,
     mode,
-    toggleMode: () => setMode((value) => value === 'dark' ? 'light' : 'dark'),
+    toggleMode,
     headerAction,
     setHeaderAction,
-  }), [headerAction, mode, reloadDataToken, user]);
+    headerActionOpen,
+    openHeaderAction,
+    closeHeaderAction,
+  }), [bumpReloadDataToken, closeHeaderAction, headerAction, headerActionOpen, mode, openHeaderAction, reloadDataToken, toggleMode, user]);
 
   const router = useMemo(() => createBrowserRouter([
     { path: '/login', element: <LoginPage /> },

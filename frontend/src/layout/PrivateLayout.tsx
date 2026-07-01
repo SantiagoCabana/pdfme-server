@@ -42,13 +42,12 @@ const drawerWidth = 260;
 const miniDrawerWidth = 72;
 
 export function PrivateLayout() {
-  const { user, setUser, mode, toggleMode, headerAction } = useAppContext();
+  const { user, setUser, mode, toggleMode, headerAction, headerActionOpen, openHeaderAction, closeHeaderAction } = useAppContext();
   const theme = useTheme();
   const downLg = useMediaQuery(theme.breakpoints.down('lg'));
   const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(!downLg);
-  const [headerActionOpen, setHeaderActionOpen] = useState(false);
 
   const items = useMemo(() => [
     { path: '/templates', label: 'Plantillas', icon: <FileTextOutlined />, visible: can(user, 'templates.view') },
@@ -58,8 +57,8 @@ export function PrivateLayout() {
   ], [user]);
 
   useEffect(() => {
-    setHeaderActionOpen(false);
-  }, [location.pathname]);
+    closeHeaderAction();
+  }, [closeHeaderAction, location.pathname]);
 
   const activeItem = items.find((item) => (
     location.pathname === item.path || (location.pathname === '/' && item.path === '/templates')
@@ -263,13 +262,13 @@ export function PrivateLayout() {
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
           {headerAction ? (
-            <Button onClick={() => setHeaderActionOpen(true)} variant="contained">
+            <Button onClick={openHeaderAction} variant="contained">
               {headerAction.label}
             </Button>
           ) : null}
         </Toolbar>
       </AppBar>
-      <Dialog fullWidth maxWidth={headerAction?.maxWidth ?? 'sm'} onClose={() => setHeaderActionOpen(false)} open={Boolean(headerAction && headerActionOpen)}>
+      <Dialog fullWidth maxWidth={headerAction?.maxWidth ?? 'sm'} onClose={closeHeaderAction} open={Boolean(headerAction && headerActionOpen)}>
         {headerAction?.title ? <DialogTitle>{headerAction.title}</DialogTitle> : null}
         <DialogContent dividers>{headerAction?.content}</DialogContent>
       </Dialog>

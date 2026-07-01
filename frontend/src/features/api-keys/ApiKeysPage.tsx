@@ -8,12 +8,13 @@ import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
 
 export function ApiKeysPage() {
-  const { setHeaderAction } = useAppContext();
+  const { setHeaderAction, closeHeaderAction } = useAppContext();
   const [credentials, setCredentials] = useState<ApiCredential[]>([]);
   const [name, setName] = useState('Servicio de documentos');
   const [expiryMode, setExpiryMode] = useState('never');
   const [rawKey, setRawKey] = useState('');
   const [error, setError] = useState('');
+  const [creating, setCreating] = useState(false);
 
   async function load() {
     const payload = await apiRequest<{ data: ApiCredential[] }>('/api/api-credentials');
@@ -25,9 +26,17 @@ export function ApiKeysPage() {
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setRawKey('');
-    const payload = await apiRequest<{ rawKey: string }>('/api/api-credentials', { method: 'POST', body: JSON.stringify({ name, expiresAt: buildExpiryDate(expiryMode) }) });
-    setRawKey(payload.rawKey);
-    await load();
+    setCreating(true);
+    try {
+      const payload = await apiRequest<{ rawKey: string }>('/api/api-credentials', { method: 'POST', body: JSON.stringify({ name, expiresAt: buildExpiryDate(expiryMode) }) });
+      setRawKey(payload.rawKey);
+      await load();
+      closeHeaderAction();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo crear la clave.');
+    } finally {
+      setCreating(false);
+    }
   }
 
 
@@ -46,13 +55,13 @@ export function ApiKeysPage() {
             <MenuItem value="90">90 dias</MenuItem>
             <MenuItem value="365">1 ano</MenuItem>
           </TextField>
-          <Button startIcon={<KeyOutlined />} type="submit" variant="contained">Crear clave</Button>
+          <Button disabled={creating} startIcon={<KeyOutlined />} type="submit" variant="contained">{creating ? 'Creando...' : 'Crear clave'}</Button>
         </Stack>
       ),
     });
 
     return () => setHeaderAction(null);
-  }, [expiryMode, name, setHeaderAction]);
+  }, [closeHeaderAction, creating, expiryMode, name, setHeaderAction]);
 
   async function revoke(id: string) { await apiRequest(`/api/api-credentials/${id}/revoke`, { method: 'PATCH' }); await load(); }
 

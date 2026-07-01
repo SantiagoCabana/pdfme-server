@@ -18,6 +18,9 @@ type AppContextValue = {
   toggleMode: () => void;
   headerAction: HeaderAction;
   setHeaderAction: (action: HeaderAction) => void;
+  headerActionOpen: boolean;
+  openHeaderAction: () => void;
+  closeHeaderAction: () => void;
 };
 
 export const AppContext = createContext<AppContextValue | null>(null);

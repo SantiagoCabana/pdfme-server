@@ -8,11 +8,12 @@ import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
 
 export function TemplatesPage() {
-  const { user, setHeaderAction } = useAppContext();
+  const { user, setHeaderAction, closeHeaderAction } = useAppContext();
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
+  const [creating, setCreating] = useState(false);
 
   async function load() {
     const payload = await apiRequest<{ data: TemplateItem[] }>('/api/templates');
@@ -24,9 +25,17 @@ export function TemplatesPage() {
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
-    await apiRequest('/api/templates', { method: 'POST', body: JSON.stringify({ name, description: description || null }) });
-    setName(''); setDescription('');
-    await load();
+    setCreating(true);
+    try {
+      await apiRequest('/api/templates', { method: 'POST', body: JSON.stringify({ name, description: description || null }) });
+      setName(''); setDescription('');
+      await load();
+      closeHeaderAction();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo crear la plantilla.');
+    } finally {
+      setCreating(false);
+    }
   }
 
 
@@ -44,13 +53,13 @@ export function TemplatesPage() {
         <Stack component="form" spacing={2} onSubmit={create}>
           <TextField autoFocus fullWidth label="Nombre" onChange={(event) => setName(event.target.value)} value={name} />
           <TextField fullWidth label="Descripcion" minRows={3} multiline onChange={(event) => setDescription(event.target.value)} value={description} />
-          <Button startIcon={<PlusOutlined />} type="submit" variant="contained">Crear plantilla</Button>
+          <Button disabled={creating} startIcon={<PlusOutlined />} type="submit" variant="contained">{creating ? 'Creando...' : 'Crear plantilla'}</Button>
         </Stack>
       ),
     });
 
     return () => setHeaderAction(null);
-  }, [description, name, setHeaderAction, user]);
+  }, [closeHeaderAction, creating, description, name, setHeaderAction, user]);
 
   async function publish(id: string) { await apiRequest(`/api/templates/${id}/publish`, { method: 'PATCH' }); await load(); }
   async function remove(id: string) { await apiRequest(`/api/templates/${id}`, { method: 'DELETE' }); await load(); }
