@@ -66,6 +66,10 @@ export function PrivateLayout() {
 
   const collapsed = !open && !downLg;
   const currentDrawerWidth = collapsed ? miniDrawerWidth : drawerWidth;
+  const sidebarTransition = theme.transitions.create(['width', 'margin', 'opacity', 'padding'], {
+    easing: theme.transitions.easing.sharp,
+    duration: theme.transitions.duration.enteringScreen,
+  });
 
   async function logout() {
     await apiRequest('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
@@ -75,10 +79,10 @@ export function PrivateLayout() {
   }
 
   const drawer = (
-    <Box sx={{ height: '100%', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', height: 74, px: collapsed ? 0 : 3, justifyContent: collapsed ? 'center' : 'flex-start' }}>
+    <Box sx={{ height: '100%', width: currentDrawerWidth, bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', overflowX: 'hidden', transition: sidebarTransition }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', height: 74, px: collapsed ? 0 : 3, justifyContent: collapsed ? 'center' : 'flex-start', transition: sidebarTransition }}>
         <RouterLink aria-label="Logo" to="/templates" style={{ textDecoration: 'none' }}>
-          {collapsed ? <Avatar variant="rounded" sx={{ bgcolor: 'primary.main', fontWeight: 700, width: 35, height: 35 }}>M</Avatar> : <MantisLogo />}
+          <Box sx={{ display: 'grid', placeItems: collapsed ? 'center' : 'start', width: collapsed ? 35 : 118, overflow: 'hidden', transition: sidebarTransition }}><Box sx={{ transformOrigin: 'left center', transform: collapsed ? 'scale(0.92)' : 'scale(1)', transition: sidebarTransition }}><MantisLogo /></Box></Box>
         </RouterLink>
       </Box>
       <Divider />
@@ -115,8 +119,18 @@ export function PrivateLayout() {
                     '& .MuiTypography-root': { color: 'inherit', fontWeight: selected ? 500 : 400 },
                   }}
                 >
-                  <ListItemIcon sx={{ minWidth: collapsed ? 0 : 36, color: 'inherit', fontSize: 16, justifyContent: 'center' }}>{item.icon}</ListItemIcon>
-                  {!collapsed ? <ListItemText primary={<Typography variant="h6" color="inherit">{item.label}</Typography>} /> : null}
+                  <ListItemIcon sx={{ minWidth: collapsed ? 0 : 36, width: collapsed ? '100%' : 36, color: 'inherit', fontSize: 16, justifyContent: 'center', transition: sidebarTransition }}>{item.icon}</ListItemIcon>
+                  <ListItemText
+                    primary={<Typography variant="h6" color="inherit" noWrap>{item.label}</Typography>}
+                    sx={{
+                      m: 0,
+                      opacity: collapsed ? 0 : 1,
+                      width: collapsed ? 0 : 'auto',
+                      minWidth: 0,
+                      whiteSpace: 'nowrap',
+                      transition: sidebarTransition,
+                    }}
+                  />
                 </ListItemButton>
               </Tooltip>
             );
@@ -136,7 +150,7 @@ export function PrivateLayout() {
           borderBottom: `1px solid ${theme.palette.divider}`,
           ml: { lg: `${currentDrawerWidth}px` },
           width: { lg: `calc(100% - ${currentDrawerWidth}px)` },
-          transition: theme.transitions.create(['margin', 'width'], { duration: theme.transitions.duration.shorter }),
+          transition: sidebarTransition,
         }}
       >
         <Toolbar sx={{ minHeight: '74px !important', gap: 1.5 }}>
@@ -169,18 +183,18 @@ export function PrivateLayout() {
           </Menu>
         </Toolbar>
       </AppBar>
-      <Box component="nav" sx={{ width: { lg: currentDrawerWidth }, flexShrink: { lg: 0 } }}>
+      <Box component="nav" sx={{ width: { lg: currentDrawerWidth }, flexShrink: { lg: 0 }, transition: sidebarTransition }}>
         <Drawer
           ModalProps={{ keepMounted: true }}
           onClose={() => setOpen(false)}
           open={downLg ? open : true}
           variant={downLg ? 'temporary' : 'permanent'}
-          slotProps={{ paper: { elevation: 0, sx: { width: currentDrawerWidth, overflowX: 'hidden', borderRight: `1px solid ${theme.palette.divider}`, transition: theme.transitions.create('width', { duration: theme.transitions.duration.shorter }) } } }}
+          slotProps={{ paper: { elevation: 0, sx: { width: currentDrawerWidth, overflowX: 'hidden', borderRight: `1px solid ${theme.palette.divider}`, transition: sidebarTransition } } }}
         >
           {drawer}
         </Drawer>
       </Box>
-      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 }, pt: { xs: 11, md: 12 }, transition: theme.transitions.create('margin', { duration: theme.transitions.duration.shorter }) }}>
+      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 }, pt: { xs: 11, md: 12 }, transition: sidebarTransition }}>
         <Outlet />
       </Box>
     </Box>
