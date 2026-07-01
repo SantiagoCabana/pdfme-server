@@ -97,12 +97,31 @@ export function PrivateLayout() {
                     target="_self"
                     to={item.path}
                     sx={{
-                      borderRadius: 1.25,
-                      minHeight: 44,
-                      mb: 0.25,
+                      borderRadius: 0,
+                      minHeight: 40,
+                      mx: -2,
+                      mb: 0,
+                      pl: 3.5,
+                      pr: 2,
+                      py: 1,
                       color: selected ? 'primary.main' : 'text.secondary',
-                      '&.Mui-selected': { bgcolor: 'primary.lighter', color: 'primary.main' },
-                      '&.Mui-selected:hover': { bgcolor: 'primary.lighter' },
+                      borderRight: '2px solid transparent',
+                      '&:hover': { bgcolor: 'action.hover' },
+                      '&.Mui-selected': {
+                        bgcolor: 'rgba(22, 119, 255, 0.09)',
+                        borderRightColor: 'primary.main',
+                        color: 'primary.main',
+                      },
+                      '&.Mui-selected:hover': {
+                        bgcolor: 'rgba(22, 119, 255, 0.09)',
+                      },
+                      '& .MuiListItemIcon-root': {
+                        color: 'inherit',
+                      },
+                      '& .MuiTypography-root': {
+                        color: 'inherit',
+                        fontWeight: selected ? 500 : 400,
+                      },
                     }}
                   >
                     <ListItemIcon sx={{ minWidth: 36, color: 'inherit', fontSize: 16 }}>{item.icon}</ListItemIcon>
