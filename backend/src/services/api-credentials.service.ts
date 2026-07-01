@@ -3,13 +3,6 @@ import crypto from 'node:crypto';
 import { env } from '../env.js';
 import { prisma } from '../prisma.js';
 
-const DEFAULT_API_PERMISSION_CODES = [
-  'templates.read',
-  'templates.write',
-  'templates.publish',
-  'documents.generate',
-];
-
 function hashApiKey(rawKey: string) {
   return crypto.createHmac('sha256', env.API_KEY_SECRET).update(rawKey).digest('hex');
 }
@@ -33,13 +26,15 @@ function toApiCredentialResponse(credential: {
   prefix: string;
   secretPreview: string;
   status: string;
-  allowedOrigin: unknown;
+  allowedOrigins: unknown;
   expiresAt: Date | null;
   lastUsedAt: Date | null;
+  lastUsedIp: string | null;
   createdById: string | null;
+  revokedById: string | null;
+  revokedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-  permissions?: Array<{ accessPermission: { code: string; name: string; category: string } }>;
 }) {
   return {
     id: credential.id,
@@ -47,22 +42,20 @@ function toApiCredentialResponse(credential: {
     prefix: credential.prefix,
     secretPreview: credential.secretPreview,
     status: credential.status,
-    allowedOrigin: credential.allowedOrigin,
+    allowedOrigins: credential.allowedOrigins,
     expiresAt: credential.expiresAt?.toISOString() ?? null,
     lastUsedAt: credential.lastUsedAt?.toISOString() ?? null,
+    lastUsedIp: credential.lastUsedIp,
     createdById: credential.createdById,
+    revokedById: credential.revokedById,
+    revokedAt: credential.revokedAt?.toISOString() ?? null,
     createdAt: credential.createdAt.toISOString(),
     updatedAt: credential.updatedAt.toISOString(),
-    permissions: credential.permissions?.map((entry) => entry.accessPermission) ?? [],
   };
 }
 
 export async function listApiCredentials() {
-  const credentials = await prisma.apiCredential.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: { permissions: { include: { accessPermission: true } } },
-  });
-
+  const credentials = await prisma.apiCredential.findMany({ orderBy: { createdAt: 'desc' } });
   return credentials.map(toApiCredentialResponse);
 }
 
@@ -70,15 +63,9 @@ export async function createApiCredential(input: {
   name: string;
   expiresAt?: Date | null;
   createdById?: string | null;
-  permissionCodes?: string[];
+  allowedOrigins?: string[] | null;
 }) {
   const key = createRawApiKey();
-  const permissionCodes = input.permissionCodes?.length ? input.permissionCodes : DEFAULT_API_PERMISSION_CODES;
-  const permissions = await prisma.accessPermission.findMany({
-    where: { code: { in: permissionCodes } },
-    select: { id: true },
-  });
-
   const credential = await prisma.apiCredential.create({
     data: {
       name: input.name,
@@ -87,37 +74,34 @@ export async function createApiCredential(input: {
       keyHash: key.keyHash,
       expiresAt: input.expiresAt ?? null,
       createdById: input.createdById ?? null,
-      permissions: {
-        create: permissions.map((permission) => ({ accessPermissionId: permission.id })),
-      },
+      allowedOrigins: input.allowedOrigins ?? null,
     },
-    include: { permissions: { include: { accessPermission: true } } },
   });
 
   return { rawKey: key.rawKey, credential: toApiCredentialResponse(credential) };
 }
 
-export async function revokeApiCredential(id: string) {
+export async function revokeApiCredential(id: string, revokedById?: string | null) {
   const credential = await prisma.apiCredential.update({
     where: { id },
-    data: { status: 'REVOKED' },
-    include: { permissions: { include: { accessPermission: true } } },
+    data: {
+      status: 'REVOKED',
+      revokedAt: new Date(),
+      revokedById: revokedById === 'bootstrap-admin' ? null : revokedById ?? null,
+    },
   });
 
   return toApiCredentialResponse(credential);
 }
 
-export async function authenticateApiKey(rawKey: string) {
+export async function authenticateApiKey(rawKey: string, requestMeta?: { origin?: string | null; ip?: string | null }) {
   const prefix = rawKey.split('.')[0];
 
   if (!prefix) {
     return null;
   }
 
-  const credential = await prisma.apiCredential.findUnique({
-    where: { prefix },
-    include: { permissions: { include: { accessPermission: true } } },
-  });
+  const credential = await prisma.apiCredential.findUnique({ where: { prefix } });
 
   if (!credential || credential.status !== 'ACTIVE') {
     return null;
@@ -132,15 +116,17 @@ export async function authenticateApiKey(rawKey: string) {
     return null;
   }
 
-  await prisma.apiCredential.update({ where: { id: credential.id }, data: { lastUsedAt: new Date() } }).catch(() => undefined);
+  const allowedOrigins = Array.isArray(credential.allowedOrigins) ? credential.allowedOrigins as string[] : [];
+  const origin = requestMeta?.origin ?? null;
 
-  return {
-    id: credential.id,
-    prefix: credential.prefix,
-    permissions: credential.permissions.map((entry) => entry.accessPermission.code),
-  };
-}
+  if (allowedOrigins.length > 0 && (!origin || !allowedOrigins.includes(origin))) {
+    return null;
+  }
 
-export function hasApiPermission(credential: { permissions: string[] } | null, permission: string) {
-  return Boolean(credential?.permissions.includes(permission) || credential?.permissions.includes('*'));
+  await prisma.apiCredential.update({
+    where: { id: credential.id },
+    data: { lastUsedAt: new Date(), lastUsedIp: requestMeta?.ip ?? null },
+  }).catch(() => undefined);
+
+  return { id: credential.id, prefix: credential.prefix };
 }

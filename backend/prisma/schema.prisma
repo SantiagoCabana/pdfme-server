@@ -55,20 +55,24 @@ enum ApiCredentialStatus {
 }
 
 model UserAccount {
-  id              String            @id @default(cuid())
-  email           String            @unique
-  passwordHash    String            @map("password_hash")
-  displayName     String            @map("display_name")
-  status          UserStatus        @default(ACTIVE)
-  isInternal      Boolean           @default(true) @map("is_internal")
-  isSuperAdmin    Boolean           @default(false) @map("is_super_admin")
-  roles           UserAccountRole[]
-  templates       Template[]        @relation("TemplateCreatedBy")
-  templateVersion TemplateVersion[] @relation("TemplateVersionCreatedBy")
-  apiCredential   ApiCredential[]   @relation("ApiCredentialCreatedBy")
-  auditEvent      AuditEvent[]      @relation("AuditActor")
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @updatedAt @map("updated_at")
+  id                        String            @id @default(cuid())
+  email                     String            @unique
+  passwordHash              String            @map("password_hash")
+  displayName               String            @map("display_name")
+  avatarUrl                 String?           @map("avatar_url")
+  status                    UserStatus        @default(ACTIVE)
+  isSuperAdmin              Boolean           @default(false) @map("is_super_admin")
+  tokenVersion              Int               @default(0) @map("token_version")
+  lastLoginAt               DateTime?         @map("last_login_at")
+  roles                     UserAccountRole[]
+  createdTemplates          Template[]        @relation("TemplateCreatedBy")
+  createdTemplateVersions   TemplateVersion[] @relation("TemplateVersionCreatedBy")
+  publishedTemplateVersions TemplateVersion[] @relation("TemplateVersionPublishedBy")
+  createdApiCredentials     ApiCredential[]   @relation("ApiCredentialCreatedBy")
+  revokedApiCredentials     ApiCredential[]   @relation("ApiCredentialRevokedBy")
+  auditEvents               AuditEvent[]      @relation("AuditActor")
+  createdAt                 DateTime          @default(now()) @map("created_at")
+  updatedAt                 DateTime          @updatedAt @map("updated_at")
 
   @@map("user_account")
 }
@@ -79,6 +83,7 @@ model AccessRole {
   name        String
   description String?
   isSystem    Boolean                @default(false) @map("is_system")
+  status      Boolean                @default(true)
   users       UserAccountRole[]
   permissions AccessRolePermission[]
   createdAt   DateTime               @default(now()) @map("created_at")
@@ -88,15 +93,15 @@ model AccessRole {
 }
 
 model AccessPermission {
-  id            String                    @id @default(cuid())
-  code          String                    @unique
-  name          String
-  category      String
-  description   String?
-  roles         AccessRolePermission[]
-  apiCredential ApiCredentialPermission[]
-  createdAt     DateTime                  @default(now()) @map("created_at")
-  updatedAt     DateTime                  @updatedAt @map("updated_at")
+  id          String                 @id @default(cuid())
+  code        String                 @unique
+  name        String
+  category    String
+  description String?
+  status      Boolean                @default(true)
+  roles       AccessRolePermission[]
+  createdAt   DateTime               @default(now()) @map("created_at")
+  updatedAt   DateTime               @updatedAt @map("updated_at")
 
   @@map("access_permission")
 }
@@ -125,71 +130,72 @@ model AccessRolePermission {
 }
 
 model ApiCredential {
-  id              String                    @id @default(cuid())
-  name            String
-  prefix          String                    @unique
-  secretPreview   String                    @map("secret_preview")
-  keyHash         String                    @map("key_hash")
-  status          ApiCredentialStatus       @default(ACTIVE)
-  allowedOrigin   Json?                     @map("allowed_origin")
-  expiresAt       DateTime?                 @map("expires_at")
-  lastUsedAt      DateTime?                 @map("last_used_at")
-  createdById     String?                   @map("created_by_id")
-  createdBy       UserAccount?              @relation("ApiCredentialCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  permissions     ApiCredentialPermission[]
-  auditEvent      AuditEvent[]              @relation("AuditApiCredential")
-  createdAt       DateTime                  @default(now()) @map("created_at")
-  updatedAt       DateTime                  @updatedAt @map("updated_at")
+  id             String              @id @default(cuid())
+  name           String
+  prefix         String              @unique
+  secretPreview  String              @map("secret_preview")
+  keyHash        String              @map("key_hash")
+  status         ApiCredentialStatus @default(ACTIVE)
+  allowedOrigins Json?               @map("allowed_origins")
+  expiresAt      DateTime?           @map("expires_at")
+  lastUsedAt     DateTime?           @map("last_used_at")
+  lastUsedIp     String?             @map("last_used_ip")
+  createdById    String?             @map("created_by_id")
+  revokedById    String?             @map("revoked_by_id")
+  revokedAt      DateTime?           @map("revoked_at")
+  createdBy      UserAccount?        @relation("ApiCredentialCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  revokedBy      UserAccount?        @relation("ApiCredentialRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
+  auditEvents    AuditEvent[]        @relation("AuditApiCredential")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
 
+  @@index([createdById])
+  @@index([status])
   @@map("api_credential")
 }
 
-model ApiCredentialPermission {
-  apiCredentialId    String @map("api_credential_id")
-  accessPermissionId String @map("access_permission_id")
-
-  apiCredential    ApiCredential    @relation(fields: [apiCredentialId], references: [id], onDelete: Cascade)
-  accessPermission AccessPermission @relation(fields: [accessPermissionId], references: [id], onDelete: Cascade)
-
-  @@id([apiCredentialId, accessPermissionId])
-  @@map("api_credential_permission")
-}
-
 model Template {
-  id          String            @id @default(cuid())
-  name        String
-  code        String            @unique
-  description String?
-  status      TemplateStatus    @default(DRAFT)
-  versions    TemplateVersion[]
-  tags        TemplateTag[]
-  createdById String?           @map("created_by_id")
-  createdBy   UserAccount?      @relation("TemplateCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  createdAt   DateTime          @default(now()) @map("created_at")
-  updatedAt   DateTime          @updatedAt @map("updated_at")
+  id              String            @id @default(cuid())
+  name            String
+  code            String            @unique
+  description     String?
+  thumbnailUrl    String?           @map("thumbnail_url")
+  status          TemplateStatus    @default(DRAFT)
+  lastPublishedAt DateTime?         @map("last_published_at")
+  versions        TemplateVersion[]
+  tags            TemplateTag[]
+  createdById     String?           @map("created_by_id")
+  createdBy       UserAccount?      @relation("TemplateCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
 
+  @@index([status])
   @@map("template")
 }
 
 model TemplateVersion {
-  id            String   @id @default(cuid())
-  templateId    String   @map("template_id")
-  versionNumber Int      @map("version_number")
-  defaultInput  Json     @map("default_input")
-  inputExample  Json?    @map("input_example")
-  isCurrent     Boolean  @default(false) @map("is_current")
-  isPublished   Boolean  @default(false) @map("is_published")
-  publishedAt   DateTime? @map("published_at")
-  createdById   String?  @map("created_by_id")
-
-  template  Template       @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  pages     TemplatePage[]
-  createdBy UserAccount?   @relation("TemplateVersionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id            String         @id @default(cuid())
+  templateId    String         @map("template_id")
+  versionNumber Int            @map("version_number")
+  notes         String?
+  defaultInput  Json           @map("default_input")
+  inputExample  Json?          @map("input_example")
+  isCurrent     Boolean        @default(false) @map("is_current")
+  isPublished   Boolean        @default(false) @map("is_published")
+  publishedAt   DateTime?      @map("published_at")
+  publishedById String?        @map("published_by_id")
+  createdById   String?        @map("created_by_id")
+  status        Boolean        @default(true)
+  template      Template       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  pages         TemplatePage[]
+  createdBy     UserAccount?   @relation("TemplateVersionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  publishedBy   UserAccount?   @relation("TemplateVersionPublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
 
   @@unique([templateId, versionNumber])
+  @@index([templateId, isCurrent])
+  @@index([templateId, isPublished])
   @@map("template_version")
 }
 
@@ -207,19 +213,21 @@ model TemplatePage {
   sourceMode          TemplateSourceMode @default(BLANK) @map("source_mode")
   baseFileName        String?            @map("base_file_name")
   baseFileUrl         String?            @map("base_file_url")
+  previewImageUrl     String?            @map("preview_image_url")
   status              Boolean            @default(true)
+  templateVersion     TemplateVersion    @relation(fields: [templateVersionId], references: [id], onDelete: Cascade)
   createdAt           DateTime           @default(now()) @map("created_at")
   updatedAt           DateTime           @updatedAt @map("updated_at")
 
-  templateVersion TemplateVersion @relation(fields: [templateVersionId], references: [id], onDelete: Cascade)
-
   @@unique([templateVersionId, pageNumber])
+  @@index([templateVersionId])
   @@map("template_page")
 }
 
 model Tag {
   id        String        @id @default(cuid())
   name      String        @unique
+  status    Boolean       @default(true)
   templates TemplateTag[]
   createdAt DateTime      @default(now()) @map("created_at")
   updatedAt DateTime      @updatedAt @map("updated_at")
@@ -244,20 +252,14 @@ model AuditEvent {
   apiCredentialId String?        @map("api_credential_id")
   action          String
   entityType      String         @map("entity_type")
-  entityId        String         @map("entity_id")
+  entityId        String?        @map("entity_id")
   metadata        Json?
   actor           UserAccount?   @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
   apiCredential   ApiCredential? @relation("AuditApiCredential", fields: [apiCredentialId], references: [id], onDelete: SetNull)
   createdAt       DateTime       @default(now()) @map("created_at")
 
+  @@index([actorId])
+  @@index([apiCredentialId])
+  @@index([entityType, entityId])
   @@map("audit_event")
-}
-
-model AppSession {
-  sid    String   @id @db.VarChar
-  sess   Json     @db.Json
-  expire DateTime @db.Timestamp(6)
-
-  @@index([expire], map: "IDX_session_expire")
-  @@map("session")
 }

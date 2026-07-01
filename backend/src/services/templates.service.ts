@@ -44,30 +44,38 @@ function mapTemplate(template: Prisma.TemplateGetPayload<{
     name: template.name,
     code: template.code,
     description: template.description,
+    thumbnailUrl: template.thumbnailUrl,
     status: template.status,
+    lastPublishedAt: template.lastPublishedAt?.toISOString() ?? null,
     versionNumber: currentVersion?.versionNumber ?? 0,
     versionId: currentVersion?.id ?? null,
+    isPublished: currentVersion?.isPublished ?? false,
     pageCount: currentVersion?.pages.length ?? 0,
     pageFormat: firstPage?.pageFormat ?? 'A4',
     pageOrientation: firstPage?.pageOrientation ?? 'PORTRAIT',
     pageWidthMm: firstPage?.pageWidthMm ?? 210,
     pageHeightMm: firstPage?.pageHeightMm ?? 297,
+    paddingVerticalMm: firstPage?.paddingVerticalMm ?? 12,
+    paddingHorizontalMm: firstPage?.paddingHorizontalMm ?? 12,
     tags: template.tags.map((entry) => entry.tag.name),
     createdAt: template.createdAt.toISOString(),
     updatedAt: template.updatedAt.toISOString(),
   };
 }
 
-export async function listTemplateCatalog() {
+const templateInclude = {
+  versions: {
+    where: { isCurrent: true },
+    include: { pages: { orderBy: { pageNumber: 'asc' as const } } },
+  },
+  tags: { include: { tag: true } },
+};
+
+export async function listTemplateCatalog(options?: { publishedOnly?: boolean }) {
   const templates = await prisma.template.findMany({
+    where: options?.publishedOnly ? { status: 'ACTIVE', versions: { some: { isCurrent: true, isPublished: true } } } : undefined,
     orderBy: { updatedAt: 'desc' },
-    include: {
-      versions: {
-        where: { isCurrent: true },
-        include: { pages: { orderBy: { pageNumber: 'asc' } } },
-      },
-      tags: { include: { tag: true } },
-    },
+    include: templateInclude,
   });
 
   return templates.map(mapTemplate);
@@ -77,6 +85,7 @@ export async function createTemplate(input: {
   name: string;
   description?: string | null;
   tagNames?: string[];
+  createdById?: string | null;
 }) {
   const code = await buildUniqueCode(input.name);
   const normalizedTags = Array.from(new Set((input.tagNames ?? []).map((tag) => tag.trim()).filter(Boolean)));
@@ -87,6 +96,7 @@ export async function createTemplate(input: {
       code,
       description: input.description ?? null,
       status: 'DRAFT',
+      createdById: input.createdById ?? null,
       tags: {
         create: normalizedTags.map((name) => ({
           tag: {
@@ -103,6 +113,7 @@ export async function createTemplate(input: {
           defaultInput: DEFAULT_INPUT,
           inputExample: DEFAULT_INPUT,
           isCurrent: true,
+          createdById: input.createdById ?? null,
           pages: {
             create: {
               pageNumber: 1,
@@ -119,15 +130,33 @@ export async function createTemplate(input: {
         },
       },
     },
-    include: {
-      versions: {
-        where: { isCurrent: true },
-        include: { pages: { orderBy: { pageNumber: 'asc' } } },
-      },
-      tags: { include: { tag: true } },
-    },
+    include: templateInclude,
   });
 
+  return mapTemplate(template);
+}
+
+export async function publishTemplate(id: string, publishedById?: string | null) {
+  const currentVersion = await prisma.templateVersion.findFirstOrThrow({
+    where: { templateId: id, isCurrent: true },
+    select: { id: true },
+  });
+
+  const now = new Date();
+
+  await prisma.$transaction([
+    prisma.template.update({ where: { id }, data: { status: 'ACTIVE', lastPublishedAt: now } }),
+    prisma.templateVersion.update({
+      where: { id: currentVersion.id },
+      data: {
+        isPublished: true,
+        publishedAt: now,
+        publishedById: publishedById === 'bootstrap-admin' ? null : publishedById ?? null,
+      },
+    }),
+  ]);
+
+  const template = await prisma.template.findUniqueOrThrow({ where: { id }, include: templateInclude });
   return mapTemplate(template);
 }
 

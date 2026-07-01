@@ -13,15 +13,15 @@ export const apiCredentialsRouter = Router();
 const createCredentialSchema = z.object({
   name: z.string().min(3),
   expiresAt: z.string().datetime().nullish(),
-  permissionCodes: z.array(z.string().min(1)).optional(),
+  allowedOrigins: z.array(z.string().url()).optional(),
 });
 
-apiCredentialsRouter.get('/api-credentials', requirePermission('api-credentials.read'), async (_request, response) => {
+apiCredentialsRouter.get('/api-credentials', requirePermission('api_keys.manage'), async (_request, response) => {
   const credentials = await listApiCredentials();
   response.json({ data: credentials });
 });
 
-apiCredentialsRouter.post('/api-credentials', requirePermission('api-credentials.write'), async (request, response) => {
+apiCredentialsRouter.post('/api-credentials', requirePermission('api_keys.manage'), async (request, response) => {
   const parsed = createCredentialSchema.safeParse(request.body);
 
   if (!parsed.success) {
@@ -32,15 +32,16 @@ apiCredentialsRouter.post('/api-credentials', requirePermission('api-credentials
   const result = await createApiCredential({
     name: parsed.data.name,
     expiresAt: parsed.data.expiresAt ? new Date(parsed.data.expiresAt) : null,
-    permissionCodes: parsed.data.permissionCodes,
+    allowedOrigins: parsed.data.allowedOrigins ?? null,
+    createdById: response.locals.user?.id === 'bootstrap-admin' ? null : response.locals.user?.id ?? null,
   });
 
   response.status(201).json({ ok: true, credential: result.credential, rawKey: result.rawKey });
 });
 
-apiCredentialsRouter.patch('/api-credentials/:id/revoke', requirePermission('api-credentials.write'), async (request, response) => {
+apiCredentialsRouter.patch('/api-credentials/:id/revoke', requirePermission('api_keys.manage'), async (request, response) => {
   try {
-    const credential = await revokeApiCredential(request.params.id);
+    const credential = await revokeApiCredential(request.params.id, response.locals.user?.id ?? null);
     response.json({ ok: true, credential });
   } catch {
     response.status(404).json({ message: 'No se encontro la clave API.' });

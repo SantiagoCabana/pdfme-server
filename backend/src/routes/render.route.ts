@@ -1,19 +1,17 @@
 import { Router } from 'express';
 
-import { authenticateApiKey, hasApiPermission } from '../services/api-credentials.service.js';
+import { authenticateApiKey } from '../services/api-credentials.service.js';
 
 export const renderRouter = Router();
 
 renderRouter.post('/v1/render', async (request, response) => {
-  const credential = await authenticateApiKey(String(request.header('x-api-key') ?? ''));
+  const credential = await authenticateApiKey(String(request.header('x-api-key') ?? ''), {
+    origin: request.header('origin'),
+    ip: request.ip,
+  });
 
   if (!credential) {
     response.status(401).json({ message: 'API key invalida.' });
-    return;
-  }
-
-  if (!hasApiPermission(credential, 'documents.generate')) {
-    response.status(403).json({ message: 'La clave no tiene permiso para generar documentos.' });
     return;
   }
 

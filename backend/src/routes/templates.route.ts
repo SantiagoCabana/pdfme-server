@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 
-import { authenticateApiKey, hasApiPermission } from '../services/api-credentials.service.js';
-import { createTemplate, deleteTemplate, listTemplateCatalog } from '../services/templates.service.js';
+import { authenticateApiKey } from '../services/api-credentials.service.js';
+import { createTemplate, deleteTemplate, listTemplateCatalog, publishTemplate } from '../services/templates.service.js';
 import { requirePermission } from '../middleware/session-auth.js';
 
 export const templatesRouter = Router();
@@ -13,11 +13,11 @@ const createTemplateSchema = z.object({
   tagNames: z.array(z.string().min(1)).optional(),
 });
 
-templatesRouter.get('/templates', requirePermission('templates.read'), async (_request, response) => {
+templatesRouter.get('/templates', requirePermission('templates.view'), async (_request, response) => {
   response.json({ data: await listTemplateCatalog() });
 });
 
-templatesRouter.post('/templates', requirePermission('templates.write'), async (request, response) => {
+templatesRouter.post('/templates', requirePermission('templates.create'), async (request, response) => {
   const parsed = createTemplateSchema.safeParse(request.body);
 
   if (!parsed.success) {
@@ -29,9 +29,19 @@ templatesRouter.post('/templates', requirePermission('templates.write'), async (
     name: parsed.data.name,
     description: parsed.data.description ?? null,
     tagNames: parsed.data.tagNames,
+    createdById: response.locals.user?.id === 'bootstrap-admin' ? null : response.locals.user?.id ?? null,
   });
 
   response.status(201).json({ ok: true, template });
+});
+
+templatesRouter.patch('/templates/:id/publish', requirePermission('templates.publish'), async (request, response) => {
+  try {
+    const template = await publishTemplate(request.params.id, response.locals.user?.id ?? null);
+    response.json({ ok: true, template });
+  } catch {
+    response.status(404).json({ message: 'No se encontro la plantilla actual.' });
+  }
 });
 
 templatesRouter.delete('/templates/:id', requirePermission('templates.delete'), async (request, response) => {
@@ -44,17 +54,15 @@ templatesRouter.delete('/templates/:id', requirePermission('templates.delete'), 
 });
 
 templatesRouter.get('/v1/templates', async (request, response) => {
-  const credential = await authenticateApiKey(String(request.header('x-api-key') ?? ''));
+  const credential = await authenticateApiKey(String(request.header('x-api-key') ?? ''), {
+    origin: request.header('origin'),
+    ip: request.ip,
+  });
 
   if (!credential) {
     response.status(401).json({ message: 'API key invalida.' });
     return;
   }
 
-  if (!hasApiPermission(credential, 'templates.read')) {
-    response.status(403).json({ message: 'La clave no tiene permiso para consultar plantillas.' });
-    return;
-  }
-
-  response.json({ data: await listTemplateCatalog() });
+  response.json({ data: await listTemplateCatalog({ publishedOnly: true }) });
 });

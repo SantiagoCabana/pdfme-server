@@ -1,23 +1,63 @@
 import type { NextFunction, Request, Response } from 'express';
 
-import { hasPermission, type SessionUser } from '../auth/auth.service.js';
+import { env } from '../env.js';
+import { hasPermission, loadUserSession } from '../auth/auth.service.js';
+import { verifyAuthToken } from '../auth/session-token.js';
 
-export function getSessionUser(request: Request) {
-  return (request.session as { user?: SessionUser } | undefined)?.user;
+function getCookie(request: Request, name: string) {
+  const header = request.header('cookie');
+
+  if (!header) {
+    return null;
+  }
+
+  const cookies = header.split(';').map((cookie) => cookie.trim());
+  const match = cookies.find((cookie) => cookie.startsWith(`${name}=`));
+
+  return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
 }
 
-export function requireSession(request: Request, response: Response, next: NextFunction) {
-  if (!getSessionUser(request)) {
+export async function getSessionUser(request: Request) {
+  const token = getCookie(request, env.AUTH_COOKIE_NAME);
+
+  if (!token) {
+    return null;
+  }
+
+  const payload = verifyAuthToken(token);
+
+  if (!payload) {
+    return null;
+  }
+
+  if (payload.id === 'bootstrap-admin') {
+    return payload;
+  }
+
+  const user = await loadUserSession(payload.id);
+
+  if (!user || user.tokenVersion !== payload.tokenVersion) {
+    return null;
+  }
+
+  return user;
+}
+
+export async function requireSession(request: Request, response: Response, next: NextFunction) {
+  const user = await getSessionUser(request);
+
+  if (!user) {
     response.status(401).json({ message: 'No autenticado.' });
     return;
   }
 
+  response.locals.user = user;
   next();
 }
 
 export function requirePermission(permission: string) {
-  return (request: Request, response: Response, next: NextFunction) => {
-    const user = getSessionUser(request);
+  return async (request: Request, response: Response, next: NextFunction) => {
+    const user = await getSessionUser(request);
 
     if (!user) {
       response.status(401).json({ message: 'No autenticado.' });
@@ -29,6 +69,7 @@ export function requirePermission(permission: string) {
       return;
     }
 
+    response.locals.user = user;
     next();
   };
 }

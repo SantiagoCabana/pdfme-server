@@ -4,36 +4,36 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 const permissionSeed = [
-  ['users.read', 'Usuarios lectura', 'access'],
-  ['users.write', 'Usuarios escritura', 'access'],
-  ['api-credentials.read', 'Credenciales API lectura', 'api'],
-  ['api-credentials.write', 'Credenciales API escritura', 'api'],
-  ['templates.read', 'Plantillas lectura', 'templates'],
-  ['templates.write', 'Plantillas escritura', 'templates'],
-  ['templates.delete', 'Plantillas eliminar', 'templates'],
-  ['documents.generate', 'Documentos generar', 'documents'],
+  ['templates.view', 'Ver plantillas', 'templates'],
+  ['templates.edit', 'Editar plantillas', 'templates'],
+  ['templates.create', 'Crear plantillas', 'templates'],
+  ['templates.delete', 'Eliminar plantillas', 'templates'],
+  ['templates.publish', 'Publicar plantillas', 'templates'],
+  ['api_keys.manage', 'Gestionar claves API', 'api'],
+  ['users.manage', 'Gestionar usuarios', 'access'],
 ] as const;
 
 const roleSeed = {
-  SUPER_ADMIN: permissionSeed.map(([code]) => code),
-  ADMIN: ['users.read', 'users.write', 'api-credentials.read', 'api-credentials.write', 'templates.read', 'templates.write', 'templates.delete', 'documents.generate'],
-  USER: ['templates.read', 'templates.write', 'documents.generate'],
+  VIEWER: ['templates.view'],
+  EDITOR: ['templates.view', 'templates.edit'],
+  MANAGER: ['templates.view', 'templates.edit', 'templates.create', 'templates.delete', 'templates.publish', 'api_keys.manage'],
+  ADMIN: permissionSeed.map(([code]) => code),
 };
 
 async function main() {
   for (const [code, name, category] of permissionSeed) {
     await prisma.accessPermission.upsert({
       where: { code },
-      update: { name, category },
-      create: { code, name, category },
+      update: { name, category, status: true },
+      create: { code, name, category, status: true },
     });
   }
 
   for (const [code, permissionCodes] of Object.entries(roleSeed)) {
     const role = await prisma.accessRole.upsert({
       where: { code },
-      update: { name: code.replaceAll('_', ' '), isSystem: true },
-      create: { code, name: code.replaceAll('_', ' '), isSystem: true },
+      update: { name: code, isSystem: true, status: true },
+      create: { code, name: code, isSystem: true, status: true },
     });
 
     await prisma.accessRolePermission.deleteMany({ where: { accessRoleId: role.id } });
@@ -56,27 +56,28 @@ async function main() {
   const adminUser = await prisma.userAccount.upsert({
     where: { email: process.env.ADMIN_EMAIL.toLowerCase() },
     update: {
-      displayName: 'Bootstrap Admin',
+      displayName: 'Administrador',
       passwordHash: await bcrypt.hash(process.env.ADMIN_PASSWORD, 10),
       isSuperAdmin: true,
       status: 'ACTIVE',
+      tokenVersion: { increment: 1 },
     },
     create: {
       email: process.env.ADMIN_EMAIL.toLowerCase(),
-      displayName: 'Bootstrap Admin',
+      displayName: 'Administrador',
       passwordHash: await bcrypt.hash(process.env.ADMIN_PASSWORD, 10),
       isSuperAdmin: true,
       status: 'ACTIVE',
     },
   });
 
-  const superAdminRole = await prisma.accessRole.findUnique({ where: { code: 'SUPER_ADMIN' } });
+  const adminRole = await prisma.accessRole.findUnique({ where: { code: 'ADMIN' } });
 
-  if (superAdminRole) {
+  if (adminRole) {
     await prisma.userAccountRole.upsert({
-      where: { userAccountId_accessRoleId: { userAccountId: adminUser.id, accessRoleId: superAdminRole.id } },
+      where: { userAccountId_accessRoleId: { userAccountId: adminUser.id, accessRoleId: adminRole.id } },
       update: {},
-      create: { userAccountId: adminUser.id, accessRoleId: superAdminRole.id },
+      create: { userAccountId: adminUser.id, accessRoleId: adminRole.id },
     });
   }
 }
