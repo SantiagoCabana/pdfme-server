@@ -1,0 +1,263 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+
+  @@map("user_status")
+}
+
+enum TemplateStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+
+  @@map("template_status")
+}
+
+enum TemplatePageFormat {
+  A4
+  LETTER
+  LEGAL
+  CUSTOM
+
+  @@map("template_page_format")
+}
+
+enum PageOrientation {
+  PORTRAIT
+  LANDSCAPE
+
+  @@map("page_orientation")
+}
+
+enum TemplateSourceMode {
+  BLANK
+  BASE_PDF
+
+  @@map("template_source_mode")
+}
+
+enum ApiCredentialStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+
+  @@map("api_credential_status")
+}
+
+model UserAccount {
+  id              String            @id @default(cuid())
+  email           String            @unique
+  passwordHash    String            @map("password_hash")
+  displayName     String            @map("display_name")
+  status          UserStatus        @default(ACTIVE)
+  isInternal      Boolean           @default(true) @map("is_internal")
+  isSuperAdmin    Boolean           @default(false) @map("is_super_admin")
+  roles           UserAccountRole[]
+  templates       Template[]        @relation("TemplateCreatedBy")
+  templateVersion TemplateVersion[] @relation("TemplateVersionCreatedBy")
+  apiCredential   ApiCredential[]   @relation("ApiCredentialCreatedBy")
+  auditEvent      AuditEvent[]      @relation("AuditActor")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  @@map("user_account")
+}
+
+model AccessRole {
+  id          String                 @id @default(cuid())
+  code        String                 @unique
+  name        String
+  description String?
+  isSystem    Boolean                @default(false) @map("is_system")
+  users       UserAccountRole[]
+  permissions AccessRolePermission[]
+  createdAt   DateTime               @default(now()) @map("created_at")
+  updatedAt   DateTime               @updatedAt @map("updated_at")
+
+  @@map("access_role")
+}
+
+model AccessPermission {
+  id            String                    @id @default(cuid())
+  code          String                    @unique
+  name          String
+  category      String
+  description   String?
+  roles         AccessRolePermission[]
+  apiCredential ApiCredentialPermission[]
+  createdAt     DateTime                  @default(now()) @map("created_at")
+  updatedAt     DateTime                  @updatedAt @map("updated_at")
+
+  @@map("access_permission")
+}
+
+model UserAccountRole {
+  userAccountId String   @map("user_account_id")
+  accessRoleId  String   @map("access_role_id")
+  assignedAt    DateTime @default(now()) @map("assigned_at")
+
+  userAccount UserAccount @relation(fields: [userAccountId], references: [id], onDelete: Cascade)
+  accessRole  AccessRole  @relation(fields: [accessRoleId], references: [id], onDelete: Cascade)
+
+  @@id([userAccountId, accessRoleId])
+  @@map("user_account_role")
+}
+
+model AccessRolePermission {
+  accessRoleId       String @map("access_role_id")
+  accessPermissionId String @map("access_permission_id")
+
+  accessRole       AccessRole       @relation(fields: [accessRoleId], references: [id], onDelete: Cascade)
+  accessPermission AccessPermission @relation(fields: [accessPermissionId], references: [id], onDelete: Cascade)
+
+  @@id([accessRoleId, accessPermissionId])
+  @@map("access_role_permission")
+}
+
+model ApiCredential {
+  id              String                    @id @default(cuid())
+  name            String
+  prefix          String                    @unique
+  secretPreview   String                    @map("secret_preview")
+  keyHash         String                    @map("key_hash")
+  status          ApiCredentialStatus       @default(ACTIVE)
+  allowedOrigin   Json?                     @map("allowed_origin")
+  expiresAt       DateTime?                 @map("expires_at")
+  lastUsedAt      DateTime?                 @map("last_used_at")
+  createdById     String?                   @map("created_by_id")
+  createdBy       UserAccount?              @relation("ApiCredentialCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  permissions     ApiCredentialPermission[]
+  auditEvent      AuditEvent[]              @relation("AuditApiCredential")
+  createdAt       DateTime                  @default(now()) @map("created_at")
+  updatedAt       DateTime                  @updatedAt @map("updated_at")
+
+  @@map("api_credential")
+}
+
+model ApiCredentialPermission {
+  apiCredentialId    String @map("api_credential_id")
+  accessPermissionId String @map("access_permission_id")
+
+  apiCredential    ApiCredential    @relation(fields: [apiCredentialId], references: [id], onDelete: Cascade)
+  accessPermission AccessPermission @relation(fields: [accessPermissionId], references: [id], onDelete: Cascade)
+
+  @@id([apiCredentialId, accessPermissionId])
+  @@map("api_credential_permission")
+}
+
+model Template {
+  id          String            @id @default(cuid())
+  name        String
+  code        String            @unique
+  description String?
+  status      TemplateStatus    @default(DRAFT)
+  versions    TemplateVersion[]
+  tags        TemplateTag[]
+  createdById String?           @map("created_by_id")
+  createdBy   UserAccount?      @relation("TemplateCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  @@map("template")
+}
+
+model TemplateVersion {
+  id            String   @id @default(cuid())
+  templateId    String   @map("template_id")
+  versionNumber Int      @map("version_number")
+  defaultInput  Json     @map("default_input")
+  inputExample  Json?    @map("input_example")
+  isCurrent     Boolean  @default(false) @map("is_current")
+  isPublished   Boolean  @default(false) @map("is_published")
+  publishedAt   DateTime? @map("published_at")
+  createdById   String?  @map("created_by_id")
+
+  template  Template       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  pages     TemplatePage[]
+  createdBy UserAccount?   @relation("TemplateVersionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([templateId, versionNumber])
+  @@map("template_version")
+}
+
+model TemplatePage {
+  id                  String             @id @default(cuid())
+  templateVersionId   String             @map("template_version_id")
+  pageNumber          Int                @map("page_number")
+  designerJson        Json               @map("designer_json")
+  pageFormat          TemplatePageFormat @default(A4) @map("page_format")
+  pageOrientation     PageOrientation    @default(PORTRAIT) @map("page_orientation")
+  pageWidthMm         Float              @default(210) @map("page_width_mm")
+  pageHeightMm        Float              @default(297) @map("page_height_mm")
+  paddingVerticalMm   Float              @default(12) @map("padding_vertical_mm")
+  paddingHorizontalMm Float              @default(12) @map("padding_horizontal_mm")
+  sourceMode          TemplateSourceMode @default(BLANK) @map("source_mode")
+  baseFileName        String?            @map("base_file_name")
+  baseFileUrl         String?            @map("base_file_url")
+  status              Boolean            @default(true)
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  templateVersion TemplateVersion @relation(fields: [templateVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([templateVersionId, pageNumber])
+  @@map("template_page")
+}
+
+model Tag {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  templates TemplateTag[]
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  @@map("tag")
+}
+
+model TemplateTag {
+  templateId String @map("template_id")
+  tagId      String @map("tag_id")
+
+  template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([templateId, tagId])
+  @@map("template_tag")
+}
+
+model AuditEvent {
+  id              String         @id @default(cuid())
+  actorId         String?        @map("actor_id")
+  apiCredentialId String?        @map("api_credential_id")
+  action          String
+  entityType      String         @map("entity_type")
+  entityId        String         @map("entity_id")
+  metadata        Json?
+  actor           UserAccount?   @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  apiCredential   ApiCredential? @relation("AuditApiCredential", fields: [apiCredentialId], references: [id], onDelete: SetNull)
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  @@map("audit_event")
+}
+
+model AdminSession {
+  sid    String   @id @db.VarChar
+  sess   Json     @db.Json
+  expire DateTime @db.Timestamp(6)
+
+  @@index([expire], map: "IDX_session_expire")
+  @@map("session")
+}

@@ -26,6 +26,7 @@ jspm_packages/
 web_modules/
 
 # Build output
+.adminjs/
 .next/
 out/
 dist/

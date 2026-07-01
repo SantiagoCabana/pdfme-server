@@ -2,197 +2,146 @@
 
 # pdfme-server
 
-**Self-hosted dashboard and API server for managing pdfme templates and generating PDFs.**
+**Self-hosted PDF template platform with AdminJS, Prisma, PostgreSQL and pdfme.**
 
-Manage reusable PDF templates, protect internal access, issue API keys, and prepare documents for generation with [pdfme](https://github.com/pdfme/pdfme).
+AdminJS is the main panel. The backend owns runtime routes and APIs; the frontend folder is kept as a source area for reusable React UI/components that can be integrated into AdminJS workflows.
 
 <br />
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Built with pdfme](https://img.shields.io/badge/Built%20with-pdfme-blue)](https://github.com/pdfme/pdfme)
-[![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-20.19%2B-green)](https://nodejs.org/)
-[![Self Hosted](https://img.shields.io/badge/Self--Hosted-Ready-black)](#self-hosting)
-
-<br />
-
-<a href="#overview">Overview</a>
-· <a href="#features">Features</a>
-· <a href="#getting-started">Getting Started</a>
-· <a href="#api">API</a>
-· <a href="#roadmap">Roadmap</a>
-· <a href="#disclaimer">Disclaimer</a>
+[![AdminJS](https://img.shields.io/badge/AdminJS-main%20panel-black)](https://adminjs.co/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Prisma-31648c)](https://www.prisma.io/)
 
 </div>
 
 ---
 
-## Overview
+## Objective
 
-**pdfme-server** is a self-hosted Next.js application for operating a PDF template service on top of [pdfme](https://github.com/pdfme/pdfme).
+`pdfme-server` is an internal platform for operating dynamic PDF templates with pdfme.
 
-It provides an internal dashboard for managing templates, users, and API keys, plus external API endpoints that other systems can use to list templates and request document generation.
+The goal is to provide:
 
-The current implementation is a **single Next.js monolith** with App Router, Prisma, PostgreSQL, internal authentication, API key authentication, and a feature-based code structure.
+- one AdminJS main panel for internal users,
+- custom AdminJS pages for business workflows such as template catalog,
+- technical AdminJS resources for access, API keys, audit and sessions,
+- backend APIs for template operations and external PDF generation,
+- PostgreSQL storage for users, roles, credentials, templates, versions and pages,
+- API keys for external systems that need to generate PDFs.
 
-> This project is independent from pdfme. It uses pdfme as an open-source dependency and is not maintained by the pdfme team.
-
----
-
-## Features
-
-### Implemented
-
-- Internal login with signed HTTP-only cookies.
-- Protected dashboard routes.
-- PostgreSQL data model managed with Prisma.
-- Internal users with simple `Admin` / `User` ranges.
-- Simplified access management for:
-  - template creation/editing,
-  - template deletion,
-  - API key management.
-- API key creation with optional expiration:
-  - never,
-  - 7 days,
-  - 30 days,
-  - 90 days,
-  - 1 year.
-- API key validation with prefix + SHA-256 hash.
-- Template catalog page with first-page visual preview placeholder.
-- Light/dark mode persisted locally in the browser.
-- shadcn-style local UI components.
-- External API foundation:
-  - `GET /api/v1/templates`,
-  - `POST /api/v1/render` reserved for pdfme generation.
-
-### In progress
-
-- Real pdfme Designer integration in the template editor.
-- CRUD for templates, versions, and pages from the UI.
-- Real PDF generation in `POST /api/v1/render`.
-- API key revocation endpoint.
-- User creation flow.
-- Real PDF preview from stored template pages.
+This project is independent from pdfme. It uses pdfme as an open-source dependency.
 
 ---
 
-## Why pdfme-server?
+## Current Architecture
 
-[pdfme](https://github.com/pdfme/pdfme) is a powerful TypeScript library for building and generating PDFs from templates. Many teams, however, need more than a library.
+The project keeps backend and frontend folders, but AdminJS is the only main panel. The frontend folder is not a separate user-facing route strategy; it is a workspace for reusable UI that can be integrated into AdminJS custom pages:
 
-| Need | What pdfme-server provides |
+```txt
+pdfme-server/
+├── backend/       # Express + AdminJS main panel + Prisma + pdfme API
+├── frontend/      # React UI source for components/views integrated into AdminJS
+├── docs/          # Project status and implementation notes
+├── README.md
+├── LICENSE
+└── package.json   # repository metadata only
+```
+
+### Backend
+
+- Express server.
+- AdminJS main panel mounted at `/admin`.
+- Custom AdminJS page `templates` for business template management.
+- Prisma as the main data layer.
+- PostgreSQL as the database.
+- API key foundation with hashed secrets and scopes.
+- Reserved pdfme render endpoint.
+
+### AdminJS Role
+
+AdminJS is the principal UI. It has two responsibilities:
+
+- business pages: custom pages such as `Plantillas`, backed by our own services and APIs;
+- technical resources: users, roles, permissions, API credentials, audit and sessions.
+
+`Template`, `TemplateVersion` and `TemplatePage` are not exposed as direct AdminJS CRUD resources. The user works with a single template catalog, while backend services create the required `template -> template_version -> template_page` records.
+
+### Frontend Folder
+
+The frontend folder is retained for React UI work, reusable views and future pdfme Designer components. It should not become a second independent panel for users. Business screens must be surfaced through AdminJS custom pages.
+
+---
+
+## Stack
+
+| Area | Tool |
 | --- | --- |
-| Store templates | Template/version/page data model |
-| Manage templates visually | Internal dashboard foundation |
-| Protect internal tools | Login, sessions, users, access ranges |
-| Generate PDFs from other systems | API key protected endpoints |
-| Self-host PDF generation | One deployable Next.js app |
-| Avoid building backend glue from scratch | Prisma + PostgreSQL + API routes |
+| Main panel | AdminJS |
+| UI source | React + Vite |
+| Admin UI system | `@adminjs/design-system` |
+| Backend | Express on Node.js |
+| Database | PostgreSQL |
+| ORM | Prisma |
+| PDF generation | pdfme |
+| Auth base | AdminJS authenticated router + PostgreSQL sessions |
+| API credentials | Prefix + hashed secret + expiration + scopes |
+
+AdminJS v7 is ESM-only, so the backend uses `type: module` and TypeScript `NodeNext` module resolution.
 
 ---
 
-## Built with
+## Environment
 
-- [pdfme](https://github.com/pdfme/pdfme) — PDF template and generation engine.
-- [Next.js](https://nextjs.org/) — Full-stack App Router framework.
-- [React](https://react.dev/) — User interface.
-- [TypeScript](https://www.typescriptlang.org/) — Typed JavaScript.
-- [PostgreSQL](https://www.postgresql.org/) — Database.
-- [Prisma](https://www.prisma.io/) — Data access and schema management.
-- [Tailwind CSS](https://tailwindcss.com/) — Styling foundation.
-- [shadcn/ui](https://ui.shadcn.com/) style components — Local, editable UI primitives.
-- [jose](https://github.com/panva/jose) — JWT sessions.
-- [bcryptjs](https://github.com/dcodeIO/bcrypt.js) — Password hashing.
-
----
-
-## How it works
-
-```mermaid
-flowchart LR
-    A[Internal User] --> B[Dashboard]
-    B --> C[Templates]
-    B --> D[Users]
-    B --> E[API Keys]
-
-    F[External System] --> G[x-api-key]
-    G --> H[pdfme-server API]
-    H --> I[Load Template]
-    H --> J[Validate Input]
-    I --> K[pdfme Generator]
-    J --> K
-    K --> L[PDF Response]
-```
-
----
-
-## Getting Started
-
-### Requirements
-
-- Node.js `20.19.5+`
-- npm
-- PostgreSQL
-
-> Tailwind 4 requires Node 20+. Do not install/build this project with Node 18.
-
-### 1. Clone
+The backend has its own environment file:
 
 ```bash
-git clone https://github.com/your-org/pdfme-server.git
-cd pdfme-server
+cp backend/.env.example backend/.env
 ```
 
-### 2. Install dependencies
-
-```bash
-npm install
-```
-
-### 3. Configure environment variables
-
-Create `.env` from `.env.example`:
-
-```bash
-cp .env.example .env
-```
-
-Required variables:
+Required backend variables:
 
 ```env
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
-AUTH_SECRET=change-this-auth-secret
-AUTH_COOKIE_NAME=company_session
+BACKEND_PORT=4000
+ADMIN_ROOT_PATH=/admin
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=change-this-admin-password
-NEXT_PUBLIC_APP_NAME=Pdfme Server
+SESSION_SECRET=change-this-session-secret
+ADMIN_COOKIE_NAME=pdfme_admin
+API_KEY_SECRET=change-this-api-key-secret
 ```
 
-### 4. Generate Prisma client
+---
+
+## Development
+
+Install backend dependencies:
+
+```bash
+cd backend
+npm install
+```
+
+Generate Prisma client:
 
 ```bash
 npm run prisma:generate
 ```
 
-### 5. Apply database schema
+Apply schema to PostgreSQL:
 
 ```bash
 npm run prisma:push
 ```
 
-The project also includes a manual SQL index for ensuring one current template version per template:
-
-```txt
-prisma/sql/template_version_one_current_per_template.sql
-```
-
-### 6. Seed the initial admin and access data
+Seed initial roles and admin user:
 
 ```bash
 npm run prisma:seed
 ```
 
-### 7. Run development server
+Run backend:
 
 ```bash
 npm run dev
@@ -201,56 +150,75 @@ npm run dev
 Open:
 
 ```txt
-http://localhost:3000
+AdminJS:  http://localhost:4000/admin
+Health:   http://localhost:4000/api/health
 ```
 
 ---
 
-## Scripts
+## Database Model
 
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Start Next.js in development mode. |
-| `npm run build` | Build the production app. |
-| `npm run start` | Start the production build. |
-| `npm run check` | Run TypeScript checks. |
-| `npm run prisma:generate` | Generate Prisma client. |
-| `npm run prisma:push` | Push Prisma schema to the database. |
-| `npm run prisma:migrate` | Run Prisma migrate dev. |
-| `npm run prisma:seed` | Seed roles, permissions, and admin user. |
+The Prisma schema lives in:
+
+```txt
+backend/prisma/schema.prisma
+```
+
+Main tables:
+
+- `user_account`
+- `access_role`
+- `access_permission`
+- `api_credential`
+- `template`
+- `template_version`
+- `template_page`
+- `tag`
+- `audit_event`
+- `session`
+
+Template structure:
+
+- one `template` has many `template_version`,
+- one `template_version` has many `template_page`,
+- current version is marked with `is_current`,
+- pages store pdfme designer JSON, page format, orientation, size, padding and optional base PDF metadata,
+- generated PDFs are not stored by design.
+
+Manual SQL helper:
+
+```txt
+backend/prisma/sql/template_version_one_current_per_template.sql
+```
 
 ---
 
-## App Routes
+## API Base
 
-| Route | Purpose |
-| --- | --- |
-| `/login` | Internal login. |
-| `/templates` | Template catalog and preview table. |
-| `/access` | Internal users, ranges, and simple access controls. |
-| `/api-credentials` | API key table and key creation modal. |
-| `/dashboard` | Alias that renders the template catalog. |
-
----
-
-## API
-
-### Health check
+### Health
 
 ```http
 GET /api/health
 ```
 
-### List templates
+### Internal Template Catalog
+
+Used by the AdminJS custom page:
+
+```http
+GET /api/templates
+POST /api/templates
+DELETE /api/templates/:id
+```
+
+### List Templates For External Systems
 
 ```http
 GET /api/v1/templates
 x-api-key: YOUR_API_KEY
 ```
 
-Returns the template catalog available to external systems.
-
-### Render document
+### Render PDF
 
 ```http
 POST /api/v1/render
@@ -258,176 +226,49 @@ x-api-key: YOUR_API_KEY
 Content-Type: application/json
 ```
 
-Current status: endpoint reserved. Real pdfme rendering is planned but not connected yet.
-
-Expected future payload shape:
-
-```json
-{
-  "templateId": "template-id",
-  "inputs": {
-    "fullName": "Jane Doe",
-    "documentId": "DOC-001"
-  }
-}
-```
+Current status: endpoint validates API key and scope, but real pdfme rendering is still pending.
 
 ---
 
-## Project Structure
+## Project Status
+
+See:
 
 ```txt
-pdfme-server/
-├── app/                    # Next.js routes and API handlers
-│   ├── api/                # Internal and external API endpoints
-│   ├── login/              # Login page
-│   ├── templates/          # Template catalog
-│   ├── access/             # User/access management
-│   └── api-credentials/    # API key management
-├── components/ui/          # Local shadcn-style UI primitives
-├── features/               # Feature-based application modules
-│   ├── auth/
-│   ├── dashboard/
-│   ├── templates/
-│   ├── access/
-│   └── api-credentials/
-├── lib/                    # Shared infrastructure helpers
-├── prisma/                 # Prisma schema, seed, and SQL helpers
-├── README.md
-├── LICENSE
-└── package.json
+docs/PROJECT_STATUS.md
+docs/ADMINJS_DATABASE_RULES.md
+docs/SCHEMA_V1_DECISIONS.md
 ```
-
----
-
-## Architecture
-
-This project intentionally uses a **single Next.js app** instead of separate frontend/backend services.
-
-The backend lives in `app/api/*`, while business logic lives in `features/*/server/*`. This keeps routes thin and feature code close to the UI it supports.
-
-Benefits:
-
-- one deployable app,
-- one auth/session layer,
-- direct Prisma access from server routes,
-- simpler pdfme integration,
-- easier self-hosting.
-
----
-
-## Database Model
-
-The Prisma schema uses PostgreSQL with `snake_case` table and column mappings.
-
-Main entities:
-
-- `UserAccount` → `user_account`
-- `AccessRole` → `access_role`
-- `AccessPermission` → `access_permission`
-- `ApiCredential` → `api_credential`
-- `Template` → `template`
-- `TemplateVersion` → `template_version`
-- `TemplatePage` → `template_page`
-- `Tag` → `tag`
-- `AuditEvent` → `audit_event`
-
-Template model:
-
-- one `Template` has many `TemplateVersion`,
-- one `TemplateVersion` has many `TemplatePage`,
-- current version is marked with `isCurrent`,
-- pages store pdfme designer JSON, format, orientation, size, padding, and optional base PDF metadata.
-
-No generated PDF history is stored by design.
-
----
-
-## Self Hosting
-
-The app is designed to run anywhere a Next.js server and PostgreSQL are available:
-
-- VPS
-- Docker
-- Coolify
-- Railway
-- Render
-- Fly.io
-- Vercel with PostgreSQL-compatible database
-- AWS / DigitalOcean
-
-Docker support is planned.
 
 ---
 
 ## Roadmap
 
-- [x] Next.js monolith base
-- [x] Login and protected dashboard routes
+- [x] Single backend/AdminJS app base
+- [x] AdminJS authenticated main panel
 - [x] PostgreSQL + Prisma schema
-- [x] Internal users and simplified access UI
-- [x] API key creation with expiration
-- [x] Template catalog table
+- [x] Internal users and simplified access data
+- [x] API key creation, scopes and revocation
+- [x] Template catalog custom page inside AdminJS
 - [x] External API key validation
-- [ ] Template CRUD UI
-- [ ] pdfme Designer integration
-- [ ] Store pdfme designer JSON from the UI
+- [ ] Template edit page inside AdminJS custom workflow
+- [ ] pdfme Designer integration inside AdminJS custom page
+- [ ] Store pdfme designer JSON from the custom UI
 - [ ] Real PDF preview
 - [ ] Real `POST /api/v1/render` PDF generation
-- [ ] API key revocation
-- [ ] User creation flow
+- [ ] User management workflow
 - [ ] Docker support
-- [ ] Public API documentation
-
----
-
-## Screenshots
-
-> Screenshots will be added later.
-
-<div align="center">
-
-| Template Catalog | API Keys |
-| --- | --- |
-| Coming soon | Coming soon |
-
-</div>
-
----
-
-## Related Projects
-
-- [pdfme](https://github.com/pdfme/pdfme) — TypeScript-based PDF generation library.
-- [pdfme documentation](https://pdfme.com/docs) — Official pdfme documentation.
-- [pdfme website](https://pdfme.com/) — Official pdfme website.
-- [shadcn/ui](https://ui.shadcn.com/) — UI component approach used for local primitives.
 
 ---
 
 ## Disclaimer
 
-**pdfme-server** is an independent community project built on top of [pdfme](https://github.com/pdfme/pdfme).
+`pdfme-server` is not affiliated with, endorsed by, sponsored by, or officially maintained by the pdfme team.
 
-This project is **not affiliated with, endorsed by, sponsored by, or officially maintained by the pdfme team**.
-
-The name **pdfme** belongs to its respective owners.
-
-This project only uses pdfme as an open-source dependency.
+The name `pdfme` belongs to its respective owners. This project uses pdfme as an open-source dependency.
 
 ---
 
 ## License
 
 This project is licensed under the [MIT License](./LICENSE).
-
-pdfme is also released under the MIT License. See the original project here:
-
-- [pdfme GitHub repository](https://github.com/pdfme/pdfme)
-
----
-
-<div align="center">
-
-Built with [pdfme](https://github.com/pdfme/pdfme) for self-hosted PDF template automation.
-
-</div>
