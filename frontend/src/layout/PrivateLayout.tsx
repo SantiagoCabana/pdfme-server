@@ -9,7 +9,6 @@ import {
   Drawer,
   IconButton,
   InputAdornment,
-  Link,
   List,
   ListItemButton,
   ListItemIcon,
@@ -26,7 +25,6 @@ import {
   ApiOutlined,
   BellOutlined,
   FileTextOutlined,
-  GithubOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -66,6 +64,11 @@ export function PrivateLayout() {
       ],
     },
   ], [user]);
+
+
+  const activeItem = groups.flatMap((group) => group.items).find((item) => (
+    location.pathname === item.path || (location.pathname === '/' && item.path === '/templates')
+  ));
 
   if (!user) return <Navigate to="/login" replace />;
 
@@ -164,7 +167,10 @@ export function PrivateLayout() {
           <IconButton aria-label="open drawer" color="secondary" edge="start" onClick={() => setOpen((value) => !value)}>
             {open ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
           </IconButton>
-          <Box sx={{ width: { xs: 1, sm: 260 }, display: { xs: 'none', sm: 'block' } }}>
+          <Typography variant="h4" color="text.primary" sx={{ minWidth: { xs: 0, md: 180 }, display: { xs: 'none', sm: 'block' } }} noWrap>
+            {activeItem?.label ?? 'Plantillas'}
+          </Typography>
+          <Box sx={{ width: { xs: 1, sm: 260 }, display: { xs: 'none', md: 'block' } }}>
             <OutlinedInput
               fullWidth
               id="header-search"
@@ -174,7 +180,6 @@ export function PrivateLayout() {
             />
           </Box>
           <Box sx={{ flexGrow: 1 }} />
-          <Tooltip title="Repositorio Mantis"><IconButton color="secondary" component={Link} href="https://github.com/codedthemes/mantis-free-react-admin-template" target="_blank"><GithubOutlined /></IconButton></Tooltip>
           <Tooltip title="Tema"><IconButton color="secondary" onClick={toggleMode}>{mode === 'dark' ? <MoonOutlined /> : <SunOutlined />}</IconButton></Tooltip>
           <Tooltip title="Notificaciones"><IconButton color="secondary"><Badge badgeContent={2} color="primary"><BellOutlined /></Badge></IconButton></Tooltip>
           <Tooltip title={user.email}><IconButton aria-label="open profile" color="secondary"><Avatar sx={{ width: 32, height: 32 }}>{user.displayName.slice(0, 1).toUpperCase()}</Avatar></IconButton></Tooltip>
