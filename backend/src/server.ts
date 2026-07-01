@@ -13,8 +13,39 @@ import { templatesRouter } from './routes/templates.route.js';
 const app = express();
 const PgSession = connectPgSimple(session);
 
+const configuredOrigins = new Set([
+  env.FRONTEND_URL,
+  ...(env.CORS_ALLOWED_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean) ?? []),
+]);
+
+function isLocalDevelopmentOrigin(origin: string) {
+  if (env.NODE_ENV === 'production') {
+    return false;
+  }
+
+  try {
+    const url = new URL(origin);
+    return (
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      url.hostname.startsWith('192.168.') ||
+      url.hostname.startsWith('10.') ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(url.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 app.use(cors({
-  origin: env.FRONTEND_URL,
+  origin(origin, callback) {
+    if (!origin || configuredOrigins.has(origin) || isLocalDevelopmentOrigin(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`Origen no permitido por CORS: ${origin}`));
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
