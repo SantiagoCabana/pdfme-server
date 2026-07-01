@@ -34,12 +34,14 @@ export function UsersPage() {
   useEffect(() => {
     setHeaderAction({
       label: 'Agregar',
+      title: 'Nuevo usuario',
+      maxWidth: 'sm',
       content: (
-        <Stack component="form" direction={{ xs: 'column', lg: 'row' }} spacing={1.5} onSubmit={create}>
-          <TextField label="Nombre" onChange={(event) => setDisplayName(event.target.value)} value={displayName} />
-          <TextField label="Correo" onChange={(event) => setEmail(event.target.value)} type="email" value={email} />
-          <TextField label="Contrasena inicial" onChange={(event) => setPassword(event.target.value)} type="password" value={password} />
-          <TextField label="Rol" onChange={(event) => setRoleCode(event.target.value)} select value={roleCode} sx={{ minWidth: 160 }}>
+        <Stack component="form" spacing={2} onSubmit={create}>
+          <TextField autoFocus fullWidth label="Nombre" onChange={(event) => setDisplayName(event.target.value)} value={displayName} />
+          <TextField fullWidth label="Correo" onChange={(event) => setEmail(event.target.value)} type="email" value={email} />
+          <TextField fullWidth label="Contrasena inicial" onChange={(event) => setPassword(event.target.value)} type="password" value={password} />
+          <TextField fullWidth label="Rol" onChange={(event) => setRoleCode(event.target.value)} select value={roleCode}>
             <MenuItem value="VIEWER">Viewer</MenuItem>
             <MenuItem value="EDITOR">Editor</MenuItem>
             <MenuItem value="MANAGER">Manager</MenuItem>

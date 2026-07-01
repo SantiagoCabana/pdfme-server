@@ -4,7 +4,9 @@ import type { ThemeMode } from '../theme/mantisTheme';
 
 type HeaderAction = {
   label: string;
+  title?: string;
   content: ReactNode;
+  maxWidth?: 'xs' | 'sm' | 'md' | 'lg';
 } | null;
 
 type AppContextValue = {

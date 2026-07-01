@@ -7,6 +7,7 @@ import { authRouter } from './routes/auth.route.js';
 import { healthRouter } from './routes/health.route.js';
 import { renderRouter } from './routes/render.route.js';
 import { templatesRouter } from './routes/templates.route.js';
+import { tagsRouter } from './routes/tags.route.js';
 import { usersRouter } from './routes/users.route.js';
 
 const app = express();
@@ -56,6 +57,7 @@ app.use('/api', healthRouter);
 app.use('/api', authRouter);
 app.use('/api', apiCredentialsRouter);
 app.use('/api', templatesRouter);
+app.use('/api', tagsRouter);
 app.use('/api', usersRouter);
 app.use('/api', renderRouter);
 

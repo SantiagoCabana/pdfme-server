@@ -5,7 +5,9 @@ import {
   Avatar,
   Box,
   Button,
-  Collapse,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   Divider,
   Drawer,
   IconButton,
@@ -27,6 +29,7 @@ import {
   MenuUnfoldOutlined,
   MoonOutlined,
   SunOutlined,
+  TagsOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 
@@ -50,6 +53,7 @@ export function PrivateLayout() {
   const items = useMemo(() => [
     { path: '/templates', label: 'Plantillas', icon: <FileTextOutlined />, visible: can(user, 'templates.view') },
     { path: '/api-keys', label: 'Claves API', icon: <ApiOutlined />, visible: can(user, 'api_keys.manage') },
+    { path: '/tags', label: 'Tags', icon: <TagsOutlined />, visible: can(user, 'templates.edit') },
     { path: '/users', label: 'Usuarios', icon: <UserOutlined />, visible: can(user, 'users.manage') },
   ], [user]);
 
@@ -259,19 +263,16 @@ export function PrivateLayout() {
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
           {headerAction ? (
-            <Button onClick={() => setHeaderActionOpen((value) => !value)} variant={headerActionOpen ? 'outlined' : 'contained'}>
-              {headerActionOpen ? 'Ocultar' : headerAction.label}
+            <Button onClick={() => setHeaderActionOpen(true)} variant="contained">
+              {headerAction.label}
             </Button>
           ) : null}
         </Toolbar>
-        {headerAction ? (
-          <Collapse in={headerActionOpen} timeout={220} unmountOnExit>
-            <Box sx={{ borderTop: `1px solid ${theme.palette.divider}`, px: { xs: 2, md: 3 }, py: 2, bgcolor: 'background.paper' }}>
-              {headerAction.content}
-            </Box>
-          </Collapse>
-        ) : null}
       </AppBar>
+      <Dialog fullWidth maxWidth={headerAction?.maxWidth ?? 'sm'} onClose={() => setHeaderActionOpen(false)} open={Boolean(headerAction && headerActionOpen)}>
+        {headerAction?.title ? <DialogTitle>{headerAction.title}</DialogTitle> : null}
+        <DialogContent dividers>{headerAction?.content}</DialogContent>
+      </Dialog>
       <Box component="nav" sx={{ width: { lg: currentDrawerWidth }, flexShrink: { lg: 0 }, transition: sidebarTransition }}>
         <Drawer
           ModalProps={{ keepMounted: true }}
@@ -283,7 +284,7 @@ export function PrivateLayout() {
           {drawer}
         </Drawer>
       </Box>
-      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 }, pt: headerActionOpen ? { xs: 25, md: 21 } : { xs: 11, md: 12 }, transition: sidebarTransition }}>
+      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 }, pt: { xs: 11, md: 12 }, transition: sidebarTransition }}>
         <Outlet />
       </Box>
     </Box>

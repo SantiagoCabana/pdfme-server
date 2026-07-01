@@ -34,10 +34,12 @@ export function ApiKeysPage() {
   useEffect(() => {
     setHeaderAction({
       label: 'Agregar',
+      title: 'Nueva clave API',
+      maxWidth: 'sm',
       content: (
-        <Stack component="form" direction={{ xs: 'column', md: 'row' }} spacing={1.5} onSubmit={create}>
-          <TextField label="Nombre" onChange={(event) => setName(event.target.value)} value={name} />
-          <TextField label="Expiracion" onChange={(event) => setExpiryMode(event.target.value)} select value={expiryMode} sx={{ minWidth: 190 }}>
+        <Stack component="form" spacing={2} onSubmit={create}>
+          <TextField autoFocus fullWidth label="Nombre" onChange={(event) => setName(event.target.value)} value={name} />
+          <TextField fullWidth label="Expiracion" onChange={(event) => setExpiryMode(event.target.value)} select value={expiryMode}>
             <MenuItem value="never">Nunca expira</MenuItem>
             <MenuItem value="7">7 dias</MenuItem>
             <MenuItem value="30">30 dias</MenuItem>

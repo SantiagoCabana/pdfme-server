@@ -12,7 +12,6 @@ export function TemplatesPage() {
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [tags, setTags] = useState('');
   const [error, setError] = useState('');
 
   async function load() {
@@ -25,8 +24,8 @@ export function TemplatesPage() {
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
-    await apiRequest('/api/templates', { method: 'POST', body: JSON.stringify({ name, description: description || null, tagNames: tags.split(',').map((tag) => tag.trim()).filter(Boolean) }) });
-    setName(''); setDescription(''); setTags('');
+    await apiRequest('/api/templates', { method: 'POST', body: JSON.stringify({ name, description: description || null }) });
+    setName(''); setDescription('');
     await load();
   }
 
@@ -39,18 +38,19 @@ export function TemplatesPage() {
 
     setHeaderAction({
       label: 'Agregar',
+      title: 'Nueva plantilla',
+      maxWidth: 'sm',
       content: (
-        <Stack component="form" direction={{ xs: 'column', md: 'row' }} spacing={1.5} onSubmit={create}>
-          <TextField label="Nombre" onChange={(event) => setName(event.target.value)} value={name} />
-          <TextField label="Descripcion" onChange={(event) => setDescription(event.target.value)} value={description} />
-          <TextField label="Etiquetas" onChange={(event) => setTags(event.target.value)} value={tags} />
-          <Button startIcon={<PlusOutlined />} type="submit" variant="contained">Crear</Button>
+        <Stack component="form" spacing={2} onSubmit={create}>
+          <TextField autoFocus fullWidth label="Nombre" onChange={(event) => setName(event.target.value)} value={name} />
+          <TextField fullWidth label="Descripcion" minRows={3} multiline onChange={(event) => setDescription(event.target.value)} value={description} />
+          <Button startIcon={<PlusOutlined />} type="submit" variant="contained">Crear plantilla</Button>
         </Stack>
       ),
     });
 
     return () => setHeaderAction(null);
-  }, [description, name, setHeaderAction, tags, user]);
+  }, [description, name, setHeaderAction, user]);
 
   async function publish(id: string) { await apiRequest(`/api/templates/${id}/publish`, { method: 'PATCH' }); await load(); }
   async function remove(id: string) { await apiRequest(`/api/templates/${id}`, { method: 'DELETE' }); await load(); }

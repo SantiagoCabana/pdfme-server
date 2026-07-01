@@ -40,3 +40,11 @@ export type InternalUser = {
   roles: string[];
   lastLoginAt: string | null;
 };
+
+export type TagItem = {
+  id: string;
+  name: string;
+  templateCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
