@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FileKey2, FileText, KeyRound, LogOut, Moon, Plus, Shield, Sun, Trash2, UserRound } from 'lucide-react';
+import type { ColumnDef } from '@tanstack/react-table';
 
 import { apiRequest } from './shared/api/client';
+import { DataTable } from './shared/components/DataTable';
 import './App.css';
 
 type SessionUser = {
@@ -242,6 +244,48 @@ export default function App() {
     }
   }
 
+
+  const templateColumns = useMemo<ColumnDef<TemplateItem>[]>(() => [
+    {
+      header: 'Plantilla',
+      cell: ({ row }) => (
+        <div className="templateCell">
+          <span className={row.original.pageOrientation === 'LANDSCAPE' ? 'preview landscape' : 'preview'} />
+          <div><strong>{row.original.name}</strong><small>{row.original.code}</small></div>
+        </div>
+      ),
+    },
+    { header: 'Estado', cell: ({ row }) => <span className="pill">{statusLabel(row.original.status)}</span> },
+    { header: 'Version', cell: ({ row }) => <>v{row.original.versionNumber}{row.original.isPublished ? ' publicada' : ''}</> },
+    { header: 'Hoja', cell: ({ row }) => <>{row.original.pageFormat} {row.original.pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}</> },
+    { header: 'Tags', cell: ({ row }) => row.original.tags.join(', ') || 'Sin etiquetas' },
+    {
+      header: 'Acciones',
+      cell: ({ row }) => (
+        <div className="actions">
+          {can(user, 'templates.publish') ? <button onClick={() => void publishTemplate(row.original.id)} type="button">Publicar</button> : null}
+          {can(user, 'templates.delete') ? <button className="danger" onClick={() => void deleteTemplate(row.original.id)} type="button"><Trash2 size={14} /></button> : null}
+        </div>
+      ),
+    },
+  ], [user]);
+
+  const apiKeyColumns = useMemo<ColumnDef<ApiCredential>[]>(() => [
+    { header: 'Nombre', accessorKey: 'name' },
+    { header: 'Identificador', accessorKey: 'prefix' },
+    { header: 'Estado', cell: ({ row }) => <span className="pill">{statusLabel(row.original.status)}</span> },
+    { header: 'Expira', cell: ({ row }) => formatDate(row.original.expiresAt) },
+    { header: 'Ultimo uso', cell: ({ row }) => formatDate(row.original.lastUsedAt) },
+    { header: '', cell: ({ row }) => row.original.status === 'ACTIVE' ? <button onClick={() => void revokeCredential(row.original.id)} type="button">Revocar</button> : null },
+  ], []);
+
+  const userColumns = useMemo<ColumnDef<InternalUser>[]>(() => [
+    { header: 'Usuario', cell: ({ row }) => <><strong>{row.original.displayName}</strong><small>{row.original.email}</small></> },
+    { header: 'Rol', cell: ({ row }) => row.original.roles.join(', ') || 'Sin rol' },
+    { header: 'Estado', cell: ({ row }) => <span className="pill">{statusLabel(row.original.status)}</span> },
+    { header: 'Ultimo acceso', cell: ({ row }) => formatDate(row.original.lastLoginAt) },
+  ], []);
+
   if (loading) return <main className="loadingShell">Cargando...</main>;
 
   if (!user) {
@@ -287,29 +331,20 @@ export default function App() {
             <input placeholder="Etiquetas: certificado, rrhh" value={templateTags} onChange={(event) => setTemplateTags(event.target.value)} />
             <button type="submit"><Plus size={15} />Crear</button>
           </form> : null}
-          <div className="tableWrap"><table><thead><tr><th>Plantilla</th><th>Estado</th><th>Version</th><th>Hoja</th><th>Tags</th><th>Acciones</th></tr></thead><tbody>
-            {templates.length === 0 ? <tr><td colSpan={6}>No hay plantillas.</td></tr> : templates.map((template) => <tr key={template.id}>
-              <td><div className="templateCell"><span className={template.pageOrientation === 'LANDSCAPE' ? 'preview landscape' : 'preview'} /><div><strong>{template.name}</strong><small>{template.code}</small></div></div></td>
-              <td><span className="pill">{statusLabel(template.status)}</span></td>
-              <td>v{template.versionNumber}{template.isPublished ? ' publicada' : ''}</td>
-              <td>{template.pageFormat} {template.pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}</td>
-              <td>{template.tags.join(', ') || 'Sin etiquetas'}</td>
-              <td className="actions">{can(user, 'templates.publish') ? <button onClick={() => void publishTemplate(template.id)} type="button">Publicar</button> : null}{can(user, 'templates.delete') ? <button className="danger" onClick={() => void deleteTemplate(template.id)} type="button"><Trash2 size={14} /></button> : null}</td>
-            </tr>)}
-          </tbody></table></div>
+          <DataTable columns={templateColumns} data={templates} emptyText="No hay plantillas." />
         </section> : null}
 
         {section === 'apiKeys' && can(user, 'api_keys.manage') ? <section className="panel">
           <div className="panelHeader"><div><h2>Claves API</h2><p>Acceso externo completo con expiracion y revocacion.</p></div></div>
           <form className="formGrid compact" onSubmit={createCredential}><input value={credentialName} onChange={(event) => setCredentialName(event.target.value)} /><select value={expiryMode} onChange={(event) => setExpiryMode(event.target.value)}><option value="never">Nunca expira</option><option value="7">7 dias</option><option value="30">30 dias</option><option value="90">90 dias</option><option value="365">1 ano</option></select><button type="submit"><KeyRound size={15} />Crear clave</button></form>
           {generatedKey ? <div className="secretBox"><strong>Clave generada</strong><code>{generatedKey}</code><small>Guardala ahora. No se volvera a mostrar completa.</small></div> : null}
-          <div className="tableWrap"><table><thead><tr><th>Nombre</th><th>Identificador</th><th>Estado</th><th>Expira</th><th>Ultimo uso</th><th></th></tr></thead><tbody>{credentials.length === 0 ? <tr><td colSpan={6}>No hay claves.</td></tr> : credentials.map((credential) => <tr key={credential.id}><td>{credential.name}</td><td>{credential.prefix}</td><td><span className="pill">{statusLabel(credential.status)}</span></td><td>{formatDate(credential.expiresAt)}</td><td>{formatDate(credential.lastUsedAt)}</td><td>{credential.status === 'ACTIVE' ? <button onClick={() => void revokeCredential(credential.id)} type="button">Revocar</button> : null}</td></tr>)}</tbody></table></div>
+          <DataTable columns={apiKeyColumns} data={credentials} emptyText="No hay claves." />
         </section> : null}
 
         {section === 'users' && can(user, 'users.manage') ? <section className="panel">
           <div className="panelHeader"><div><h2>Usuarios internos</h2><p>Solo admins crean accesos. No existe registro publico.</p></div><Shield size={22} /></div>
           <form className="formGrid" onSubmit={createUser}><input placeholder="Nombre" value={newUserName} onChange={(event) => setNewUserName(event.target.value)} /><input placeholder="Correo" value={newUserEmail} onChange={(event) => setNewUserEmail(event.target.value)} type="email" /><input placeholder="Contrasena inicial" value={newUserPassword} onChange={(event) => setNewUserPassword(event.target.value)} type="password" /><select value={newUserRole} onChange={(event) => setNewUserRole(event.target.value)}><option value="VIEWER">Viewer</option><option value="EDITOR">Editor</option><option value="MANAGER">Manager</option><option value="ADMIN">Admin</option></select><button type="submit"><Plus size={15} />Crear usuario</button></form>
-          <div className="tableWrap"><table><thead><tr><th>Usuario</th><th>Rol</th><th>Estado</th><th>Ultimo acceso</th></tr></thead><tbody>{users.length === 0 ? <tr><td colSpan={4}>No hay usuarios.</td></tr> : users.map((item) => <tr key={item.id}><td><strong>{item.displayName}</strong><small>{item.email}</small></td><td>{item.roles.join(', ') || 'Sin rol'}</td><td><span className="pill">{statusLabel(item.status)}</span></td><td>{formatDate(item.lastLoginAt)}</td></tr>)}</tbody></table></div>
+          <DataTable columns={userColumns} data={users} emptyText="No hay usuarios." />
         </section> : null}
       </section>
     </main>

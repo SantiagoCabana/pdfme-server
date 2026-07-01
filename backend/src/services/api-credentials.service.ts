@@ -74,7 +74,7 @@ export async function createApiCredential(input: {
       keyHash: key.keyHash,
       expiresAt: input.expiresAt ?? null,
       createdById: input.createdById ?? null,
-      allowedOrigins: input.allowedOrigins ?? null,
+      allowedOrigins: input.allowedOrigins ?? undefined,
     },
   });
 
