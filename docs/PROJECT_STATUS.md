@@ -23,14 +23,14 @@ La base Next monolito fue reemplazada por una sola app `backend/` con AdminJS co
 ## Avanzado
 
 - Repositorio limpiado de archivos Next que ya no se usaran.
-- Frontend restaurado con UI funcional de catalogo de plantillas para desarrollo e integracion, no como panel separado final.
+- Frontend conservado como proyecto auxiliar React/Vite; redirige al panel principal y no es una segunda experiencia para usuarios finales.
 - Raiz dejada solo para presentacion y metadatos.
 - Variables de entorno consolidadas en `backend/.env`.
 - `backend/package.json` independiente creado.
 - Prisma movido a `backend/prisma`.
 - Seed backend creado para roles, permisos y admin inicial.
 - Backend Express creado.
-- AdminJS montado en `/admin` como panel principal.
+- AdminJS montado en `/` como panel principal.
 - AdminJS tiene pagina custom `Plantillas`.
 - Sesiones AdminJS preparadas con PostgreSQL.
 - API base creada:
@@ -61,14 +61,14 @@ La base Next monolito fue reemplazada por una sola app `backend/` con AdminJS co
 - AdminJS no expone Template/TemplateVersion/TemplatePage como CRUD visible.
 - Backend interno `/api/templates` crea plantillas como una sola entidad y genera version/pagina inicial automaticamente.
 - La pagina custom de AdminJS usa `/api/templates` para manejar plantillas como entidad unica.
-- Placeholder frontend eliminado; la UI funcional de plantillas fue restaurada.
+- Frontend auxiliar apunta al panel principal de AdminJS para evitar dos vistas separadas.
 - Endpoints externos validan scopes desde `api_credential_permission`.
 
 ## Faltante Para Probar Bien
 
 1. Ejecutar backend desde `backend/` con `npm run dev`.
 2. Validar login AdminJS con las credenciales configuradas.
-3. Validar pagina AdminJS `Plantillas` en `http://localhost:4000/admin/pages/templates`.
+3. Validar pagina AdminJS `Plantillas` en `http://localhost:4000/pages/templates`.
 4. Crear y eliminar una plantilla desde el panel AdminJS.
 5. Confirmar que la base remota acepta conexiones estables desde el entorno local.
 

@@ -6,6 +6,7 @@ import {
   listApiCredentials,
   revokeApiCredential,
 } from '../services/api-credentials.service.js';
+import { requireAdminPermission } from '../middleware/admin-session.js';
 
 export const apiCredentialsRouter = Router();
 
@@ -15,12 +16,12 @@ const createCredentialSchema = z.object({
   permissionCodes: z.array(z.string().min(1)).optional(),
 });
 
-apiCredentialsRouter.get('/api-credentials', async (_request, response) => {
+apiCredentialsRouter.get('/api-credentials', requireAdminPermission('api-credentials.read'), async (_request, response) => {
   const credentials = await listApiCredentials();
   response.json({ data: credentials });
 });
 
-apiCredentialsRouter.post('/api-credentials', async (request, response) => {
+apiCredentialsRouter.post('/api-credentials', requireAdminPermission('api-credentials.write'), async (request, response) => {
   const parsed = createCredentialSchema.safeParse(request.body);
 
   if (!parsed.success) {
@@ -37,7 +38,7 @@ apiCredentialsRouter.post('/api-credentials', async (request, response) => {
   response.status(201).json({ ok: true, credential: result.credential, rawKey: result.rawKey });
 });
 
-apiCredentialsRouter.patch('/api-credentials/:id/revoke', async (request, response) => {
+apiCredentialsRouter.patch('/api-credentials/:id/revoke', requireAdminPermission('api-credentials.write'), async (request, response) => {
   try {
     const credential = await revokeApiCredential(request.params.id);
     response.json({ ok: true, credential });

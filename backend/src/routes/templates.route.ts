@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { authenticateApiKey, hasApiPermission } from '../services/api-credentials.service.js';
 import { createTemplate, deleteTemplate, listTemplateCatalog } from '../services/templates.service.js';
+import { requireAdminPermission } from '../middleware/admin-session.js';
 
 export const templatesRouter = Router();
 
@@ -12,11 +13,11 @@ const createTemplateSchema = z.object({
   tagNames: z.array(z.string().min(1)).optional(),
 });
 
-templatesRouter.get('/templates', async (_request, response) => {
+templatesRouter.get('/templates', requireAdminPermission('templates.read'), async (_request, response) => {
   response.json({ data: await listTemplateCatalog() });
 });
 
-templatesRouter.post('/templates', async (request, response) => {
+templatesRouter.post('/templates', requireAdminPermission('templates.write'), async (request, response) => {
   const parsed = createTemplateSchema.safeParse(request.body);
 
   if (!parsed.success) {
@@ -33,7 +34,7 @@ templatesRouter.post('/templates', async (request, response) => {
   response.status(201).json({ ok: true, template });
 });
 
-templatesRouter.delete('/templates/:id', async (request, response) => {
+templatesRouter.delete('/templates/:id', requireAdminPermission('templates.delete'), async (request, response) => {
   try {
     await deleteTemplate(request.params.id);
     response.json({ ok: true });

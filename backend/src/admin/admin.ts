@@ -1,6 +1,7 @@
-import AdminJS, { ComponentLoader, type ActionContext, type ResourceOptions } from 'adminjs';
+import AdminJS, { ComponentLoader, type ActionContext, type CurrentAdmin, type ResourceOptions } from 'adminjs';
 import { Database, Resource, getModelByName } from '@adminjs/prisma';
 
+import { hasPermission, type AdminSessionUser } from '../auth/admin-auth.js';
 import { prisma } from '../prisma.js';
 
 AdminJS.registerAdapter({ Database, Resource });
@@ -18,6 +19,14 @@ const navigation = {
   api: { name: 'API', icon: 'Key' },
   system: { name: 'Sistema', icon: 'Settings' },
 } satisfies Record<string, NavigationGroup>;
+
+function getAdminUser(currentAdmin: CurrentAdmin | AdminSessionUser | undefined) {
+  return currentAdmin as AdminSessionUser | undefined;
+}
+
+function can(permission: string) {
+  return (context: ActionContext) => hasPermission(getAdminUser(context.currentAdmin), permission);
+}
 
 const readonlyActions = {
   new: { isAccessible: false },
@@ -44,6 +53,14 @@ function resource(modelName: string, options: ResourceOptions) {
 
 const resources = [
   resource('UserAccount', {
+    actions: {
+      list: { isAccessible: can('users.read') },
+      show: { isAccessible: can('users.read') },
+      edit: { isAccessible: can('users.write') },
+      new: { isAccessible: false },
+      delete: { isAccessible: false },
+      bulkDelete: { isAccessible: false },
+    },
     navigation: navigation.access,
     listProperties: ['displayName', 'email', 'status', 'isSuperAdmin', 'updatedAt'],
     filterProperties: ['email', 'displayName', 'status', 'isInternal', 'isSuperAdmin'],
@@ -52,32 +69,46 @@ const resources = [
     properties: {
       passwordHash: { isVisible: false },
     },
-    actions: {
-      new: { isAccessible: false },
-      delete: { isAccessible: false },
-      bulkDelete: { isAccessible: false },
-    },
   }),
   resource('AccessRole', {
+    actions: {
+      list: { isAccessible: can('users.read') },
+      show: { isAccessible: can('users.read') },
+      edit: { isAccessible: can('users.write') },
+      new: { isAccessible: can('users.write') },
+      delete: { isAccessible: (context) => can('users.write')(context) && isNotSystemRecord(context) },
+      bulkDelete: { isAccessible: false },
+    },
     navigation: navigation.access,
     listProperties: ['code', 'name', 'isSystem', 'updatedAt'],
     filterProperties: ['code', 'name', 'isSystem'],
     showProperties: ['id', 'code', 'name', 'description', 'isSystem', 'createdAt', 'updatedAt'],
     editProperties: ['code', 'name', 'description', 'isSystem'],
-    actions: {
-      delete: { isAccessible: isNotSystemRecord },
-      bulkDelete: { isAccessible: false },
-    },
   }),
   resource('AccessPermission', {
+    actions: {
+      list: { isAccessible: can('users.read') },
+      show: { isAccessible: can('users.read') },
+      edit: { isAccessible: can('users.write') },
+      new: { isAccessible: can('users.write') },
+      delete: { isAccessible: false },
+      bulkDelete: { isAccessible: false },
+    },
     navigation: navigation.access,
     listProperties: ['code', 'name', 'category', 'updatedAt'],
     filterProperties: ['code', 'name', 'category'],
     showProperties: ['id', 'code', 'name', 'category', 'description', 'createdAt', 'updatedAt'],
     editProperties: ['code', 'name', 'category', 'description'],
-    actions: noDeleteActions,
   }),
   resource('UserAccountRole', {
+    actions: {
+      list: { isAccessible: can('users.read') },
+      show: { isAccessible: can('users.read') },
+      edit: { isAccessible: can('users.write') },
+      new: { isAccessible: can('users.write') },
+      delete: { isAccessible: can('users.write') },
+      bulkDelete: { isAccessible: false },
+    },
     navigation: navigation.access,
     listProperties: ['userAccountId', 'accessRoleId', 'assignedAt'],
     filterProperties: ['userAccountId', 'accessRoleId'],
@@ -85,6 +116,14 @@ const resources = [
     editProperties: ['userAccountId', 'accessRoleId'],
   }),
   resource('AccessRolePermission', {
+    actions: {
+      list: { isAccessible: can('users.read') },
+      show: { isAccessible: can('users.read') },
+      edit: { isAccessible: can('users.write') },
+      new: { isAccessible: can('users.write') },
+      delete: { isAccessible: can('users.write') },
+      bulkDelete: { isAccessible: false },
+    },
     navigation: navigation.access,
     listProperties: ['accessRoleId', 'accessPermissionId'],
     filterProperties: ['accessRoleId', 'accessPermissionId'],
@@ -93,6 +132,14 @@ const resources = [
   }),
 
   resource('ApiCredential', {
+    actions: {
+      list: { isAccessible: can('api-credentials.read') },
+      show: { isAccessible: can('api-credentials.read') },
+      edit: { isAccessible: can('api-credentials.write') },
+      new: { isAccessible: false },
+      delete: { isAccessible: false },
+      bulkDelete: { isAccessible: false },
+    },
     navigation: navigation.api,
     listProperties: ['name', 'prefix', 'status', 'expiresAt', 'lastUsedAt', 'updatedAt'],
     filterProperties: ['name', 'prefix', 'status', 'expiresAt', 'lastUsedAt'],
@@ -102,13 +149,16 @@ const resources = [
       keyHash: { isVisible: false },
       secretPreview: { isVisible: false },
     },
-    actions: {
-      new: { isAccessible: false },
-      delete: { isAccessible: false },
-      bulkDelete: { isAccessible: false },
-    },
   }),
   resource('ApiCredentialPermission', {
+    actions: {
+      list: { isAccessible: can('api-credentials.read') },
+      show: { isAccessible: can('api-credentials.read') },
+      edit: { isAccessible: can('api-credentials.write') },
+      new: { isAccessible: can('api-credentials.write') },
+      delete: { isAccessible: can('api-credentials.write') },
+      bulkDelete: { isAccessible: false },
+    },
     navigation: navigation.api,
     listProperties: ['apiCredentialId', 'accessPermissionId'],
     filterProperties: ['apiCredentialId', 'accessPermissionId'],
@@ -133,13 +183,24 @@ const resources = [
 ];
 
 export function createAdmin() {
-  return new AdminJS({
-    rootPath: process.env.ADMIN_ROOT_PATH ?? '/admin',
+  const rootPath = process.env.ADMIN_ROOT_PATH ?? '/';
+  const adminPaths = {
+    rootPath,
+    loginPath: rootPath === '/' ? '/login' : `${rootPath}/login`,
+    logoutPath: rootPath === '/' ? '/logout' : `${rootPath}/logout`,
+    refreshTokenPath: rootPath === '/' ? '/refresh-token' : `${rootPath}/refresh-token`,
+  };
+
+  const admin = new AdminJS({
+    ...adminPaths,
     branding: {
       companyName: 'Pdfme Server',
       withMadeWithLove: false,
     },
     componentLoader,
+    dashboard: {
+      component: TemplatesPage,
+    },
     pages: {
       templates: {
         icon: 'FileText',
@@ -148,4 +209,12 @@ export function createAdmin() {
     },
     resources,
   });
+
+  const renderLogin = admin.renderLogin.bind(admin);
+  admin.renderLogin = async (props) => {
+    const html = await renderLogin(props);
+    return html.replace(/\"paths\":\{[^}]*\}/, `\"paths\":${JSON.stringify(adminPaths)}`);
+  };
+
+  return admin;
 }

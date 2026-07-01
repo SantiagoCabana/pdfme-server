@@ -51,7 +51,7 @@ pdfme-server/
 ### Backend
 
 - Express server.
-- AdminJS main panel mounted at `/admin`.
+- AdminJS main panel mounted at `/`.
 - Custom AdminJS page `templates` for business template management.
 - Prisma as the main data layer.
 - PostgreSQL as the database.
@@ -104,7 +104,7 @@ Required backend variables:
 ```env
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
 BACKEND_PORT=4000
-ADMIN_ROOT_PATH=/admin
+ADMIN_ROOT_PATH=/
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=change-this-admin-password
 SESSION_SECRET=change-this-session-secret
@@ -150,7 +150,7 @@ npm run dev
 Open:
 
 ```txt
-AdminJS:  http://localhost:4000/admin
+AdminJS:  http://localhost:4000/
 Health:   http://localhost:4000/api/health
 ```
 

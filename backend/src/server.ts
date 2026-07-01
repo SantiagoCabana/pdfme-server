@@ -30,6 +30,17 @@ const sessionOptions: session.SessionOptions = {
   },
 };
 
+app.use(session({
+  ...sessionOptions,
+  secret: env.SESSION_SECRET,
+  name: env.ADMIN_COOKIE_NAME,
+}));
+
+app.use('/api', healthRouter);
+app.use('/api', apiCredentialsRouter);
+app.use('/api', templatesRouter);
+app.use('/api', renderRouter);
+
 const adminRouter = buildAuthenticatedRouter(
   admin,
   {
@@ -42,10 +53,6 @@ const adminRouter = buildAuthenticatedRouter(
 );
 
 app.use(admin.options.rootPath, adminRouter);
-app.use('/api', healthRouter);
-app.use('/api', apiCredentialsRouter);
-app.use('/api', templatesRouter);
-app.use('/api', renderRouter);
 
 app.listen(env.BACKEND_PORT, () => {
   console.log(`Backend listo en http://localhost:${env.BACKEND_PORT}`);
