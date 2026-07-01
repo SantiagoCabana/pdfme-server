@@ -61,14 +61,14 @@ La base Next monolito fue reemplazada por una sola app `backend/` con AdminJS co
 - AdminJS no expone Template/TemplateVersion/TemplatePage como CRUD visible.
 - Backend interno `/api/templates` crea plantillas como una sola entidad y genera version/pagina inicial automaticamente.
 - La pagina custom de AdminJS usa `/api/templates` para manejar plantillas como entidad unica.
-- Frontend auxiliar apunta al panel principal de AdminJS para evitar dos vistas separadas.
+- Frontend auxiliar ya no redirige al backend; queda como URL de interfaz React/Vite.
 - Endpoints externos validan scopes desde `api_credential_permission`.
 
 ## Faltante Para Probar Bien
 
 1. Ejecutar backend desde `backend/` con `npm run dev`.
 2. Validar login AdminJS con las credenciales configuradas.
-3. Validar pagina AdminJS `Plantillas` en `http://localhost:4000/pages/templates`.
+3. Validar frontend en `http://localhost:5173` y backend/API en `http://localhost:4000`.
 4. Crear y eliminar una plantilla desde el panel AdminJS.
 5. Confirmar que la base remota acepta conexiones estables desde el entorno local.
 

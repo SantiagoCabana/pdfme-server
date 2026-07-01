@@ -150,9 +150,11 @@ npm run dev
 Open:
 
 ```txt
-AdminJS:  http://localhost:4000/
-Health:   http://localhost:4000/api/health
+Frontend UI: http://localhost:5173
+Backend API: http://localhost:4000/api/health
 ```
+
+During development the frontend is the URL intended for users. The backend URL remains available for API, AdminJS runtime and health checks.
 
 ---
 

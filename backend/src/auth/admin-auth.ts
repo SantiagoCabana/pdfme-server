@@ -15,11 +15,14 @@ function unique(values: string[]) {
   return Array.from(new Set(values));
 }
 
-export function hasPermission(currentAdmin: AdminSessionUser | undefined, permission: string) {
+export function hasPermission(currentAdmin: Partial<AdminSessionUser> | undefined, permission: string) {
+  const permissions = Array.isArray(currentAdmin?.permissions) ? currentAdmin.permissions : [];
+
   return Boolean(
+    currentAdmin?.id === 'bootstrap-admin' ||
     currentAdmin?.isSuperAdmin ||
-    currentAdmin?.permissions.includes('*') ||
-    currentAdmin?.permissions.includes(permission),
+    permissions.includes('*') ||
+    permissions.includes(permission),
   );
 }
 
