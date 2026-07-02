@@ -6,7 +6,7 @@ import '@fontsource/public-sans/500.css';
 import '@fontsource/public-sans/600.css';
 import '@fontsource/public-sans/700.css';
 
-import { AppContext } from './app/AppContext';
+import { AppContext, type HeaderAction } from './app/AppContext';
 import type { SessionUser } from './app/types';
 import { LoginPage } from './features/auth/LoginPage';
 import { ApiKeysPage } from './features/api-keys/ApiKeysPage';
@@ -23,7 +23,7 @@ export default function App() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [reloadDataToken, setReloadDataToken] = useState(0);
-  const [headerAction, setHeaderAction] = useState<{ label: string; title?: string; content: ReactNode; maxWidth?: 'xs' | 'sm' | 'md' | 'lg' } | null>(null);
+  const [headerAction, setHeaderAction] = useState<HeaderAction>(null);
   const [headerActionOpen, setHeaderActionOpen] = useState(false);
   const [headerControls, setHeaderControls] = useState<ReactNode>(null);
   const [mode, setMode] = useState<ThemeMode>(() => localStorage.getItem('pdfme-theme') === 'dark' ? 'dark' : 'light');
