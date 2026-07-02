@@ -357,7 +357,7 @@ export function TemplatesPage() {
         <Button onClick={() => navigate('/templates')} startIcon={<ArrowLeftOutlined />}>Volver a plantillas</Button>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="subtitle2" noWrap>{editingTemplate.name}</Typography>
-          <Typography color="text.secondary" variant="caption" noWrap>{editingTemplate.code} · v{editingTemplate.versionNumber}</Typography>
+          <Typography color="text.secondary" variant="caption" noWrap>v{editingTemplate.versionNumber}</Typography>
         </Box>
         <Box sx={{ flexGrow: 1 }} />
         {isPreviewRoute ? (
