@@ -108,9 +108,9 @@ function composeDesignerJson(pages: Prisma.TemplatePageGetPayload<Record<string,
   };
 }
 
-export async function listTemplateCatalog(options?: { publishedOnly?: boolean }) {
+export async function listTemplateCatalog() {
   const templates = await prisma.template.findMany({
-    where: options?.publishedOnly ? { status: 'ACTIVE', versions: { some: { isCurrent: true, isPublished: true } } } : undefined,
+    where: { status: { not: 'ARCHIVED' } },
     orderBy: { updatedAt: 'desc' },
     include: templateInclude,
   });
@@ -279,30 +279,6 @@ export async function createTemplateVersion(id: string, createdById?: string | n
             previewImageUrl: page.previewImageUrl,
           })),
         },
-      },
-    }),
-  ]);
-
-  const template = await prisma.template.findUniqueOrThrow({ where: { id }, include: templateInclude });
-  return mapTemplate(template);
-}
-
-export async function publishTemplate(id: string, publishedById?: string | null) {
-  const currentVersion = await prisma.templateVersion.findFirstOrThrow({
-    where: { templateId: id, isCurrent: true },
-    select: { id: true },
-  });
-
-  const now = new Date();
-
-  await prisma.$transaction([
-    prisma.template.update({ where: { id }, data: { status: 'ACTIVE', lastPublishedAt: now } }),
-    prisma.templateVersion.update({
-      where: { id: currentVersion.id },
-      data: {
-        isPublished: true,
-        publishedAt: now,
-        publishedById: publishedById === 'bootstrap-admin' ? null : publishedById ?? null,
       },
     }),
   ]);

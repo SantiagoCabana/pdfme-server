@@ -8,7 +8,6 @@ const permissionSeed = [
   ['templates.edit', 'Editar plantillas', 'templates'],
   ['templates.create', 'Crear plantillas', 'templates'],
   ['templates.delete', 'Eliminar plantillas', 'templates'],
-  ['templates.publish', 'Publicar plantillas', 'templates'],
   ['api_keys.manage', 'Gestionar claves API', 'api'],
   ['users.manage', 'Gestionar usuarios', 'access'],
 ] as const;
@@ -16,11 +15,25 @@ const permissionSeed = [
 const roleSeed = {
   VIEWER: ['templates.view'],
   EDITOR: ['templates.view', 'templates.edit'],
-  MANAGER: ['templates.view', 'templates.edit', 'templates.create', 'templates.delete', 'templates.publish', 'api_keys.manage'],
+  MANAGER: ['templates.view', 'templates.edit', 'templates.create', 'templates.delete', 'api_keys.manage'],
   ADMIN: permissionSeed.map(([code]) => code),
 };
 
 async function main() {
+  const removedPermissionCodes = ['templates.publish'];
+
+  const removedPermissions = await prisma.accessPermission.findMany({
+    where: { code: { in: removedPermissionCodes } },
+    select: { id: true },
+  });
+
+  if (removedPermissions.length > 0) {
+    await prisma.accessRolePermission.deleteMany({
+      where: { accessPermissionId: { in: removedPermissions.map((permission) => permission.id) } },
+    });
+    await prisma.accessPermission.deleteMany({ where: { code: { in: removedPermissionCodes } } });
+  }
+
   for (const [code, name, category] of permissionSeed) {
     await prisma.accessPermission.upsert({
       where: { code },

@@ -1,8 +1,45 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+function spaFallback() {
+  return {
+    name: 'pdfme-spa-fallback',
+    configureServer(server) {
+      server.middlewares.use((request, _response, next) => {
+        if (
+          request.method === 'GET' &&
+          request.url &&
+          !request.url.startsWith('/api') &&
+          !request.url.includes('.') &&
+          request.headers.accept?.includes('text/html')
+        ) {
+          request.url = '/index.html';
+        }
+
+        next();
+      });
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use((request, _response, next) => {
+        if (
+          request.method === 'GET' &&
+          request.url &&
+          !request.url.startsWith('/api') &&
+          !request.url.includes('.') &&
+          request.headers.accept?.includes('text/html')
+        ) {
+          request.url = '/index.html';
+        }
+
+        next();
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react()],
+  appType: 'spa',
+  plugins: [spaFallback(), react()],
   server: {
     host: '0.0.0.0',
     port: 5173,

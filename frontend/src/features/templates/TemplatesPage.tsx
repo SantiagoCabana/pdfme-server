@@ -155,6 +155,7 @@ export function TemplatesPage() {
   }, [search, templates]);
 
   const visibleTemplates = filteredTemplates.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const editingTemplateVersions = editingTemplate?.versions ?? [];
 
   useEffect(() => {
     setPage(0);
@@ -398,7 +399,7 @@ export function TemplatesPage() {
               sx={{ width: 120 }}
               value={editingTemplate.versionId ?? ''}
             >
-              {editingTemplate.versions.map((version) => (
+              {editingTemplateVersions.map((version) => (
                 <MenuItem key={version.id} value={version.id}>
                   v{version.versionNumber}
                 </MenuItem>

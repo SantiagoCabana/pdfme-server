@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 
 import { authenticateApiKey } from '../services/api-credentials.service.js';
-import { createTemplate, createTemplateVersion, deleteTemplate, listTemplateCatalog, publishTemplate, setCurrentTemplateVersion, updateTemplatePageSettings } from '../services/templates.service.js';
+import { createTemplate, createTemplateVersion, deleteTemplate, listTemplateCatalog, setCurrentTemplateVersion, updateTemplatePageSettings } from '../services/templates.service.js';
 import { requirePermission } from '../middleware/session-auth.js';
 
 export const templatesRouter = Router();
@@ -85,15 +85,6 @@ templatesRouter.patch('/templates/:id/versions/:versionId/current', requirePermi
   }
 });
 
-templatesRouter.patch('/templates/:id/publish', requirePermission('templates.publish'), async (request, response) => {
-  try {
-    const template = await publishTemplate(request.params.id, response.locals.user?.id ?? null);
-    response.json({ ok: true, template });
-  } catch {
-    response.status(404).json({ message: 'No se encontro la plantilla actual.' });
-  }
-});
-
 templatesRouter.delete('/templates/:id', requirePermission('templates.delete'), async (request, response) => {
   try {
     await deleteTemplate(request.params.id);
@@ -114,5 +105,5 @@ templatesRouter.get('/v1/templates', async (request, response) => {
     return;
   }
 
-  response.json({ data: await listTemplateCatalog({ publishedOnly: true }) });
+  response.json({ data: await listTemplateCatalog() });
 });
