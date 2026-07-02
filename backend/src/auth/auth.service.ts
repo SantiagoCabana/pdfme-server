@@ -12,6 +12,9 @@ export type SessionUser = {
   tokenVersion: number;
 };
 
+const SESSION_CACHE_TTL_MS = 30_000;
+const sessionCache = new Map<string, { expiresAt: number; user: SessionUser | null }>();
+
 function unique(values: string[]) {
   return Array.from(new Set(values));
 }
@@ -68,7 +71,24 @@ function findUserWithRoles(emailOrId: string, by: 'email' | 'id' = 'email') {
 }
 
 export async function loadUserSession(userId: string) {
-  return mapUserSession(await findUserWithRoles(userId, 'id'));
+  const cached = sessionCache.get(userId);
+
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.user;
+  }
+
+  const user = mapUserSession(await findUserWithRoles(userId, 'id'));
+
+  sessionCache.set(userId, {
+    expiresAt: Date.now() + SESSION_CACHE_TTL_MS,
+    user,
+  });
+
+  return user;
+}
+
+export function invalidateSessionCache(userId: string) {
+  sessionCache.delete(userId);
 }
 
 export async function authenticateUser(email: string, password: string): Promise<SessionUser | null> {
@@ -102,6 +122,8 @@ export async function authenticateUser(email: string, password: string): Promise
     where: { id: user.id },
     data: { lastLoginAt: new Date() },
   }).catch(() => undefined);
+
+  invalidateSessionCache(user.id);
 
   return mapUserSession(user);
 }

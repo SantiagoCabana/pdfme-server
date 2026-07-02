@@ -1,5 +1,6 @@
 import { prisma } from '../prisma.js';
 import { hashPassword } from '../auth/password.js';
+import { invalidateSessionCache } from '../auth/auth.service.js';
 
 export async function listUsers() {
   const users = await prisma.userAccount.findMany({
@@ -81,9 +82,12 @@ export async function updateUser(input: {
     await replaceUserRoles(input.id, [input.roleCode]);
   }
 
+  invalidateSessionCache(input.id);
+
   return (await listUsers()).find((entry) => entry.id === input.id);
 }
 
 export async function deleteUser(id: string) {
   await prisma.userAccount.delete({ where: { id } });
+  invalidateSessionCache(id);
 }
