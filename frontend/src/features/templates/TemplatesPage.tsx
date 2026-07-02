@@ -41,7 +41,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import type { Template as PdfmeTemplate } from '@pdfme/common';
+import type { Schema, Template as PdfmeTemplate } from '@pdfme/common';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { can } from '../../app/session';
@@ -61,6 +61,12 @@ const pageFormats = [
 ];
 
 const backgroundSchemaName = '__page_background';
+type BlankBasePdf = {
+  width: number;
+  height: number;
+  padding: [number, number, number, number];
+  staticSchema?: Schema[];
+};
 
 function randomSuffix() {
   const values = new Uint8Array(4);
@@ -87,35 +93,60 @@ function buildCode(name: string, suffix: string) {
 function buildPdfmeTemplate(template: TemplateItem, options?: { pageWidthMm?: number; pageHeightMm?: number }) {
   const storedTemplate = template.designerJson ?? {};
   const storedBasePdf = typeof storedTemplate.basePdf === 'object' && storedTemplate.basePdf && !Array.isArray(storedTemplate.basePdf)
-    ? storedTemplate.basePdf
-    : {};
+    ? storedTemplate.basePdf as Record<string, unknown>
+    : {} as Record<string, unknown>;
+  const width = options?.pageWidthMm ?? template.pageWidthMm;
+  const height = options?.pageHeightMm ?? template.pageHeightMm;
 
   return {
     ...storedTemplate,
     schemas: Array.isArray(storedTemplate.schemas) ? storedTemplate.schemas : [[]],
     basePdf: {
       ...storedBasePdf,
-      width: options?.pageWidthMm ?? template.pageWidthMm,
-      height: options?.pageHeightMm ?? template.pageHeightMm,
+      width,
+      height,
       padding: [0, 0, 0, 0],
+      staticSchema: syncBackgroundSchemaSize(storedBasePdf.staticSchema, width, height),
     },
   } as PdfmeTemplate;
+}
+
+function syncBackgroundSchemaSize(staticSchema: unknown, width: number, height: number): Schema[] | undefined {
+  if (!Array.isArray(staticSchema)) return undefined;
+
+  return (staticSchema as Schema[]).map((schema) => {
+    if (!(typeof schema === 'object' && schema && 'name' in schema && schema.name === backgroundSchemaName)) {
+      return schema;
+    }
+
+    return {
+      ...schema,
+      position: { x: 0, y: 0 },
+      width,
+      height,
+    };
+  });
 }
 
 function updatePdfmeBasePdf(current: PdfmeTemplate | null, patch: { width?: number; height?: number }) {
   if (!current) return current;
   const basePdf = typeof current.basePdf === 'object' && current.basePdf && 'width' in current.basePdf && 'height' in current.basePdf
-    ? current.basePdf
+    ? current.basePdf as BlankBasePdf
     : { width: 210, height: 297, padding: [0, 0, 0, 0] as [number, number, number, number] };
+  const nextWidth = patch.width ?? basePdf.width;
+  const nextHeight = patch.height ?? basePdf.height;
 
   return {
     ...current,
     basePdf: {
       ...basePdf,
       ...patch,
+      width: nextWidth,
+      height: nextHeight,
       padding: basePdf.padding ?? [0, 0, 0, 0],
+      staticSchema: syncBackgroundSchemaSize(basePdf.staticSchema, nextWidth, nextHeight),
     },
-  };
+  } as PdfmeTemplate;
 }
 
 function updatePdfmeBackground(current: PdfmeTemplate | null, dataUrl: string, width: number, height: number) {
