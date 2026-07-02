@@ -355,9 +355,9 @@ export function TemplatesPage() {
     setHeaderControls(
       <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flex: 1, minWidth: 0 }}>
         <Button onClick={() => navigate('/templates')} startIcon={<ArrowLeftOutlined />}>Volver a plantillas</Button>
-        <Box sx={{ minWidth: 0 }}>
+        <Box sx={{ alignItems: 'center', display: 'flex', gap: 1, minWidth: 0 }}>
           <Typography variant="subtitle2" noWrap>{editingTemplate.name}</Typography>
-          <Typography color="text.secondary" variant="caption" noWrap>v{editingTemplate.versionNumber}</Typography>
+          <Chip label={`v${editingTemplate.versionNumber}`} size="small" variant="outlined" />
         </Box>
         <Box sx={{ flexGrow: 1 }} />
         {isPreviewRoute ? (
@@ -388,10 +388,10 @@ export function TemplatesPage() {
 
   if (editingTemplate) {
     return (
-      <Stack spacing={2}>
-        {error ? <Alert severity="error">{error}</Alert> : null}
-        <Box sx={{ minHeight: 'calc(100vh - 170px)' }}>
-          <Card sx={{ minWidth: 0, overflow: 'hidden', bgcolor: 'background.default' }}>
+      <Box sx={{ height: '100%', minHeight: 0, position: 'relative', width: '100%' }}>
+        {error ? <Alert severity="error" sx={{ left: 16, position: 'absolute', right: 16, top: 16, zIndex: 2 }}>{error}</Alert> : null}
+        <Box sx={{ height: '100%', minHeight: 0, width: '100%' }}>
+          <Card sx={{ bgcolor: 'background.default', borderRadius: 0, boxShadow: 'none', height: '100%', minWidth: 0, overflow: 'hidden' }}>
             {designerTemplate ? (
               <Suspense fallback={<Box sx={{ display: 'grid', minHeight: 680, placeItems: 'center' }}><CircularProgress size={24} /></Box>}>
                 {isPreviewRoute ? <PdfmeViewer template={designerTemplate} /> : <PdfmeDesigner onChange={setDesignerTemplate} template={designerTemplate} />}
@@ -399,7 +399,7 @@ export function TemplatesPage() {
             ) : <Box sx={{ display: 'grid', minHeight: 680, placeItems: 'center' }}><CircularProgress size={24} /></Box>}
           </Card>
         </Box>
-      </Stack>
+      </Box>
     );
   }
 

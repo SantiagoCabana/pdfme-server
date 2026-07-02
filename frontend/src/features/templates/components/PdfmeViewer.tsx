@@ -37,5 +37,5 @@ export function PdfmeViewer({ template }: PdfmeViewerProps) {
     viewerRef.current?.updateTemplate(template);
   }, [template]);
 
-  return <div ref={containerRef} style={{ height: '100%', minHeight: 680, width: '100%' }} />;
+  return <div ref={containerRef} style={{ height: '100%', minHeight: 0, width: '100%' }} />;
 }

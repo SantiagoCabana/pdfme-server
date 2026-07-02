@@ -66,6 +66,7 @@ export function PrivateLayout() {
   const activeItem = items.find((item) => (
     location.pathname === item.path || location.pathname.startsWith(`${item.path}/`) || (location.pathname === '/' && item.path === '/templates')
   ));
+  const isTemplateWorkspace = location.pathname.startsWith('/templates/edit/') || location.pathname.startsWith('/templates/preview/');
 
   if (!user) return <Navigate to="/login" replace />;
 
@@ -290,7 +291,20 @@ export function PrivateLayout() {
           {drawer}
         </Drawer>
       </Box>
-      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 }, pt: { xs: 9, md: 10 }, transition: sidebarTransition }}>
+      <Box
+        component="main"
+        sx={{
+          boxSizing: 'border-box',
+          flexGrow: 1,
+          height: isTemplateWorkspace ? '100vh' : 'auto',
+          minHeight: isTemplateWorkspace ? '100vh' : 0,
+          minWidth: 0,
+          overflow: isTemplateWorkspace ? 'hidden' : 'visible',
+          p: isTemplateWorkspace ? 0 : { xs: 2, md: 3 },
+          pt: isTemplateWorkspace ? '58px' : { xs: 9, md: 10 },
+          transition: sidebarTransition,
+        }}
+      >
         <Outlet />
       </Box>
     </Box>
