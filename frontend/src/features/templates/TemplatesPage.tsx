@@ -1,9 +1,10 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeftOutlined,
   CopyOutlined,
   DeleteOutlined,
   EditOutlined,
+  EllipsisOutlined,
   EyeOutlined,
   PlusOutlined,
   RetweetOutlined,
@@ -17,7 +18,9 @@ import {
   Card,
   Chip,
   CircularProgress,
+  IconButton,
   InputAdornment,
+  Menu,
   MenuItem,
   Stack,
   Table,
@@ -37,6 +40,7 @@ import { can, statusLabel } from '../../app/session';
 import type { TemplateItem } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
+import type { PdfmeDesignerHandle } from './components/PdfmeDesigner';
 
 const PdfmeDesigner = lazy(() => import('./components/PdfmeDesigner').then((module) => ({ default: module.PdfmeDesigner })));
 const PdfmeViewer = lazy(() => import('./components/PdfmeViewer').then((module) => ({ default: module.PdfmeViewer })));
@@ -132,6 +136,8 @@ export function TemplatesPage() {
   const [pageWidthMm, setPageWidthMm] = useState(210);
   const [pageHeightMm, setPageHeightMm] = useState(297);
   const [designerTemplate, setDesignerTemplate] = useState<PdfmeTemplate | null>(null);
+  const [versionMenuAnchor, setVersionMenuAnchor] = useState<HTMLElement | null>(null);
+  const designerRef = useRef<PdfmeDesignerHandle | null>(null);
 
   async function load() {
     setLoading(true);
@@ -156,6 +162,7 @@ export function TemplatesPage() {
 
   const visibleTemplates = filteredTemplates.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   const editingTemplateVersions = editingTemplate?.versions ?? [];
+  const hasMultipleVersions = editingTemplateVersions.length > 1;
 
   useEffect(() => {
     setPage(0);
@@ -260,12 +267,13 @@ export function TemplatesPage() {
 
   async function saveSettings() {
     if (!editingTemplate) return null;
+    const currentDesignerTemplate = designerRef.current?.getTemplate() ?? designerTemplate;
     setError('');
     setSaving(true);
     try {
       const payload = await apiRequest<{ template: TemplateItem }>('/api/templates/' + editingTemplate.id + '/page-settings', {
         method: 'PATCH',
-        body: JSON.stringify({ pageFormat, pageOrientation, pageWidthMm, pageHeightMm, designerJson: designerTemplate }),
+        body: JSON.stringify({ pageFormat, pageOrientation, pageWidthMm, pageHeightMm, designerJson: currentDesignerTemplate }),
       });
       setEditingTemplate(payload.template);
       setDesignerTemplate(buildPdfmeTemplate(payload.template));
@@ -309,6 +317,7 @@ export function TemplatesPage() {
       setPageWidthMm(payload.template.pageWidthMm);
       setPageHeightMm(payload.template.pageHeightMm);
       setDesignerTemplate(buildPdfmeTemplate(payload.template));
+      setVersionMenuAnchor(null);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cambiar de version.');
@@ -390,21 +399,20 @@ export function TemplatesPage() {
           <Button onClick={() => navigate(`/templates/edit/${editingTemplate.code}`)} size="small" startIcon={<EditOutlined />} variant="outlined">Editar</Button>
         ) : (
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <TextField
-              disabled={saving || savingVersion || switchingVersion}
-              label="Version"
-              onChange={(event) => void switchVersion(event.target.value)}
-              select
-              size="small"
-              sx={{ width: 120 }}
-              value={editingTemplate.versionId ?? ''}
-            >
-              {editingTemplateVersions.map((version) => (
-                <MenuItem key={version.id} value={version.id}>
-                  v{version.versionNumber}
-                </MenuItem>
-              ))}
-            </TextField>
+            {hasMultipleVersions ? (
+              <>
+                <IconButton disabled={saving || savingVersion || switchingVersion} onClick={(event) => setVersionMenuAnchor(event.currentTarget)} size="small">
+                  <EllipsisOutlined />
+                </IconButton>
+                <Menu anchorEl={versionMenuAnchor} onClose={() => setVersionMenuAnchor(null)} open={Boolean(versionMenuAnchor)}>
+                  {editingTemplateVersions.map((version) => (
+                    <MenuItem disabled={version.id === editingTemplate.versionId || switchingVersion} key={version.id} onClick={() => void switchVersion(version.id)}>
+                      v{version.versionNumber}{version.id === editingTemplate.versionId ? ' actual' : ''}
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </>
+            ) : null}
             <TextField label="Formato" onChange={(event) => setFormat(event.target.value)} select size="small" sx={{ width: 120 }} value={pageFormat}>
               {pageFormats.map((format) => <MenuItem key={format.value} value={format.value}>{format.label}</MenuItem>)}
             </TextField>
@@ -425,7 +433,7 @@ export function TemplatesPage() {
     );
 
     return () => setHeaderControls(null);
-  }, [editingTemplate, isPreviewRoute, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, saving, savingVersion, search, setHeaderAction, setHeaderControls, switchingVersion, user]);
+  }, [editingTemplate, editingTemplateVersions, hasMultipleVersions, isPreviewRoute, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, saving, savingVersion, search, setHeaderAction, setHeaderControls, switchingVersion, user, versionMenuAnchor]);
 
   if (editingTemplate) {
     return (
@@ -435,7 +443,7 @@ export function TemplatesPage() {
           <Card sx={{ bgcolor: 'background.default', borderRadius: 0, boxShadow: 'none', height: '100%', minWidth: 0, overflow: 'hidden' }}>
             {designerTemplate ? (
               <Suspense fallback={<Box sx={{ display: 'grid', minHeight: 680, placeItems: 'center' }}><CircularProgress size={24} /></Box>}>
-                {isPreviewRoute ? <PdfmeViewer template={designerTemplate} /> : <PdfmeDesigner onChange={setDesignerTemplate} template={designerTemplate} />}
+                {isPreviewRoute ? <PdfmeViewer template={designerTemplate} /> : <PdfmeDesigner onChange={setDesignerTemplate} ref={designerRef} template={designerTemplate} />}
               </Suspense>
             ) : <Box sx={{ display: 'grid', minHeight: 680, placeItems: 'center' }}><CircularProgress size={24} /></Box>}
           </Card>

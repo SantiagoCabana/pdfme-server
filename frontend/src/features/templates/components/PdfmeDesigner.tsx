@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import type { Template as PdfmeTemplate } from '@pdfme/common';
 import { Designer } from '@pdfme/ui';
 import {
@@ -45,11 +45,19 @@ type PdfmeDesignerProps = {
   onChange: (template: PdfmeTemplate) => void;
 };
 
-export function PdfmeDesigner({ template, onChange }: PdfmeDesignerProps) {
+export type PdfmeDesignerHandle = {
+  getTemplate: () => PdfmeTemplate | null;
+};
+
+export const PdfmeDesigner = forwardRef<PdfmeDesignerHandle, PdfmeDesignerProps>(function PdfmeDesigner({ template, onChange }, ref) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const designerRef = useRef<Designer | null>(null);
   const internalTemplateRef = useRef<PdfmeTemplate | null>(null);
   const skipNextTemplateSyncRef = useRef(false);
+
+  useImperativeHandle(ref, () => ({
+    getTemplate: () => designerRef.current?.getTemplate() ?? internalTemplateRef.current,
+  }), []);
 
   useEffect(() => {
     if (!containerRef.current) return undefined;
@@ -96,4 +104,4 @@ export function PdfmeDesigner({ template, onChange }: PdfmeDesignerProps) {
   }, [template]);
 
   return <div ref={containerRef} style={{ height: '100%', minHeight: 0, width: '100%' }} />;
-}
+});
