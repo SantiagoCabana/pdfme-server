@@ -131,6 +131,7 @@ export function TemplatesPage() {
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingVersion, setSavingVersion] = useState(false);
@@ -163,6 +164,36 @@ export function TemplatesPage() {
   }
 
   useEffect(() => { void load().catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar.')); }, []);
+
+  useEffect(() => {
+    if (!routeCode) {
+      setEditingTemplate(null);
+      setDesignerTemplate(null);
+      setLoadingTemplate(false);
+      return;
+    }
+
+    let active = true;
+
+    setLoadingTemplate(true);
+    setError('');
+    apiRequest<{ template: TemplateItem }>(`/api/templates/by-code/${routeCode}`)
+      .then((payload) => {
+        if (!active) return;
+        openEditor(payload.template);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : 'No se encontro la plantilla solicitada.');
+        setEditingTemplate(null);
+        setDesignerTemplate(null);
+      })
+      .finally(() => {
+        if (active) setLoadingTemplate(false);
+      });
+
+    return () => { active = false; };
+  }, [routeCode]);
 
   const filteredTemplates = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -201,27 +232,6 @@ export function TemplatesPage() {
     setDesignerTemplate(buildPdfmeTemplate(template));
     setError('');
   }
-
-  useEffect(() => {
-    if (!routeCode) {
-      setEditingTemplate(null);
-      setDesignerTemplate(null);
-      return;
-    }
-
-    if (loading) return;
-
-    const template = templates.find((item) => item.code === routeCode);
-
-    if (!template) {
-      setError('No se encontro la plantilla solicitada.');
-      setEditingTemplate(null);
-      setDesignerTemplate(null);
-      return;
-    }
-
-    openEditor(template);
-  }, [loading, routeCode, templates]);
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -418,6 +428,12 @@ export function TemplatesPage() {
   }
 
   useEffect(() => {
+    if (routeCode && !editingTemplate) {
+      setHeaderAction(null);
+      setHeaderControls(null);
+      return;
+    }
+
     if (!editingTemplate) {
       setHeaderControls(
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flex: 1, minWidth: 0 }}>
@@ -482,7 +498,15 @@ export function TemplatesPage() {
     );
 
     return () => setHeaderControls(null);
-  }, [editingTemplate, hasMultipleVersions, isPreviewRoute, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, saving, savingDetails, savingVersion, search, setHeaderAction, setHeaderControls, switchingVersion, user, versionMenuAnchor]);
+  }, [editingTemplate, hasMultipleVersions, isPreviewRoute, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, routeCode, saving, savingDetails, savingVersion, search, setHeaderAction, setHeaderControls, switchingVersion, user, versionMenuAnchor]);
+
+  if (routeCode && (loadingTemplate || !editingTemplate)) {
+    return (
+      <Box sx={{ display: 'grid', height: '100%', minHeight: 0, placeItems: 'center', width: '100%' }}>
+        {error ? <Alert severity="error">{error}</Alert> : <CircularProgress size={24} />}
+      </Box>
+    );
+  }
 
   if (editingTemplate) {
     return (
@@ -550,7 +574,7 @@ export function TemplatesPage() {
             <TableBody>
               {loading ? <TableRow><TableCell align="center" colSpan={5}><CircularProgress size={24} /></TableCell></TableRow> : null}
               {!loading && filteredTemplates.length === 0 ? <TableRow><TableCell colSpan={5}>No hay plantillas.</TableCell></TableRow> : null}
-              {!loading ? visibleTemplates.map((template) => <TableRow key={template.id}><TableCell><Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}><Box sx={{ width: template.pageOrientation === 'LANDSCAPE' ? 58 : 38, height: template.pageOrientation === 'LANDSCAPE' ? 34 : 52, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.default' }} /><Box><strong>{template.name}</strong><br /><small>{template.code}</small></Box></Stack></TableCell><TableCell>v{template.versionNumber}</TableCell><TableCell>{template.pageFormat} {template.pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}</TableCell><TableCell>{template.tags.join(', ') || 'Sin etiquetas'}</TableCell><TableCell align="right"><Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}><Button onClick={() => navigate(`/templates/preview/${template.code}`)} size="small" startIcon={<EyeOutlined />}>Preview</Button><Button onClick={() => navigate(`/templates/edit/${template.code}`)} size="small" startIcon={<EditOutlined />}>Editar</Button>{can(user, 'templates.delete') ? <Button color="error" disabled={deletingId === template.id} onClick={() => void remove(template.id)} size="small" startIcon={<DeleteOutlined />}>{deletingId === template.id ? 'Eliminando...' : 'Eliminar'}</Button> : null}</Stack></TableCell></TableRow>) : null}
+              {!loading ? visibleTemplates.map((template) => <TableRow key={template.id}><TableCell><Box><strong>{template.name}</strong><br /><small>{template.code}</small></Box></TableCell><TableCell>v{template.versionNumber}</TableCell><TableCell>{template.pageFormat} {template.pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}</TableCell><TableCell>{template.tags.join(', ') || 'Sin etiquetas'}</TableCell><TableCell align="right"><Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}><Button onClick={() => navigate(`/templates/preview/${template.code}`)} size="small" startIcon={<EyeOutlined />}>Preview</Button><Button onClick={() => navigate(`/templates/edit/${template.code}`)} size="small" startIcon={<EditOutlined />}>Editar</Button>{can(user, 'templates.delete') ? <Button color="error" disabled={deletingId === template.id} onClick={() => void remove(template.id)} size="small" startIcon={<DeleteOutlined />}>{deletingId === template.id ? 'Eliminando...' : 'Eliminar'}</Button> : null}</Stack></TableCell></TableRow>) : null}
             </TableBody>
           </Table>
         </TableContainer>

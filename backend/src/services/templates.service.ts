@@ -118,6 +118,15 @@ export async function listTemplateCatalog() {
   return templates.map(mapTemplate);
 }
 
+export async function getTemplateByCode(code: string) {
+  const template = await prisma.template.findFirstOrThrow({
+    where: { code, status: { not: 'ARCHIVED' } },
+    include: templateInclude,
+  });
+
+  return mapTemplate(template);
+}
+
 export async function createTemplate(input: {
   name: string;
   code?: string;

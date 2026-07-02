@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 
 import { authenticateApiKey } from '../services/api-credentials.service.js';
-import { createTemplate, createTemplateVersion, deleteTemplate, listTemplateCatalog, setCurrentTemplateVersion, updateTemplateDetails, updateTemplatePageSettings } from '../services/templates.service.js';
+import { createTemplate, createTemplateVersion, deleteTemplate, getTemplateByCode, listTemplateCatalog, setCurrentTemplateVersion, updateTemplateDetails, updateTemplatePageSettings } from '../services/templates.service.js';
 import { requirePermission } from '../middleware/session-auth.js';
 
 export const templatesRouter = Router();
@@ -30,6 +30,14 @@ const updateTemplateDetailsSchema = z.object({
 
 templatesRouter.get('/templates', requirePermission('templates.view'), async (_request, response) => {
   response.json({ data: await listTemplateCatalog() });
+});
+
+templatesRouter.get('/templates/by-code/:code', requirePermission('templates.view'), async (request, response) => {
+  try {
+    response.json({ template: await getTemplateByCode(request.params.code) });
+  } catch {
+    response.status(404).json({ message: 'No se encontro la plantilla.' });
+  }
 });
 
 templatesRouter.post('/templates', requirePermission('templates.create'), async (request, response) => {
