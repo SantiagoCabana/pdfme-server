@@ -475,9 +475,7 @@ export function TemplatesPage() {
               <MenuItem disabled={!hasMultipleVersions} onClick={() => { setVersionMenuAnchor(null); setVersionsDialogOpen(true); }}>
                 Cambiar version
               </MenuItem>
-              <MenuItem onClick={openDetailsDialog}>Renombrar</MenuItem>
-              <MenuItem onClick={openDetailsDialog}>Renombrar codigo</MenuItem>
-              <MenuItem onClick={openDetailsDialog}>Editar tags</MenuItem>
+              <MenuItem onClick={openDetailsDialog}>Propiedades</MenuItem>
             </Menu>
           </Stack>
         )}

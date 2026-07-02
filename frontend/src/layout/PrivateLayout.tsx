@@ -318,7 +318,21 @@ export function PrivateLayout() {
           {drawer}
         </Drawer>
       </Box>
-      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 }, pt: { xs: 9, md: 10 }, height: '100vh', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden', transition: sidebarTransition }}>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          minWidth: 0,
+          p: isTemplateWorkspace ? 0 : { xs: 2, md: 3 },
+          pt: isTemplateWorkspace ? '58px' : { xs: 9, md: 10 },
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+          transition: sidebarTransition,
+        }}
+      >
         <Outlet />
       </Box>
     </Box>
