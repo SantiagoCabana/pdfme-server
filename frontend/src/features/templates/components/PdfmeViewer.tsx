@@ -3,6 +3,7 @@ import type { Template as PdfmeTemplate } from '@pdfme/common';
 import { Viewer } from '@pdfme/ui';
 
 import { pdfmePlugins } from './PdfmeDesigner';
+import { loadPdfmeFonts } from './pdfmeFonts';
 
 type PdfmeViewerProps = {
   template: PdfmeTemplate;
@@ -15,20 +16,28 @@ export function PdfmeViewer({ template }: PdfmeViewerProps) {
   useEffect(() => {
     if (!containerRef.current) return undefined;
 
-    const viewer = new Viewer({
-      domContainer: containerRef.current,
-      template,
-      inputs: [{}],
-      plugins: pdfmePlugins,
-      options: {
-        lang: 'es',
-      },
+    let isMounted = true;
+
+    loadPdfmeFonts().then((font) => {
+      if (!isMounted || !containerRef.current) return;
+
+      const viewer = new Viewer({
+        domContainer: containerRef.current,
+        template,
+        inputs: [{}],
+        plugins: pdfmePlugins,
+        options: {
+          font,
+          lang: 'es',
+        },
+      });
+
+      viewerRef.current = viewer;
     });
 
-    viewerRef.current = viewer;
-
     return () => {
-      viewer.destroy();
+      isMounted = false;
+      viewerRef.current?.destroy();
       viewerRef.current = null;
     };
   }, []);

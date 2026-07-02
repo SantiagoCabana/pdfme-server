@@ -19,6 +19,8 @@ import {
   time,
 } from '@pdfme/schemas';
 
+import { loadPdfmeFonts } from './pdfmeFonts';
+
 export const pdfmePlugins = {
   text,
   multiVariableText,
@@ -50,20 +52,43 @@ export function PdfmeDesigner({ template, onChange }: PdfmeDesignerProps) {
   useEffect(() => {
     if (!containerRef.current) return undefined;
 
-    const designer = new Designer({
-      domContainer: containerRef.current,
-      template,
-      plugins: pdfmePlugins,
-      options: {
-        lang: 'es',
-      },
+    let isMounted = true;
+    let removeDeselectListener: (() => void) | undefined;
+
+    loadPdfmeFonts().then((font) => {
+      if (!isMounted || !containerRef.current) return;
+
+      const designer = new Designer({
+        domContainer: containerRef.current,
+        template,
+        plugins: pdfmePlugins,
+        options: {
+          font,
+          lang: 'es',
+        },
+      });
+
+      const deselectWhenOutsideDesigner = (event: PointerEvent) => {
+        const target = event.target;
+
+        if (target instanceof Node && containerRef.current?.contains(target)) {
+          return;
+        }
+
+        designer.selectSchemas([]);
+      };
+
+      document.addEventListener('pointerdown', deselectWhenOutsideDesigner, true);
+      removeDeselectListener = () => document.removeEventListener('pointerdown', deselectWhenOutsideDesigner, true);
+
+      designer.onChangeTemplate((nextTemplate) => onChange(nextTemplate));
+      designerRef.current = designer;
     });
 
-    designer.onChangeTemplate((nextTemplate) => onChange(nextTemplate));
-    designerRef.current = designer;
-
     return () => {
-      designer.destroy();
+      isMounted = false;
+      removeDeselectListener?.();
+      designerRef.current?.destroy();
       designerRef.current = null;
     };
   }, []);
