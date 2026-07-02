@@ -14,6 +14,16 @@ export type TemplateItem = {
   code: string;
   status: string;
   versionNumber: number;
+  versionId: string | null;
+  versions: {
+    id: string;
+    versionNumber: number;
+    isCurrent: boolean;
+    isPublished: boolean;
+    pageCount: number;
+    createdAt: string;
+    updatedAt: string;
+  }[];
   isPublished: boolean;
   pageCount: number;
   pageFormat: string;

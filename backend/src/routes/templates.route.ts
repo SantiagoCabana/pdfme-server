@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 
 import { authenticateApiKey } from '../services/api-credentials.service.js';
-import { createTemplate, createTemplateVersion, deleteTemplate, listTemplateCatalog, publishTemplate, updateTemplatePageSettings } from '../services/templates.service.js';
+import { createTemplate, createTemplateVersion, deleteTemplate, listTemplateCatalog, publishTemplate, setCurrentTemplateVersion, updateTemplatePageSettings } from '../services/templates.service.js';
 import { requirePermission } from '../middleware/session-auth.js';
 
 export const templatesRouter = Router();
@@ -73,6 +73,15 @@ templatesRouter.post('/templates/:id/versions', requirePermission('templates.edi
     response.status(201).json({ ok: true, template });
   } catch {
     response.status(404).json({ message: 'No se encontro la plantilla actual.' });
+  }
+});
+
+templatesRouter.patch('/templates/:id/versions/:versionId/current', requirePermission('templates.edit'), async (request, response) => {
+  try {
+    const template = await setCurrentTemplateVersion(request.params.id, request.params.versionId);
+    response.json({ ok: true, template });
+  } catch {
+    response.status(404).json({ message: 'No se encontro la version solicitada.' });
   }
 });
 

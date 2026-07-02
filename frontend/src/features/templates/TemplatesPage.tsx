@@ -123,6 +123,7 @@ export function TemplatesPage() {
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingVersion, setSavingVersion] = useState(false);
+  const [switchingVersion, setSwitchingVersion] = useState(false);
   const [deletingId, setDeletingId] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -257,7 +258,7 @@ export function TemplatesPage() {
   }, [closeHeaderAction, code, codeSuffix, codeTouched, creating, editingTemplate, name, navigate, setHeaderAction, user]);
 
   async function saveSettings() {
-    if (!editingTemplate) return;
+    if (!editingTemplate) return null;
     setError('');
     setSaving(true);
     try {
@@ -268,8 +269,10 @@ export function TemplatesPage() {
       setEditingTemplate(payload.template);
       setDesignerTemplate(buildPdfmeTemplate(payload.template));
       await load();
+      return payload.template;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar la plantilla.');
+      return null;
     } finally {
       setSaving(false);
     }
@@ -288,6 +291,28 @@ export function TemplatesPage() {
       setError(err instanceof Error ? err.message : 'No se pudo guardar una nueva version.');
     } finally {
       setSavingVersion(false);
+    }
+  }
+
+  async function switchVersion(versionId: string) {
+    if (!editingTemplate || versionId === editingTemplate.versionId) return;
+    setError('');
+    setSwitchingVersion(true);
+    try {
+      const savedTemplate = await saveSettings();
+      const templateId = savedTemplate?.id ?? editingTemplate.id;
+      const payload = await apiRequest<{ template: TemplateItem }>(`/api/templates/${templateId}/versions/${versionId}/current`, { method: 'PATCH' });
+      setEditingTemplate(payload.template);
+      setPageFormat(payload.template.pageFormat);
+      setPageOrientation(payload.template.pageOrientation === 'LANDSCAPE' ? 'LANDSCAPE' : 'PORTRAIT');
+      setPageWidthMm(payload.template.pageWidthMm);
+      setPageHeightMm(payload.template.pageHeightMm);
+      setDesignerTemplate(buildPdfmeTemplate(payload.template));
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo cambiar de version.');
+    } finally {
+      setSwitchingVersion(false);
     }
   }
 
@@ -364,6 +389,21 @@ export function TemplatesPage() {
           <Button onClick={() => navigate(`/templates/edit/${editingTemplate.code}`)} size="small" startIcon={<EditOutlined />} variant="outlined">Editar</Button>
         ) : (
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <TextField
+              disabled={saving || savingVersion || switchingVersion}
+              label="Version"
+              onChange={(event) => void switchVersion(event.target.value)}
+              select
+              size="small"
+              sx={{ width: 120 }}
+              value={editingTemplate.versionId ?? ''}
+            >
+              {editingTemplate.versions.map((version) => (
+                <MenuItem key={version.id} value={version.id}>
+                  v{version.versionNumber}
+                </MenuItem>
+              ))}
+            </TextField>
             <TextField label="Formato" onChange={(event) => setFormat(event.target.value)} select size="small" sx={{ width: 120 }} value={pageFormat}>
               {pageFormats.map((format) => <MenuItem key={format.value} value={format.value}>{format.label}</MenuItem>)}
             </TextField>
@@ -372,10 +412,10 @@ export function TemplatesPage() {
             <Button onClick={toggleOrientation} size="small" startIcon={<RetweetOutlined />} variant="outlined">
               {pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}
             </Button>
-            <Button disabled={saving} onClick={() => void saveSettings()} size="small" startIcon={<SaveOutlined />} variant="contained">
+            <Button disabled={saving || switchingVersion} onClick={() => void saveSettings()} size="small" startIcon={<SaveOutlined />} variant="contained">
               {saving ? 'Guardando...' : 'Guardar'}
             </Button>
-            <Button disabled={savingVersion} onClick={() => void saveVersion()} size="small" startIcon={<CopyOutlined />} variant="outlined">
+            <Button disabled={savingVersion || switchingVersion} onClick={() => void saveVersion()} size="small" startIcon={<CopyOutlined />} variant="outlined">
               {savingVersion ? 'Creando...' : 'Guardar version'}
             </Button>
           </Stack>
@@ -384,7 +424,7 @@ export function TemplatesPage() {
     );
 
     return () => setHeaderControls(null);
-  }, [editingTemplate, isPreviewRoute, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, saving, savingVersion, search, setHeaderAction, setHeaderControls, user]);
+  }, [editingTemplate, isPreviewRoute, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, saving, savingVersion, search, setHeaderAction, setHeaderControls, switchingVersion, user]);
 
   if (editingTemplate) {
     return (

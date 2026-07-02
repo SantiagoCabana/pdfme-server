@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 
 import { prisma } from '../prisma.js';
 
-const DEFAULT_DESIGNER_JSON = { schemas: [] };
+const DEFAULT_DESIGNER_JSON = { schemas: [[]] };
 const DEFAULT_INPUT = {};
 
 function slugifyCode(value: string) {
@@ -28,8 +28,9 @@ function mapTemplate(template: Prisma.TemplateGetPayload<{
     tags: { include: { tag: true } };
   };
 }>) {
-  const currentVersion = template.versions[0];
+  const currentVersion = template.versions.find((version) => version.isCurrent) ?? template.versions[0];
   const firstPage = currentVersion?.pages[0];
+  const designerJson = currentVersion ? composeDesignerJson(currentVersion.pages) : DEFAULT_DESIGNER_JSON;
 
   return {
     id: template.id,
@@ -40,6 +41,15 @@ function mapTemplate(template: Prisma.TemplateGetPayload<{
     lastPublishedAt: template.lastPublishedAt?.toISOString() ?? null,
     versionNumber: currentVersion?.versionNumber ?? 0,
     versionId: currentVersion?.id ?? null,
+    versions: template.versions.map((version) => ({
+      id: version.id,
+      versionNumber: version.versionNumber,
+      isCurrent: version.isCurrent,
+      isPublished: version.isPublished,
+      pageCount: version.pages.length,
+      createdAt: version.createdAt.toISOString(),
+      updatedAt: version.updatedAt.toISOString(),
+    })),
     isPublished: currentVersion?.isPublished ?? false,
     pageCount: currentVersion?.pages.length ?? 0,
     pageFormat: firstPage?.pageFormat ?? 'A4',
@@ -48,7 +58,7 @@ function mapTemplate(template: Prisma.TemplateGetPayload<{
     pageHeightMm: firstPage?.pageHeightMm ?? 297,
     paddingVerticalMm: firstPage?.paddingVerticalMm ?? 12,
     paddingHorizontalMm: firstPage?.paddingHorizontalMm ?? 12,
-    designerJson: firstPage?.designerJson ?? DEFAULT_DESIGNER_JSON,
+    designerJson,
     tags: template.tags.map((entry) => entry.tag.name),
     createdAt: template.createdAt.toISOString(),
     updatedAt: template.updatedAt.toISOString(),
@@ -57,11 +67,46 @@ function mapTemplate(template: Prisma.TemplateGetPayload<{
 
 const templateInclude = {
   versions: {
-    where: { isCurrent: true },
+    orderBy: { versionNumber: 'asc' as const },
     include: { pages: { orderBy: { pageNumber: 'asc' as const } } },
   },
   tags: { include: { tag: true } },
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function getSchemaPages(designerJson: unknown) {
+  if (!isRecord(designerJson) || !Array.isArray(designerJson.schemas)) return [[]];
+
+  const schemas = designerJson.schemas;
+
+  if (schemas.length === 0) return [[]];
+
+  return schemas.map((pageSchemas) => Array.isArray(pageSchemas) ? pageSchemas : []);
+}
+
+function buildPageDesignerJson(designerJson: unknown, pageSchemas: unknown[]) {
+  if (!isRecord(designerJson)) {
+    return { schemas: [pageSchemas] } as Prisma.InputJsonValue;
+  }
+
+  return {
+    ...designerJson,
+    schemas: [pageSchemas],
+  } as Prisma.InputJsonValue;
+}
+
+function composeDesignerJson(pages: Prisma.TemplatePageGetPayload<Record<string, never>>[]) {
+  const firstPageJson = pages[0]?.designerJson;
+  const base = isRecord(firstPageJson) ? firstPageJson : DEFAULT_DESIGNER_JSON;
+
+  return {
+    ...base,
+    schemas: pages.map((page) => getSchemaPages(page.designerJson)[0] ?? []),
+  };
+}
 
 export async function listTemplateCatalog(options?: { publishedOnly?: boolean }) {
   const templates = await prisma.template.findMany({
@@ -138,22 +183,59 @@ export async function updateTemplatePageSettings(id: string, input: {
     where: { templateId: id, isCurrent: true },
     include: { pages: { orderBy: { pageNumber: 'asc' } } },
   });
-  const firstPage = currentVersion.pages[0];
+  const schemaPages = input.designerJson ? getSchemaPages(input.designerJson) : currentVersion.pages.map((page) => getSchemaPages(page.designerJson)[0] ?? []);
+  const safeSchemaPages = schemaPages.length > 0 ? schemaPages : [[]];
 
-  if (!firstPage) {
-    throw new Error('Template page not found');
-  }
+  await prisma.$transaction([
+    ...safeSchemaPages.map((pageSchemas, index) => prisma.templatePage.upsert({
+      where: {
+        templateVersionId_pageNumber: {
+          templateVersionId: currentVersion.id,
+          pageNumber: index + 1,
+        },
+      },
+      update: {
+        pageFormat: input.pageFormat,
+        pageOrientation: input.pageOrientation,
+        pageWidthMm: input.pageWidthMm,
+        pageHeightMm: input.pageHeightMm,
+        designerJson: input.designerJson ? buildPageDesignerJson(input.designerJson, pageSchemas) : undefined,
+      },
+      create: {
+        templateVersionId: currentVersion.id,
+        pageNumber: index + 1,
+        designerJson: input.designerJson ? buildPageDesignerJson(input.designerJson, pageSchemas) : DEFAULT_DESIGNER_JSON,
+        pageFormat: input.pageFormat,
+        pageOrientation: input.pageOrientation,
+        pageWidthMm: input.pageWidthMm,
+        pageHeightMm: input.pageHeightMm,
+        paddingVerticalMm: 12,
+        paddingHorizontalMm: 12,
+        sourceMode: 'BLANK',
+      },
+    })),
+    prisma.templatePage.deleteMany({
+      where: {
+        templateVersionId: currentVersion.id,
+        pageNumber: { gt: safeSchemaPages.length },
+      },
+    }),
+  ]);
 
-  await prisma.templatePage.update({
-    where: { id: firstPage.id },
-    data: {
-      pageFormat: input.pageFormat,
-      pageOrientation: input.pageOrientation,
-      pageWidthMm: input.pageWidthMm,
-      pageHeightMm: input.pageHeightMm,
-      designerJson: input.designerJson ?? undefined,
-    },
+  const template = await prisma.template.findUniqueOrThrow({ where: { id }, include: templateInclude });
+  return mapTemplate(template);
+}
+
+export async function setCurrentTemplateVersion(id: string, versionId: string) {
+  await prisma.templateVersion.findFirstOrThrow({
+    where: { id: versionId, templateId: id },
+    select: { id: true },
   });
+
+  await prisma.$transaction([
+    prisma.templateVersion.updateMany({ where: { templateId: id }, data: { isCurrent: false } }),
+    prisma.templateVersion.update({ where: { id: versionId }, data: { isCurrent: true } }),
+  ]);
 
   const template = await prisma.template.findUniqueOrThrow({ where: { id }, include: templateInclude });
   return mapTemplate(template);
