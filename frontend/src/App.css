@@ -16,3 +16,7 @@ small {
   color: inherit;
   opacity: 0.72;
 }
+
+.pdfme-designer-canvas{
+  margin-top: 15px;
+}
