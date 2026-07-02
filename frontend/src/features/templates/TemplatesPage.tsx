@@ -10,6 +10,11 @@ import {
   RetweetOutlined,
   SaveOutlined,
   SearchOutlined,
+  LockOutlined,
+  UnlockOutlined,
+  UnorderedListOutlined,
+  BarcodeOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import {
   Alert,
@@ -39,6 +44,7 @@ import {
   TablePagination,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import type { Schema, Template as PdfmeTemplate } from '@pdfme/common';
@@ -228,6 +234,7 @@ export function TemplatesPage() {
   const [pageWidthMm, setPageWidthMm] = useState(210);
   const [pageHeightMm, setPageHeightMm] = useState(297);
   const [designerTemplate, setDesignerTemplate] = useState<PdfmeTemplate | null>(null);
+  const [lockedSchemaNames, setLockedSchemaNames] = useState<string[]>([]);
   const [versionMenuAnchor, setVersionMenuAnchor] = useState<HTMLElement | null>(null);
   const [versionsDialogOpen, setVersionsDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -391,9 +398,26 @@ export function TemplatesPage() {
   async function saveSettings() {
     if (!editingTemplate) return null;
     const designerCurrentTemplate = designerRef.current?.getTemplate();
-    const currentDesignerTemplate = designerTemplate && designerCurrentTemplate
+    let currentDesignerTemplate = designerTemplate && designerCurrentTemplate
       ? { ...designerCurrentTemplate, basePdf: designerTemplate.basePdf }
       : designerCurrentTemplate ?? designerTemplate;
+
+    if (currentDesignerTemplate && currentDesignerTemplate.schemas) {
+      currentDesignerTemplate = {
+        ...currentDesignerTemplate,
+        schemas: currentDesignerTemplate.schemas.map((pageSchemas) => {
+          if (!Array.isArray(pageSchemas)) return pageSchemas;
+          return pageSchemas.map((schema) => {
+            const isLocked = lockedSchemaNames.includes(schema.name);
+            return {
+              ...schema,
+              __isLocked: isLocked
+            };
+          });
+        }) as any
+      };
+    }
+
     setError('');
     setSaving(true);
     try {
@@ -555,6 +579,194 @@ export function TemplatesPage() {
     setVersionMenuAnchor(null);
   }
 
+  const prevSchemasRef = useRef<Record<string, string>>({});
+  const lastLoadedTemplateIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!designerTemplate) {
+      setLockedSchemaNames([]);
+      prevSchemasRef.current = {};
+      lastLoadedTemplateIdRef.current = null;
+      return;
+    }
+    const locked: string[] = [];
+    const currentSchemas: Record<string, string> = {};
+
+    designerTemplate.schemas.forEach((pageSchemas) => {
+      if (!Array.isArray(pageSchemas)) return;
+      pageSchemas.forEach((schema) => {
+        if (!schema || !schema.name) return;
+        currentSchemas[schema.name] = schema.type || 'unknown';
+        if (schema.__isLocked) {
+          locked.push(schema.name);
+        }
+      });
+    });
+
+    const currentTemplateId = editingTemplate?.id + '-' + editingTemplate?.versionId;
+    if (lastLoadedTemplateIdRef.current !== currentTemplateId) {
+      lastLoadedTemplateIdRef.current = currentTemplateId;
+      setLockedSchemaNames(locked);
+    }
+
+    const prevSchemas = prevSchemasRef.current;
+    prevSchemasRef.current = currentSchemas;
+
+    // Apply the locking/unlocking styles and sidebar buttons
+    const handleDOMUpdate = () => {
+      const container = document.querySelector('.pdfme-workspace');
+      if (!container) return;
+
+      // 1. Update selectable classes on canvas elements
+      designerTemplate.schemas.forEach((pageSchemas) => {
+        if (!Array.isArray(pageSchemas)) return;
+        pageSchemas.forEach((schema) => {
+          if (!schema || !schema.name) return;
+          const el = container.querySelector(`div[title="${schema.name}"]`) as HTMLElement | null;
+          if (!el) return;
+
+          const isLocked = lockedSchemaNames.includes(schema.name);
+
+          if (isLocked) {
+            if (el.classList.contains('selectable')) {
+              el.classList.remove('selectable');
+              el.classList.add('selectable-locked');
+            }
+          } else {
+            if (el.classList.contains('selectable-locked')) {
+              el.classList.remove('selectable-locked');
+              el.classList.add('selectable');
+            }
+          }
+
+          const legacyBtn = el.querySelector('.canvas-lock-btn');
+          if (legacyBtn) legacyBtn.remove();
+        });
+      });
+
+      // 2. Render lock/unlock buttons in the sidebar element list
+      const parent = container.parentElement || document;
+      const listItems = parent.querySelectorAll('ul > li');
+      listItems.forEach((li) => {
+        const rowDiv = li.querySelector('div') as HTMLDivElement | null;
+        if (!rowDiv) return;
+
+        const span = rowDiv.querySelector('span[title="Editar"]') as HTMLSpanElement | null;
+        if (!span) return;
+
+        const schemaName = span.textContent?.trim();
+        if (!schemaName) return;
+
+        let foundPageIndex = -1;
+        designerTemplate.schemas.forEach((pageSchemas, pageIndex) => {
+          if (Array.isArray(pageSchemas)) {
+            const hasSchema = pageSchemas.some((s) => s.name === schemaName);
+            if (hasSchema) {
+              foundPageIndex = pageIndex;
+            }
+          }
+        });
+
+        if (foundPageIndex === -1) return;
+
+        const isLocked = lockedSchemaNames.includes(schemaName);
+        const desiredTitle = isLocked ? 'Desbloquear' : 'Bloquear';
+
+        let lockBtn = rowDiv.querySelector('.sidebar-lock-btn') as HTMLButtonElement | null;
+        if (!lockBtn) {
+          lockBtn = document.createElement('button');
+          lockBtn.className = 'sidebar-lock-btn';
+          lockBtn.style.background = 'none';
+          lockBtn.style.border = 'none';
+          lockBtn.style.cursor = 'pointer';
+          lockBtn.style.padding = '4px';
+          lockBtn.style.display = 'flex';
+          lockBtn.style.alignItems = 'center';
+          lockBtn.style.justifyContent = 'center';
+          lockBtn.style.marginLeft = 'auto';
+          lockBtn.style.outline = 'none';
+          lockBtn.style.transition = 'transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)';
+
+          lockBtn.style.setProperty('pointer-events', 'auto', 'important');
+
+          const handleAction = (e: Event) => {
+            e.stopPropagation();
+            e.preventDefault();
+          };
+
+          lockBtn.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            toggleLockSchema(foundPageIndex, schemaName);
+          });
+          lockBtn.addEventListener('mouseup', handleAction);
+          lockBtn.addEventListener('click', handleAction);
+
+          lockBtn.addEventListener('mouseenter', () => {
+            if (lockBtn) lockBtn.style.transform = 'scale(1.2)';
+          });
+          lockBtn.addEventListener('mouseleave', () => {
+            if (lockBtn) lockBtn.style.transform = 'scale(1)';
+          });
+
+          rowDiv.appendChild(lockBtn);
+        }
+
+        if (lockBtn.title !== desiredTitle) {
+          lockBtn.title = desiredTitle;
+          if (isLocked) {
+            lockBtn.style.color = '#ff4d4f';
+            lockBtn.innerHTML = `
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+              </svg>
+            `;
+          } else {
+            lockBtn.style.color = 'rgba(0, 0, 0, 0.45)';
+            lockBtn.innerHTML = `
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z"/>
+              </svg>
+            `;
+          }
+        }
+      });
+    };
+
+    handleDOMUpdate();
+    const t1 = setTimeout(handleDOMUpdate, 50);
+    const t2 = setTimeout(handleDOMUpdate, 200);
+    const intervalId = setInterval(handleDOMUpdate, 300);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearInterval(intervalId);
+    };
+  }, [designerTemplate, lockedSchemaNames]);
+
+  function toggleLockSchema(pageIndex: number, schemaName: string) {
+    setLockedSchemaNames((current) => {
+      const exists = current.includes(schemaName);
+      return exists ? current.filter((name) => name !== schemaName) : [...current, schemaName];
+    });
+  }
+
+  function getSchemaIcon(type: string) {
+    const iconStyle = { fontSize: '0.9rem', opacity: 0.7 };
+    switch (type) {
+      case 'text':
+        return <span style={{ ...iconStyle, fontWeight: 'bold' }}>T</span>;
+      case 'image':
+        return <PictureOutlined style={iconStyle} />;
+      case 'qrcode':
+      case 'code128':
+        return <BarcodeOutlined style={iconStyle} />;
+      default:
+        return <FileTextOutlined style={iconStyle} />;
+    }
+  }
+
   useEffect(() => {
     if (routeCode && !editingTemplate) {
       setHeaderAction(null);
@@ -630,12 +842,29 @@ export function TemplatesPage() {
               </TextField>
               <TextField label="Ancho" onChange={(event) => { const next = Number(event.target.value); setPageWidthMm(next); setDesignerTemplate((current) => updatePdfmeBasePdf(current, { width: next })); }} size="small" sx={{ width: 86 }} type="number" value={pageWidthMm} />
               <TextField label="Alto" onChange={(event) => { const next = Number(event.target.value); setPageHeightMm(next); setDesignerTemplate((current) => updatePdfmeBasePdf(current, { height: next })); }} size="small" sx={{ width: 86 }} type="number" value={pageHeightMm} />
-              <Button onClick={toggleOrientation} size="small" startIcon={<RetweetOutlined />} sx={{ minWidth: 112, whiteSpace: 'nowrap' }} variant="outlined">
-                {pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}
-              </Button>
-              <Button disabled={loadingBackground || saving || switchingVersion} onClick={() => backgroundInputRef.current?.click()} size="small" startIcon={<PictureOutlined />} sx={{ minWidth: 96, whiteSpace: 'nowrap' }} variant="outlined">
-                {loadingBackground ? 'Cargando...' : 'Fondo'}
-              </Button>
+              <Tooltip title={pageOrientation === 'LANDSCAPE' ? 'Cambiar a Vertical' : 'Cambiar a Horizontal'}>
+                <IconButton onClick={toggleOrientation} color="primary" sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0, width: 40, height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {pageOrientation === 'LANDSCAPE' ? (
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                      {/* Background/Target page (vertical, semi-transparent) */}
+                      <rect x="13" y="2" width="8" height="12" rx="1.5" opacity="0.3" />
+                      {/* Active page (horizontal, solid) */}
+                      <rect x="2" y="9" width="12" height="8" rx="1.5" />
+                      {/* Rotate arrow */}
+                      <path d="M16 19a4 4 0 0 0 4-4v-1.5c0-.3-.2-.5-.5-.5s-.5.2-.5.5V15a3 3 0 0 1-3 3h-2.5l1.1-1.1c.2-.2.2-.5 0-.7a.5.5 0 0 0-.7 0l-2 2a.5.5 0 0 0 0 .7l2 2c.2.2.5.2.7 0c.2-.2.2-.5 0-.7L13.5 19H16z" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                      {/* Background/Target page (horizontal, semi-transparent) */}
+                      <rect x="9" y="13" width="12" height="8" rx="1.5" opacity="0.3" />
+                      {/* Active page (vertical, solid) */}
+                      <rect x="2" y="2" width="8" height="12" rx="1.5" />
+                      {/* Rotate arrow */}
+                      <path d="M19 8a4 4 0 0 0-4-4h-1.5c-.3 0-.5.2-.5.5s.2.5.5.5H15a3 3 0 0 1 3 3v2.5l-1.1-1.1c-.2-.2-.5-.2-.7 0s-.2.5 0 .7l2 2c.2.2.5.2.7 0l2-2c.2-.2.2-.5 0-.7s-.5-.2-.7 0L19 10.5V8z" />
+                    </svg>
+                  )}
+                </IconButton>
+              </Tooltip>
             </Box>
             <Button disabled={saving || switchingVersion} onClick={() => void saveSettings()} size="small" startIcon={<SaveOutlined />} variant="contained">
               {saving ? 'Guardando...' : 'Guardar'}
@@ -659,7 +888,23 @@ export function TemplatesPage() {
     );
 
     return () => setHeaderControls(null);
-  }, [editingTemplate, hasMultipleVersions, isPreviewRoute, loadingBackground, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, routeCode, saving, savingDetails, savingVersion, search, setHeaderAction, setHeaderControls, switchingVersion, user, versionMenuAnchor]);
+  }, [editingTemplate, hasMultipleVersions, isPreviewRoute, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, routeCode, saving, savingDetails, savingVersion, search, setHeaderAction, setHeaderControls, switchingVersion, user, versionMenuAnchor]);
+
+  useEffect(() => {
+    const originalConfirm = window.confirm;
+    window.confirm = (message) => {
+      const msg = message ? message.toLowerCase() : '';
+      if (msg.includes('page') || msg.includes('página') || msg.includes('delete') || msg.includes('eliminar')) {
+        return true;
+      }
+      return originalConfirm(message);
+    };
+    return () => {
+      window.confirm = originalConfirm;
+    };
+  }, []);
+
+
 
   if (routeCode && (loadingTemplate || !editingTemplate)) {
     return (
@@ -732,7 +977,16 @@ export function TemplatesPage() {
             ) : <Box sx={{ display: 'grid', minHeight: 680, placeItems: 'center' }}><CircularProgress size={24} /></Box>}
           </Card>
         </Box>
-      </Box>
+        {lockedSchemaNames.length > 0 && (
+          <style>
+            {lockedSchemaNames.map((name) => `
+              div.selectable-locked[title="${name}"],
+              div.selectable[title="${name}"] {
+                pointer-events: none !important;
+              }
+            `).join('\n')}
+          </style>
+        )}      </Box>
     );
   }
 

@@ -94,13 +94,19 @@ export const PdfmeDesigner = forwardRef<PdfmeDesignerHandle, PdfmeDesignerProps>
     };
   }, []);
 
+  const lastSchemasLengthRef = useRef(template.schemas.length);
+
   useEffect(() => {
-    if (skipNextTemplateSyncRef.current && internalTemplateRef.current === template) {
+    const schemasLengthChanged = lastSchemasLengthRef.current !== template.schemas.length;
+    lastSchemasLengthRef.current = template.schemas.length;
+
+    if (!schemasLengthChanged && skipNextTemplateSyncRef.current && internalTemplateRef.current === template) {
       skipNextTemplateSyncRef.current = false;
       return;
     }
 
     designerRef.current?.updateTemplate(template);
+    skipNextTemplateSyncRef.current = false;
   }, [template]);
 
   return <div ref={containerRef} style={{ height: '100%', minHeight: 0, width: '100%' }} />;
