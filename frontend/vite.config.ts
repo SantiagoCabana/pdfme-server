@@ -1,6 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+function isApiRequest(url: string) {
+  return url === '/api' || url.startsWith('/api/');
+}
+
 function spaFallback() {
   return {
     name: 'pdfme-spa-fallback',
@@ -9,7 +13,7 @@ function spaFallback() {
         if (
           request.method === 'GET' &&
           request.url &&
-          !request.url.startsWith('/api') &&
+          !isApiRequest(request.url) &&
           !request.url.includes('.') &&
           request.headers.accept?.includes('text/html')
         ) {
@@ -24,7 +28,7 @@ function spaFallback() {
         if (
           request.method === 'GET' &&
           request.url &&
-          !request.url.startsWith('/api') &&
+          !isApiRequest(request.url) &&
           !request.url.includes('.') &&
           request.headers.accept?.includes('text/html')
         ) {
@@ -48,7 +52,7 @@ export default defineConfig({
       interval: 1000,
     },
     proxy: {
-      '/api': 'http://localhost:4000',
+      '^/api(/|$)': 'http://localhost:4000',
     },
   },
 });
