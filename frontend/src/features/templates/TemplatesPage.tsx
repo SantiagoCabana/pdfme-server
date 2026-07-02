@@ -43,7 +43,7 @@ import {
 import type { Template as PdfmeTemplate } from '@pdfme/common';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
-import { can, statusLabel } from '../../app/session';
+import { can } from '../../app/session';
 import type { TemplateItem } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
@@ -449,11 +449,10 @@ export function TemplatesPage() {
           <Typography sx={{ fontWeight: 600, maxWidth: { xs: 120, md: 260 } }} variant="subtitle2" noWrap>{editingTemplate.name}</Typography>
           <Chip color="primary" label={`v${editingTemplate.versionNumber}`} size="small" variant="outlined" />
         </Box>
-        <Box sx={{ flexGrow: 1 }} />
         {isPreviewRoute ? (
-          <Button onClick={() => navigate(`/templates/edit/${editingTemplate.code}`)} size="small" startIcon={<EditOutlined />} variant="outlined">Editar</Button>
+          <Button onClick={() => navigate(`/templates/edit/${editingTemplate.code}`)} size="small" startIcon={<EditOutlined />} sx={{ ml: 'auto' }} variant="outlined">Editar</Button>
         ) : (
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', ml: 'auto' }}>
             <TextField label="Formato" onChange={(event) => setFormat(event.target.value)} select size="small" sx={{ width: 120 }} value={pageFormat}>
               {pageFormats.map((format) => <MenuItem key={format.value} value={format.value}>{format.label}</MenuItem>)}
             </TextField>
@@ -547,11 +546,11 @@ export function TemplatesPage() {
       <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <TableContainer sx={{ flexGrow: 1, overflowY: 'auto' }}>
           <Table stickyHeader>
-            <TableHead><TableRow><TableCell sx={{ py: 2 }}>Plantilla</TableCell><TableCell sx={{ py: 2 }}>Estado</TableCell><TableCell sx={{ py: 2 }}>Version</TableCell><TableCell sx={{ py: 2 }}>Hoja</TableCell><TableCell sx={{ py: 2 }}>Tags</TableCell><TableCell align="right" sx={{ py: 2 }}>Acciones</TableCell></TableRow></TableHead>
+            <TableHead><TableRow><TableCell sx={{ py: 2 }}>Plantilla</TableCell><TableCell sx={{ py: 2 }}>Version</TableCell><TableCell sx={{ py: 2 }}>Hoja</TableCell><TableCell sx={{ py: 2 }}>Tags</TableCell><TableCell align="right" sx={{ py: 2 }}>Acciones</TableCell></TableRow></TableHead>
             <TableBody>
-              {loading ? <TableRow><TableCell align="center" colSpan={6}><CircularProgress size={24} /></TableCell></TableRow> : null}
-              {!loading && filteredTemplates.length === 0 ? <TableRow><TableCell colSpan={6}>No hay plantillas.</TableCell></TableRow> : null}
-              {!loading ? visibleTemplates.map((template) => <TableRow key={template.id}><TableCell><Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}><Box sx={{ width: template.pageOrientation === 'LANDSCAPE' ? 58 : 38, height: template.pageOrientation === 'LANDSCAPE' ? 34 : 52, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.default' }} /><Box><strong>{template.name}</strong><br /><small>{template.code}</small></Box></Stack></TableCell><TableCell><Chip label={statusLabel(template.status)} size="small" /></TableCell><TableCell>v{template.versionNumber}</TableCell><TableCell>{template.pageFormat} {template.pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}</TableCell><TableCell>{template.tags.join(', ') || 'Sin etiquetas'}</TableCell><TableCell align="right"><Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}><Button onClick={() => navigate(`/templates/preview/${template.code}`)} size="small" startIcon={<EyeOutlined />}>Preview</Button><Button onClick={() => navigate(`/templates/edit/${template.code}`)} size="small" startIcon={<EditOutlined />}>Editar</Button>{can(user, 'templates.delete') ? <Button color="error" disabled={deletingId === template.id} onClick={() => void remove(template.id)} size="small" startIcon={<DeleteOutlined />}>{deletingId === template.id ? 'Eliminando...' : 'Eliminar'}</Button> : null}</Stack></TableCell></TableRow>) : null}
+              {loading ? <TableRow><TableCell align="center" colSpan={5}><CircularProgress size={24} /></TableCell></TableRow> : null}
+              {!loading && filteredTemplates.length === 0 ? <TableRow><TableCell colSpan={5}>No hay plantillas.</TableCell></TableRow> : null}
+              {!loading ? visibleTemplates.map((template) => <TableRow key={template.id}><TableCell><Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}><Box sx={{ width: template.pageOrientation === 'LANDSCAPE' ? 58 : 38, height: template.pageOrientation === 'LANDSCAPE' ? 34 : 52, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.default' }} /><Box><strong>{template.name}</strong><br /><small>{template.code}</small></Box></Stack></TableCell><TableCell>v{template.versionNumber}</TableCell><TableCell>{template.pageFormat} {template.pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}</TableCell><TableCell>{template.tags.join(', ') || 'Sin etiquetas'}</TableCell><TableCell align="right"><Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}><Button onClick={() => navigate(`/templates/preview/${template.code}`)} size="small" startIcon={<EyeOutlined />}>Preview</Button><Button onClick={() => navigate(`/templates/edit/${template.code}`)} size="small" startIcon={<EditOutlined />}>Editar</Button>{can(user, 'templates.delete') ? <Button color="error" disabled={deletingId === template.id} onClick={() => void remove(template.id)} size="small" startIcon={<DeleteOutlined />}>{deletingId === template.id ? 'Eliminando...' : 'Eliminar'}</Button> : null}</Stack></TableCell></TableRow>) : null}
             </TableBody>
           </Table>
         </TableContainer>
