@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
-import { Alert, Button, Card, Chip, CircularProgress, Dialog, DialogContent, DialogTitle, MenuItem, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from '@mui/material';
+import { Alert, Button, Card, Chip, CircularProgress, Dialog, DialogContent, DialogTitle, MenuItem, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField } from '@mui/material';
 
 import { formatDate, statusLabel } from '../../app/session';
 import type { InternalUser } from '../../app/types';
@@ -27,6 +27,8 @@ export function UsersPage() {
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   async function load() {
     setLoading(true);
@@ -39,6 +41,8 @@ export function UsersPage() {
   }
 
   useEffect(() => { void load().catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar.')); }, []);
+
+  const visibleUsers = users.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -132,7 +136,7 @@ export function UsersPage() {
             <TableBody>
               {loading ? <TableRow><TableCell colSpan={5} align="center"><CircularProgress size={24} /></TableCell></TableRow> : null}
               {!loading && users.length === 0 ? <TableRow><TableCell colSpan={5}>No hay usuarios.</TableCell></TableRow> : null}
-              {!loading ? users.map((item) => (
+              {!loading ? visibleUsers.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell><strong>{item.displayName}</strong><br /><small>{item.email}</small></TableCell>
                   <TableCell>{item.roles.join(', ') || 'Sin rol'}</TableCell>
@@ -149,6 +153,16 @@ export function UsersPage() {
             </TableBody>
           </Table>
         </TableContainer>
+        <TablePagination
+          component="div"
+          count={users.length}
+          labelRowsPerPage="Filas por pagina"
+          onPageChange={(_event, nextPage) => setPage(nextPage)}
+          onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          rowsPerPageOptions={[10, 25, 50]}
+        />
       </Card>
 
       <Dialog fullWidth maxWidth="sm" onClose={() => setEditingUser(null)} open={Boolean(editingUser)}>

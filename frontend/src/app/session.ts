@@ -14,6 +14,7 @@ export function statusLabel(value: string) {
   if (value === 'DRAFT') return 'Borrador';
   if (value === 'REVOKED') return 'Revocada';
   if (value === 'SUSPENDED') return 'Suspendido';
+  if (value === 'INVITED') return 'Invitado';
   return value;
 }
 

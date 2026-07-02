@@ -28,6 +28,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MoonOutlined,
+  SafetyCertificateOutlined,
   SunOutlined,
   TagsOutlined,
   UserOutlined,
@@ -54,6 +55,7 @@ export function PrivateLayout() {
     { path: '/api-keys', label: 'Claves API', icon: <ApiOutlined />, visible: can(user, 'api_keys.manage') },
     { path: '/tags', label: 'Tags', icon: <TagsOutlined />, visible: can(user, 'templates.edit') },
     { path: '/users', label: 'Usuarios', icon: <UserOutlined />, visible: can(user, 'users.manage') },
+    { path: '/permissions', label: 'Permisos', icon: <SafetyCertificateOutlined />, visible: can(user, 'users.manage') },
   ], [user]);
 
   useEffect(() => {
@@ -85,7 +87,7 @@ export function PrivateLayout() {
         sx={{
           display: 'flex',
           alignItems: 'center',
-          height: 74,
+          height: 58,
           px: collapsed ? 0 : 3,
           justifyContent: collapsed ? 'center' : 'space-between',
           gap: collapsed ? 0 : 1.5,
@@ -253,16 +255,16 @@ export function PrivateLayout() {
           transition: sidebarTransition,
         }}
       >
-        <Toolbar sx={{ minHeight: '74px !important', gap: 1.5 }}>
+        <Toolbar sx={{ minHeight: '58px !important', gap: 1.25, px: { xs: 2, md: 2.5 } }}>
           <IconButton aria-label="open drawer" color="secondary" edge="start" onClick={() => setOpen((value) => !value)} sx={{ display: { xs: 'inline-flex', lg: 'none' } }}>
             {open ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
           </IconButton>
-          <Typography variant="h4" color="text.primary" sx={{ minWidth: { xs: 0, md: 180 }, display: { xs: 'none', sm: 'block' } }} noWrap>
+          <Typography variant="h5" color="text.primary" sx={{ minWidth: { xs: 0, md: 180 }, display: { xs: 'none', sm: 'block' } }} noWrap>
             {activeItem?.label ?? 'Plantillas'}
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
           {headerAction ? (
-            <Button onClick={openHeaderAction} variant="contained">
+            <Button onClick={openHeaderAction} size="small" variant="contained">
               {headerAction.label}
             </Button>
           ) : null}
@@ -283,7 +285,7 @@ export function PrivateLayout() {
           {drawer}
         </Drawer>
       </Box>
-      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 }, pt: { xs: 11, md: 12 }, transition: sidebarTransition }}>
+      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 }, pt: { xs: 9, md: 10 }, transition: sidebarTransition }}>
         <Outlet />
       </Box>
     </Box>

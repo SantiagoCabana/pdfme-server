@@ -13,6 +13,7 @@ import { ApiKeysPage } from './features/api-keys/ApiKeysPage';
 import { TemplatesPage } from './features/templates/TemplatesPage';
 import { UsersPage } from './features/users/UsersPage';
 import { TagsPage } from './features/tags/TagsPage';
+import { PermissionsPage } from './features/permissions/PermissionsPage';
 import { PrivateLayout } from './layout/PrivateLayout';
 import { apiRequest } from './shared/api/client';
 import { createMantisTheme, type ThemeMode } from './theme/mantisTheme';
@@ -69,6 +70,7 @@ export default function App() {
         { path: 'api-keys', element: <ApiKeysPage /> },
         { path: 'tags', element: <TagsPage /> },
         { path: 'users', element: <UsersPage /> },
+        { path: 'permissions', element: <PermissionsPage /> },
       ],
     },
     { path: '*', element: <Navigate to={user ? '/templates' : '/login'} replace /> },

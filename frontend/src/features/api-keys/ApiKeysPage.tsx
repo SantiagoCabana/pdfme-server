@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { KeyOutlined, StopOutlined } from '@ant-design/icons';
-import { Alert, Button, Card, Chip, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, MenuItem } from '@mui/material';
+import { Alert, Button, Card, Chip, CircularProgress, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField, MenuItem } from '@mui/material';
 
 import { buildExpiryDate, formatDate, statusLabel } from '../../app/session';
 import type { ApiCredential } from '../../app/types';
@@ -14,11 +14,20 @@ export function ApiKeysPage() {
   const [expiryMode, setExpiryMode] = useState('never');
   const [rawKey, setRawKey] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [revokingId, setRevokingId] = useState('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   async function load() {
-    const payload = await apiRequest<{ data: ApiCredential[] }>('/api/api-credentials');
-    setCredentials(payload.data);
+    setLoading(true);
+    try {
+      const payload = await apiRequest<{ data: ApiCredential[] }>('/api/api-credentials');
+      setCredentials(payload.data);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { void load().catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar.')); }, []);
@@ -63,13 +72,26 @@ export function ApiKeysPage() {
     return () => setHeaderAction(null);
   }, [closeHeaderAction, creating, expiryMode, name, setHeaderAction]);
 
-  async function revoke(id: string) { await apiRequest(`/api/api-credentials/${id}/revoke`, { method: 'PATCH' }); await load(); }
+  async function revoke(id: string) {
+    setError('');
+    setRevokingId(id);
+    try {
+      await apiRequest(`/api/api-credentials/${id}/revoke`, { method: 'PATCH' });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo revocar la clave.');
+    } finally {
+      setRevokingId('');
+    }
+  }
+
+  const visibleCredentials = credentials.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   return (
     <Stack spacing={2}>
       {error ? <Alert severity="error">{error}</Alert> : null}
       {rawKey ? <Alert severity="info"><strong>Clave generada:</strong> <code>{rawKey}</code>. Guardala ahora; no se volvera a mostrar completa.</Alert> : null}
-      <Card><TableContainer><Table><TableHead><TableRow><TableCell>Nombre</TableCell><TableCell>Identificador</TableCell><TableCell>Estado</TableCell><TableCell>Expira</TableCell><TableCell>Ultimo uso</TableCell><TableCell align="right"></TableCell></TableRow></TableHead><TableBody>{credentials.length === 0 ? <TableRow><TableCell colSpan={6}>No hay claves.</TableCell></TableRow> : credentials.map((credential) => <TableRow key={credential.id}><TableCell>{credential.name}</TableCell><TableCell>{credential.prefix}</TableCell><TableCell><Chip label={statusLabel(credential.status)} size="small" /></TableCell><TableCell>{formatDate(credential.expiresAt)}</TableCell><TableCell>{formatDate(credential.lastUsedAt)}</TableCell><TableCell align="right">{credential.status === 'ACTIVE' ? <Button color="error" onClick={() => void revoke(credential.id)} size="small" startIcon={<StopOutlined />}>Revocar</Button> : null}</TableCell></TableRow>)}</TableBody></Table></TableContainer></Card>
+      <Card><TableContainer><Table><TableHead><TableRow><TableCell>Nombre</TableCell><TableCell>Identificador</TableCell><TableCell>Estado</TableCell><TableCell>Expira</TableCell><TableCell>Ultimo uso</TableCell><TableCell align="right"></TableCell></TableRow></TableHead><TableBody>{loading ? <TableRow><TableCell align="center" colSpan={6}><CircularProgress size={24} /></TableCell></TableRow> : null}{!loading && credentials.length === 0 ? <TableRow><TableCell colSpan={6}>No hay claves.</TableCell></TableRow> : null}{!loading ? visibleCredentials.map((credential) => <TableRow key={credential.id}><TableCell>{credential.name}</TableCell><TableCell>{credential.prefix}</TableCell><TableCell><Chip label={statusLabel(credential.status)} size="small" /></TableCell><TableCell>{formatDate(credential.expiresAt)}</TableCell><TableCell>{formatDate(credential.lastUsedAt)}</TableCell><TableCell align="right">{credential.status === 'ACTIVE' ? <Button color="error" disabled={revokingId === credential.id} onClick={() => void revoke(credential.id)} size="small" startIcon={<StopOutlined />}>{revokingId === credential.id ? 'Revocando...' : 'Revocar'}</Button> : null}</TableCell></TableRow>) : null}</TableBody></Table></TableContainer><TablePagination component="div" count={credentials.length} labelRowsPerPage="Filas por pagina" onPageChange={(_event, nextPage) => setPage(nextPage)} onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }} page={page} rowsPerPage={rowsPerPage} rowsPerPageOptions={[10, 25, 50]} /></Card>
     </Stack>
   );
 }

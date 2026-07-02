@@ -48,3 +48,20 @@ export type TagItem = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type AccessPermissionItem = {
+  id: string;
+  code: string;
+  name: string;
+  category: string;
+  description: string | null;
+};
+
+export type AccessRoleItem = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  isSystem: boolean;
+  permissions: string[];
+};

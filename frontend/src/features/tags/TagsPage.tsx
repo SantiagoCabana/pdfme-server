@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DeleteOutlined, EditOutlined, TagsOutlined } from '@ant-design/icons';
-import { Alert, Button, Card, CircularProgress, Dialog, DialogContent, DialogTitle, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from '@mui/material';
+import { Alert, Button, Card, CircularProgress, Dialog, DialogContent, DialogTitle, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField } from '@mui/material';
 
 import type { TagItem } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
@@ -17,6 +17,8 @@ export function TagsPage() {
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   async function load() {
     setLoading(true);
@@ -29,6 +31,8 @@ export function TagsPage() {
   }
 
   useEffect(() => { void load().catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar.')); }, []);
+
+  const visibleTags = tags.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -106,7 +110,7 @@ export function TagsPage() {
             <TableBody>
               {loading ? <TableRow><TableCell colSpan={3} align="center"><CircularProgress size={24} /></TableCell></TableRow> : null}
               {!loading && tags.length === 0 ? <TableRow><TableCell colSpan={3}>No hay tags.</TableCell></TableRow> : null}
-              {!loading ? tags.map((tag) => (
+              {!loading ? visibleTags.map((tag) => (
                 <TableRow key={tag.id}>
                   <TableCell><strong>{tag.name}</strong></TableCell>
                   <TableCell>{tag.templateCount}</TableCell>
@@ -121,6 +125,16 @@ export function TagsPage() {
             </TableBody>
           </Table>
         </TableContainer>
+        <TablePagination
+          component="div"
+          count={tags.length}
+          labelRowsPerPage="Filas por pagina"
+          onPageChange={(_event, nextPage) => setPage(nextPage)}
+          onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          rowsPerPageOptions={[10, 25, 50]}
+        />
       </Card>
 
       <Dialog fullWidth maxWidth="xs" onClose={() => setEditingTag(null)} open={Boolean(editingTag)}>
