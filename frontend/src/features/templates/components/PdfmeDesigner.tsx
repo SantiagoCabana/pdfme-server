@@ -48,12 +48,13 @@ type PdfmeDesignerProps = {
 export function PdfmeDesigner({ template, onChange }: PdfmeDesignerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const designerRef = useRef<Designer | null>(null);
+  const internalTemplateRef = useRef<PdfmeTemplate | null>(null);
+  const skipNextTemplateSyncRef = useRef(false);
 
   useEffect(() => {
     if (!containerRef.current) return undefined;
 
     let isMounted = true;
-    let removeDeselectListener: (() => void) | undefined;
 
     loadPdfmeFonts().then((font) => {
       if (!isMounted || !containerRef.current) return;
@@ -68,32 +69,29 @@ export function PdfmeDesigner({ template, onChange }: PdfmeDesignerProps) {
         },
       });
 
-      const deselectWhenOutsideDesigner = (event: PointerEvent) => {
-        const target = event.target;
-
-        if (target instanceof Node && containerRef.current?.contains(target)) {
-          return;
-        }
-
-        designer.selectSchemas([]);
-      };
-
-      document.addEventListener('pointerdown', deselectWhenOutsideDesigner, true);
-      removeDeselectListener = () => document.removeEventListener('pointerdown', deselectWhenOutsideDesigner, true);
-
-      designer.onChangeTemplate((nextTemplate) => onChange(nextTemplate));
+      designer.onChangeTemplate((nextTemplate) => {
+        internalTemplateRef.current = nextTemplate;
+        skipNextTemplateSyncRef.current = true;
+        onChange(nextTemplate);
+      });
       designerRef.current = designer;
     });
 
     return () => {
       isMounted = false;
-      removeDeselectListener?.();
       designerRef.current?.destroy();
       designerRef.current = null;
+      internalTemplateRef.current = null;
+      skipNextTemplateSyncRef.current = false;
     };
   }, []);
 
   useEffect(() => {
+    if (skipNextTemplateSyncRef.current && internalTemplateRef.current === template) {
+      skipNextTemplateSyncRef.current = false;
+      return;
+    }
+
     designerRef.current?.updateTemplate(template);
   }, [template]);
 
