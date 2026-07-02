@@ -34,7 +34,16 @@ export function createMantisTheme(mode: ThemeMode) {
     components: {
       MuiButton: { styleOverrides: { root: { boxShadow: 'none' } } },
       MuiCard: { styleOverrides: { root: { backgroundImage: 'none' } } },
-      MuiTableCell: { styleOverrides: { head: { fontWeight: 700, fontSize: 12, textTransform: 'uppercase' } } },
+      MuiTableCell: {
+        styleOverrides: {
+          head: {
+            fontWeight: 700,
+            fontSize: 12,
+            textTransform: 'uppercase',
+            borderBottom: isDark ? '2px solid #1677ff' : '2px solid #0958d9',
+          },
+        },
+      },
     },
   });
 }

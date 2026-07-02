@@ -114,8 +114,8 @@ function buildPdfmeTemplate(template: TemplateItem, options?: { pageWidthMm?: nu
 function syncBackgroundSchemaSize(staticSchema: unknown, width: number, height: number): Schema[] | undefined {
   if (!Array.isArray(staticSchema)) return undefined;
 
-  return (staticSchema as Schema[]).map((schema) => {
-    if (!(typeof schema === 'object' && schema && 'name' in schema && schema.name === backgroundSchemaName)) {
+  return (staticSchema as any[]).map((schema) => {
+    if (schema?.name !== backgroundSchemaName) {
       return schema;
     }
 
@@ -175,12 +175,10 @@ function updatePdfmeBackground(current: PdfmeTemplate | null, dataUrl: string, w
       padding: currentBasePdf.padding ?? [0, 0, 0, 0],
       staticSchema: [
         backgroundSchema,
-        ...staticSchema.filter((schema) => (
-          !(typeof schema === 'object' && schema && 'name' in schema && schema.name === backgroundSchemaName)
-        )),
+        ...staticSchema.filter((schema: any) => schema?.name !== backgroundSchemaName),
       ],
     },
-  } as PdfmeTemplate;
+  } as unknown as PdfmeTemplate;
 }
 
 function removePdfmeBackground(current: PdfmeTemplate | null) {
@@ -196,11 +194,9 @@ function removePdfmeBackground(current: PdfmeTemplate | null) {
     basePdf: {
       ...currentBasePdf,
       padding: currentBasePdf.padding ?? [0, 0, 0, 0],
-      staticSchema: staticSchema.filter((schema) => (
-        !(typeof schema === 'object' && schema && 'name' in schema && schema.name === backgroundSchemaName)
-      )),
+      staticSchema: staticSchema.filter((schema: any) => schema?.name !== backgroundSchemaName),
     },
-  } as PdfmeTemplate;
+  } as unknown as PdfmeTemplate;
 }
 
 export function TemplatesPage() {
