@@ -21,6 +21,12 @@ small {
   margin-top: 15px;
 }
 
+.pdfme-workspace .pdfme-designer-left-sidebar {
+  bottom: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
 .pdfme-workspace {
   background: #f0f2f8;
 }

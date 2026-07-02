@@ -1,11 +1,11 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeftOutlined,
-  CopyOutlined,
   DeleteOutlined,
   EditOutlined,
   EllipsisOutlined,
   EyeOutlined,
+  PictureOutlined,
   PlusOutlined,
   RetweetOutlined,
   SaveOutlined,
@@ -59,6 +59,8 @@ const pageFormats = [
   { value: 'LEGAL', label: 'Legal', width: 216, height: 356 },
   { value: 'CUSTOM', label: 'Personalizado', width: 210, height: 297 },
 ];
+
+const backgroundSchemaName = '__page_background';
 
 function randomSuffix() {
   const values = new Uint8Array(4);
@@ -116,6 +118,60 @@ function updatePdfmeBasePdf(current: PdfmeTemplate | null, patch: { width?: numb
   };
 }
 
+function updatePdfmeBackground(current: PdfmeTemplate | null, dataUrl: string, width: number, height: number) {
+  if (!current) return current;
+
+  const currentBasePdf = typeof current.basePdf === 'object' && current.basePdf && !Array.isArray(current.basePdf)
+    ? current.basePdf as Record<string, unknown>
+    : {};
+  const staticSchema = Array.isArray(currentBasePdf.staticSchema) ? currentBasePdf.staticSchema : [];
+  const backgroundSchema = {
+    name: backgroundSchemaName,
+    type: 'image',
+    content: dataUrl,
+    position: { x: 0, y: 0 },
+    width,
+    height,
+    readOnly: true,
+  };
+
+  return {
+    ...current,
+    basePdf: {
+      ...currentBasePdf,
+      width,
+      height,
+      padding: currentBasePdf.padding ?? [0, 0, 0, 0],
+      staticSchema: [
+        backgroundSchema,
+        ...staticSchema.filter((schema) => (
+          !(typeof schema === 'object' && schema && 'name' in schema && schema.name === backgroundSchemaName)
+        )),
+      ],
+    },
+  } as PdfmeTemplate;
+}
+
+function removePdfmeBackground(current: PdfmeTemplate | null) {
+  if (!current) return current;
+
+  const currentBasePdf = typeof current.basePdf === 'object' && current.basePdf && !Array.isArray(current.basePdf)
+    ? current.basePdf as Record<string, unknown>
+    : {};
+  const staticSchema = Array.isArray(currentBasePdf.staticSchema) ? currentBasePdf.staticSchema : [];
+
+  return {
+    ...current,
+    basePdf: {
+      ...currentBasePdf,
+      padding: currentBasePdf.padding ?? [0, 0, 0, 0],
+      staticSchema: staticSchema.filter((schema) => (
+        !(typeof schema === 'object' && schema && 'name' in schema && schema.name === backgroundSchemaName)
+      )),
+    },
+  } as PdfmeTemplate;
+}
+
 export function TemplatesPage() {
   const { user, setHeaderAction, closeHeaderAction, openHeaderAction, setHeaderControls } = useAppContext();
   const navigate = useNavigate();
@@ -152,7 +208,9 @@ export function TemplatesPage() {
   const [detailsCode, setDetailsCode] = useState('');
   const [detailsTags, setDetailsTags] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
+  const [loadingBackground, setLoadingBackground] = useState(false);
   const designerRef = useRef<PdfmeDesignerHandle | null>(null);
+  const backgroundInputRef = useRef<HTMLInputElement | null>(null);
 
   async function load() {
     setLoading(true);
@@ -305,7 +363,10 @@ export function TemplatesPage() {
 
   async function saveSettings() {
     if (!editingTemplate) return null;
-    const currentDesignerTemplate = designerRef.current?.getTemplate() ?? designerTemplate;
+    const designerCurrentTemplate = designerRef.current?.getTemplate();
+    const currentDesignerTemplate = designerTemplate && designerCurrentTemplate
+      ? { ...designerCurrentTemplate, basePdf: designerTemplate.basePdf }
+      : designerCurrentTemplate ?? designerTemplate;
     setError('');
     setSaving(true);
     try {
@@ -439,6 +500,34 @@ export function TemplatesPage() {
     setDesignerTemplate((current) => updatePdfmeBasePdf(current, { width: pageHeightMm, height: pageWidthMm }));
   }
 
+  function uploadBackground(file: File) {
+    setError('');
+    setLoadingBackground(true);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      if (!result.startsWith('data:image/')) {
+        setError('El fondo debe ser una imagen PNG, JPG o WebP.');
+        setLoadingBackground(false);
+        return;
+      }
+
+      setDesignerTemplate((current) => updatePdfmeBackground(current, result, pageWidthMm, pageHeightMm));
+      setLoadingBackground(false);
+    };
+    reader.onerror = () => {
+      setError('No se pudo leer la imagen de fondo.');
+      setLoadingBackground(false);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearBackground() {
+    setDesignerTemplate((current) => removePdfmeBackground(current));
+    setVersionMenuAnchor(null);
+  }
+
   useEffect(() => {
     if (routeCode && !editingTemplate) {
       setHeaderAction(null);
@@ -517,6 +606,9 @@ export function TemplatesPage() {
               <Button onClick={toggleOrientation} size="small" startIcon={<RetweetOutlined />} sx={{ minWidth: 112, whiteSpace: 'nowrap' }} variant="outlined">
                 {pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}
               </Button>
+              <Button disabled={loadingBackground || saving || switchingVersion} onClick={() => backgroundInputRef.current?.click()} size="small" startIcon={<PictureOutlined />} sx={{ minWidth: 96, whiteSpace: 'nowrap' }} variant="outlined">
+                {loadingBackground ? 'Cargando...' : 'Fondo'}
+              </Button>
             </Box>
             <Button disabled={saving || switchingVersion} onClick={() => void saveSettings()} size="small" startIcon={<SaveOutlined />} variant="contained">
               {saving ? 'Guardando...' : 'Guardar'}
@@ -532,6 +624,7 @@ export function TemplatesPage() {
                 Cambiar version
               </MenuItem>
               <MenuItem onClick={openDetailsDialog}>Propiedades</MenuItem>
+              <MenuItem onClick={clearBackground}>Quitar fondo</MenuItem>
             </Menu>
           </Stack>
         )}
@@ -539,7 +632,7 @@ export function TemplatesPage() {
     );
 
     return () => setHeaderControls(null);
-  }, [editingTemplate, hasMultipleVersions, isPreviewRoute, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, routeCode, saving, savingDetails, savingVersion, search, setHeaderAction, setHeaderControls, switchingVersion, user, versionMenuAnchor]);
+  }, [editingTemplate, hasMultipleVersions, isPreviewRoute, loadingBackground, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, routeCode, saving, savingDetails, savingVersion, search, setHeaderAction, setHeaderControls, switchingVersion, user, versionMenuAnchor]);
 
   if (routeCode && (loadingTemplate || !editingTemplate)) {
     return (
@@ -552,6 +645,17 @@ export function TemplatesPage() {
   if (editingTemplate) {
     return (
       <Box sx={{ height: '100%', minHeight: 0, position: 'relative', width: '100%' }}>
+        <input
+          accept="image/png,image/jpeg,image/webp"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+            if (file) uploadBackground(file);
+          }}
+          ref={backgroundInputRef}
+          type="file"
+        />
         {error ? <Alert severity="error" sx={{ left: 16, position: 'absolute', right: 16, top: 16, zIndex: 2 }}>{error}</Alert> : null}
         <Dialog fullWidth maxWidth="sm" onClose={() => setVersionsDialogOpen(false)} open={versionsDialogOpen}>
           <DialogTitle>Cambiar version</DialogTitle>
