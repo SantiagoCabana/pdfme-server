@@ -74,10 +74,11 @@ export async function listTemplateCatalog(options?: { publishedOnly?: boolean })
 
 export async function createTemplate(input: {
   name: string;
+  code?: string;
   tagNames?: string[];
   createdById?: string | null;
 }) {
-  const code = buildTemplateCode(input.name);
+  const code = input.code?.trim() || buildTemplateCode(input.name);
   const normalizedTags = Array.from(new Set((input.tagNames ?? []).map((tag) => tag.trim()).filter(Boolean)));
 
   const template = await prisma.template.create({
@@ -122,6 +123,82 @@ export async function createTemplate(input: {
     include: templateInclude,
   });
 
+  return mapTemplate(template);
+}
+
+export async function updateTemplatePageSettings(id: string, input: {
+  pageFormat: 'A4' | 'LETTER' | 'LEGAL' | 'CUSTOM';
+  pageOrientation: 'PORTRAIT' | 'LANDSCAPE';
+  pageWidthMm: number;
+  pageHeightMm: number;
+}) {
+  const currentVersion = await prisma.templateVersion.findFirstOrThrow({
+    where: { templateId: id, isCurrent: true },
+    include: { pages: { orderBy: { pageNumber: 'asc' } } },
+  });
+  const firstPage = currentVersion.pages[0];
+
+  if (!firstPage) {
+    throw new Error('Template page not found');
+  }
+
+  await prisma.templatePage.update({
+    where: { id: firstPage.id },
+    data: {
+      pageFormat: input.pageFormat,
+      pageOrientation: input.pageOrientation,
+      pageWidthMm: input.pageWidthMm,
+      pageHeightMm: input.pageHeightMm,
+    },
+  });
+
+  const template = await prisma.template.findUniqueOrThrow({ where: { id }, include: templateInclude });
+  return mapTemplate(template);
+}
+
+export async function createTemplateVersion(id: string, createdById?: string | null) {
+  const currentVersion = await prisma.templateVersion.findFirstOrThrow({
+    where: { templateId: id, isCurrent: true },
+    include: { pages: { orderBy: { pageNumber: 'asc' } } },
+  });
+  const lastVersion = await prisma.templateVersion.findFirst({
+    where: { templateId: id },
+    orderBy: { versionNumber: 'desc' },
+    select: { versionNumber: true },
+  });
+
+  await prisma.$transaction([
+    prisma.templateVersion.updateMany({ where: { templateId: id }, data: { isCurrent: false } }),
+    prisma.templateVersion.create({
+      data: {
+        templateId: id,
+        versionNumber: (lastVersion?.versionNumber ?? 0) + 1,
+        notes: currentVersion.notes,
+        defaultInput: currentVersion.defaultInput ?? DEFAULT_INPUT,
+        inputExample: currentVersion.inputExample ?? DEFAULT_INPUT,
+        isCurrent: true,
+        createdById: createdById === 'bootstrap-admin' ? null : createdById ?? null,
+        pages: {
+          create: currentVersion.pages.map((page) => ({
+            pageNumber: page.pageNumber,
+            designerJson: page.designerJson ?? DEFAULT_DESIGNER_JSON,
+            pageFormat: page.pageFormat,
+            pageOrientation: page.pageOrientation,
+            pageWidthMm: page.pageWidthMm,
+            pageHeightMm: page.pageHeightMm,
+            paddingVerticalMm: page.paddingVerticalMm,
+            paddingHorizontalMm: page.paddingHorizontalMm,
+            sourceMode: page.sourceMode,
+            baseFileName: page.baseFileName,
+            baseFileUrl: page.baseFileUrl,
+            previewImageUrl: page.previewImageUrl,
+          })),
+        },
+      },
+    }),
+  ]);
+
+  const template = await prisma.template.findUniqueOrThrow({ where: { id }, include: templateInclude });
   return mapTemplate(template);
 }
 

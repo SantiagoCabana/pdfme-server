@@ -1,24 +1,92 @@
 import { useEffect, useMemo, useState } from 'react';
-import { DeleteOutlined, PlusOutlined, SearchOutlined, SendOutlined } from '@ant-design/icons';
-import { Alert, Box, Button, Card, Chip, CircularProgress, InputAdornment, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField } from '@mui/material';
+import {
+  ArrowLeftOutlined,
+  CopyOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  PictureOutlined,
+  PlusOutlined,
+  RetweetOutlined,
+  SaveOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  Chip,
+  CircularProgress,
+  Divider,
+  InputAdornment,
+  MenuItem,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
+  TextField,
+  Typography,
+} from '@mui/material';
 
 import { can, statusLabel } from '../../app/session';
 import type { TemplateItem } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
 
+const pageFormats = [
+  { value: 'A4', label: 'A4', width: 210, height: 297 },
+  { value: 'LETTER', label: 'Carta', width: 216, height: 279 },
+  { value: 'LEGAL', label: 'Legal', width: 216, height: 356 },
+  { value: 'CUSTOM', label: 'Personalizado', width: 210, height: 297 },
+];
+
+function randomSuffix() {
+  const values = new Uint8Array(4);
+  crypto.getRandomValues(values);
+  return Array.from(values).map((value) => value.toString(16).padStart(2, '0')).join('');
+}
+
+function slugifyCode(value: string) {
+  const base = value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 48);
+
+  return base || 'template';
+}
+
+function buildCode(name: string, suffix: string) {
+  return `${slugifyCode(name)}_${suffix}`;
+}
+
 export function TemplatesPage() {
-  const { user, setHeaderAction, closeHeaderAction } = useAppContext();
+  const { user, setHeaderAction, closeHeaderAction, setHeaderControls } = useAppContext();
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
+  const [editingTemplate, setEditingTemplate] = useState<TemplateItem | null>(null);
   const [name, setName] = useState('');
+  const [code, setCode] = useState(() => buildCode('', randomSuffix()));
+  const [codeTouched, setCodeTouched] = useState(false);
+  const [codeSuffix, setCodeSuffix] = useState(() => randomSuffix());
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [publishingId, setPublishingId] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [savingVersion, setSavingVersion] = useState(false);
   const [deletingId, setDeletingId] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [pageFormat, setPageFormat] = useState('A4');
+  const [pageOrientation, setPageOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>('PORTRAIT');
+  const [pageWidthMm, setPageWidthMm] = useState(210);
+  const [pageHeightMm, setPageHeightMm] = useState(297);
 
   async function load() {
     setLoading(true);
@@ -47,15 +115,36 @@ export function TemplatesPage() {
     setPage(0);
   }, [search]);
 
+  function resetCreateForm() {
+    const suffix = randomSuffix();
+    setName('');
+    setCodeSuffix(suffix);
+    setCode(buildCode('', suffix));
+    setCodeTouched(false);
+  }
+
+  function openEditor(template: TemplateItem) {
+    setEditingTemplate(template);
+    setPageFormat(template.pageFormat);
+    setPageOrientation(template.pageOrientation === 'LANDSCAPE' ? 'LANDSCAPE' : 'PORTRAIT');
+    setPageWidthMm(template.pageWidthMm);
+    setPageHeightMm(template.pageHeightMm);
+    setError('');
+  }
+
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
     setCreating(true);
     try {
-      await apiRequest('/api/templates', { method: 'POST', body: JSON.stringify({ name }) });
-      setName('');
+      const payload = await apiRequest<{ template: TemplateItem }>('/api/templates', {
+        method: 'POST',
+        body: JSON.stringify({ name, code }),
+      });
+      resetCreateForm();
       await load();
       closeHeaderAction();
+      openEditor(payload.template);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo crear la plantilla.');
     } finally {
@@ -63,9 +152,8 @@ export function TemplatesPage() {
     }
   }
 
-
   useEffect(() => {
-    if (!can(user, 'templates.create')) {
+    if (editingTemplate || !can(user, 'templates.create')) {
       setHeaderAction(null);
       return;
     }
@@ -76,25 +164,63 @@ export function TemplatesPage() {
       maxWidth: 'sm',
       content: (
         <Stack component="form" spacing={2} onSubmit={create}>
-          <TextField autoFocus fullWidth label="Nombre" onChange={(event) => setName(event.target.value)} value={name} />
+          <TextField
+            autoFocus
+            fullWidth
+            label="Nombre"
+            onChange={(event) => {
+              const nextName = event.target.value;
+              setName(nextName);
+              if (!codeTouched) setCode(buildCode(nextName, codeSuffix));
+            }}
+            value={name}
+          />
+          <TextField
+            fullWidth
+            helperText="Identificador usado por las apps y APIs para referirse a esta plantilla."
+            label="Codigo"
+            onChange={(event) => { setCode(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_')); setCodeTouched(true); }}
+            value={code}
+          />
           <Button disabled={creating} startIcon={<PlusOutlined />} type="submit" variant="contained">{creating ? 'Creando...' : 'Crear plantilla'}</Button>
         </Stack>
       ),
     });
 
     return () => setHeaderAction(null);
-  }, [closeHeaderAction, creating, name, setHeaderAction, user]);
+  }, [closeHeaderAction, code, codeSuffix, codeTouched, creating, editingTemplate, name, setHeaderAction, user]);
 
-  async function publish(id: string) {
+  async function saveSettings() {
+    if (!editingTemplate) return;
     setError('');
-    setPublishingId(id);
+    setSaving(true);
     try {
-      await apiRequest(`/api/templates/${id}/publish`, { method: 'PATCH' });
+      const payload = await apiRequest<{ template: TemplateItem }>('/api/templates/' + editingTemplate.id + '/page-settings', {
+        method: 'PATCH',
+        body: JSON.stringify({ pageFormat, pageOrientation, pageWidthMm, pageHeightMm }),
+      });
+      setEditingTemplate(payload.template);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo publicar la plantilla.');
+      setError(err instanceof Error ? err.message : 'No se pudo guardar la plantilla.');
     } finally {
-      setPublishingId('');
+      setSaving(false);
+    }
+  }
+
+  async function saveVersion() {
+    if (!editingTemplate) return;
+    setError('');
+    setSavingVersion(true);
+    try {
+      await saveSettings();
+      const payload = await apiRequest<{ template: TemplateItem }>('/api/templates/' + editingTemplate.id + '/versions', { method: 'POST' });
+      setEditingTemplate(payload.template);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo guardar una nueva version.');
+    } finally {
+      setSavingVersion(false);
     }
   }
 
@@ -109,6 +235,101 @@ export function TemplatesPage() {
     } finally {
       setDeletingId('');
     }
+  }
+
+  function setFormat(format: string) {
+    setPageFormat(format);
+    if (format === 'CUSTOM') return;
+    const selectedFormat = pageFormats.find((item) => item.value === format);
+    if (!selectedFormat) return;
+    if (pageOrientation === 'LANDSCAPE') {
+      setPageWidthMm(selectedFormat.height);
+      setPageHeightMm(selectedFormat.width);
+    } else {
+      setPageWidthMm(selectedFormat.width);
+      setPageHeightMm(selectedFormat.height);
+    }
+  }
+
+  function toggleOrientation() {
+    setPageOrientation((value) => value === 'PORTRAIT' ? 'LANDSCAPE' : 'PORTRAIT');
+    setPageWidthMm(pageHeightMm);
+    setPageHeightMm(pageWidthMm);
+  }
+
+  useEffect(() => {
+    if (!editingTemplate) {
+      setHeaderControls(null);
+      return;
+    }
+
+    setHeaderAction(null);
+    setHeaderControls(
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <TextField label="Formato" onChange={(event) => setFormat(event.target.value)} select size="small" sx={{ width: 120 }} value={pageFormat}>
+          {pageFormats.map((format) => <MenuItem key={format.value} value={format.value}>{format.label}</MenuItem>)}
+        </TextField>
+        <TextField label="Ancho mm" onChange={(event) => setPageWidthMm(Number(event.target.value))} size="small" sx={{ width: 110 }} type="number" value={pageWidthMm} />
+        <TextField label="Alto mm" onChange={(event) => setPageHeightMm(Number(event.target.value))} size="small" sx={{ width: 110 }} type="number" value={pageHeightMm} />
+        <Button onClick={toggleOrientation} size="small" startIcon={<RetweetOutlined />} variant="outlined">
+          {pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}
+        </Button>
+        <Button disabled={saving} onClick={() => void saveSettings()} size="small" startIcon={<SaveOutlined />} variant="contained">
+          {saving ? 'Guardando...' : 'Guardar'}
+        </Button>
+        <Button disabled={savingVersion} onClick={() => void saveVersion()} size="small" startIcon={<CopyOutlined />} variant="outlined">
+          {savingVersion ? 'Creando...' : 'Guardar version'}
+        </Button>
+      </Stack>,
+    );
+
+    return () => setHeaderControls(null);
+  }, [editingTemplate, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, saving, savingVersion, setHeaderAction, setHeaderControls]);
+
+  if (editingTemplate) {
+    const pageScale = Math.min(1.45, 720 / Math.max(pageWidthMm, pageHeightMm));
+
+    return (
+      <Stack spacing={2}>
+        {error ? <Alert severity="error">{error}</Alert> : null}
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+          <Button onClick={() => setEditingTemplate(null)} startIcon={<ArrowLeftOutlined />}>Volver a plantillas</Button>
+          <Box sx={{ textAlign: 'right' }}>
+            <Typography variant="subtitle2">{editingTemplate.name}</Typography>
+            <Typography color="text.secondary" variant="caption">{editingTemplate.code} · v{editingTemplate.versionNumber}</Typography>
+          </Box>
+        </Stack>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '240px minmax(0, 1fr)' }, gap: 2, minHeight: 'calc(100vh - 170px)' }}>
+          <Card sx={{ p: 2, alignSelf: 'start' }}>
+            <Typography variant="subtitle2">Componentes</Typography>
+            <Typography color="text.secondary" sx={{ mt: 0.5 }} variant="caption">
+              Los fondos, firmas, sellos y logos se trataran como imagenes PNG para impresion.
+            </Typography>
+            <Divider sx={{ my: 2 }} />
+            <Button fullWidth startIcon={<PictureOutlined />} variant="outlined">Imagen PNG</Button>
+          </Card>
+          <Card sx={{ minWidth: 0, overflow: 'auto', p: 3, bgcolor: 'background.default' }}>
+            <Box sx={{ minWidth: pageWidthMm * pageScale + 48, minHeight: pageHeightMm * pageScale + 48, display: 'grid', placeItems: 'center' }}>
+              <Box
+                sx={{
+                  width: pageWidthMm * pageScale,
+                  height: pageHeightMm * pageScale,
+                  bgcolor: 'background.paper',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  boxShadow: '0 18px 42px rgba(15, 23, 42, 0.14)',
+                  position: 'relative',
+                }}
+              >
+                <Box sx={{ position: 'absolute', inset: 16, border: '1px dashed', borderColor: 'divider', display: 'grid', placeItems: 'center', color: 'text.secondary' }}>
+                  <Typography variant="body2">Lienzo de plantilla pdfme</Typography>
+                </Box>
+              </Box>
+            </Box>
+          </Card>
+        </Box>
+      </Stack>
+    );
   }
 
   return (
@@ -132,7 +353,7 @@ export function TemplatesPage() {
             <TableBody>
               {loading ? <TableRow><TableCell align="center" colSpan={6}><CircularProgress size={24} /></TableCell></TableRow> : null}
               {!loading && filteredTemplates.length === 0 ? <TableRow><TableCell colSpan={6}>No hay plantillas.</TableCell></TableRow> : null}
-              {!loading ? visibleTemplates.map((template) => <TableRow key={template.id}><TableCell><Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}><Box sx={{ width: template.pageOrientation === 'LANDSCAPE' ? 58 : 38, height: template.pageOrientation === 'LANDSCAPE' ? 34 : 52, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.default' }} /><Box><strong>{template.name}</strong><br /><small>{template.code}</small></Box></Stack></TableCell><TableCell><Chip label={statusLabel(template.status)} size="small" /></TableCell><TableCell>v{template.versionNumber}{template.isPublished ? ' publicada' : ''}</TableCell><TableCell>{template.pageFormat} {template.pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}</TableCell><TableCell>{template.tags.join(', ') || 'Sin etiquetas'}</TableCell><TableCell align="right"><Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>{can(user, 'templates.publish') ? <Button disabled={publishingId === template.id} onClick={() => void publish(template.id)} size="small" startIcon={<SendOutlined />}>{publishingId === template.id ? 'Publicando...' : 'Publicar'}</Button> : null}{can(user, 'templates.delete') ? <Button color="error" disabled={deletingId === template.id} onClick={() => void remove(template.id)} size="small" startIcon={<DeleteOutlined />}>{deletingId === template.id ? 'Eliminando...' : 'Eliminar'}</Button> : null}</Stack></TableCell></TableRow>) : null}
+              {!loading ? visibleTemplates.map((template) => <TableRow key={template.id}><TableCell><Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}><Box sx={{ width: template.pageOrientation === 'LANDSCAPE' ? 58 : 38, height: template.pageOrientation === 'LANDSCAPE' ? 34 : 52, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.default' }} /><Box><strong>{template.name}</strong><br /><small>{template.code}</small></Box></Stack></TableCell><TableCell><Chip label={statusLabel(template.status)} size="small" /></TableCell><TableCell>v{template.versionNumber}</TableCell><TableCell>{template.pageFormat} {template.pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}</TableCell><TableCell>{template.tags.join(', ') || 'Sin etiquetas'}</TableCell><TableCell align="right"><Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}><Button onClick={() => openEditor(template)} size="small" startIcon={<EditOutlined />}>Editar</Button>{can(user, 'templates.delete') ? <Button color="error" disabled={deletingId === template.id} onClick={() => void remove(template.id)} size="small" startIcon={<DeleteOutlined />}>{deletingId === template.id ? 'Eliminando...' : 'Eliminar'}</Button> : null}</Stack></TableCell></TableRow>) : null}
             </TableBody>
           </Table>
         </TableContainer>

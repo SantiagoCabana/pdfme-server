@@ -25,6 +25,7 @@ export default function App() {
   const [reloadDataToken, setReloadDataToken] = useState(0);
   const [headerAction, setHeaderAction] = useState<{ label: string; title?: string; content: ReactNode; maxWidth?: 'xs' | 'sm' | 'md' | 'lg' } | null>(null);
   const [headerActionOpen, setHeaderActionOpen] = useState(false);
+  const [headerControls, setHeaderControls] = useState<ReactNode>(null);
   const [mode, setMode] = useState<ThemeMode>(() => localStorage.getItem('pdfme-theme') === 'dark' ? 'dark' : 'light');
 
   useEffect(() => {
@@ -57,7 +58,9 @@ export default function App() {
     headerActionOpen,
     openHeaderAction,
     closeHeaderAction,
-  }), [bumpReloadDataToken, closeHeaderAction, headerAction, headerActionOpen, mode, openHeaderAction, reloadDataToken, toggleMode, user]);
+    headerControls,
+    setHeaderControls,
+  }), [bumpReloadDataToken, closeHeaderAction, headerAction, headerActionOpen, headerControls, mode, openHeaderAction, reloadDataToken, toggleMode, user]);
 
   const router = useMemo(() => createBrowserRouter([
     { path: '/login', element: <LoginPage /> },

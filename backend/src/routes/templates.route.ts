@@ -2,14 +2,22 @@ import { Router } from 'express';
 import { z } from 'zod';
 
 import { authenticateApiKey } from '../services/api-credentials.service.js';
-import { createTemplate, deleteTemplate, listTemplateCatalog, publishTemplate } from '../services/templates.service.js';
+import { createTemplate, createTemplateVersion, deleteTemplate, listTemplateCatalog, publishTemplate, updateTemplatePageSettings } from '../services/templates.service.js';
 import { requirePermission } from '../middleware/session-auth.js';
 
 export const templatesRouter = Router();
 
 const createTemplateSchema = z.object({
   name: z.string().min(2),
+  code: z.string().min(3).regex(/^[a-z0-9_]+$/).optional(),
   tagNames: z.array(z.string().min(1)).optional(),
+});
+
+const updatePageSettingsSchema = z.object({
+  pageFormat: z.enum(['A4', 'LETTER', 'LEGAL', 'CUSTOM']),
+  pageOrientation: z.enum(['PORTRAIT', 'LANDSCAPE']),
+  pageWidthMm: z.number().positive(),
+  pageHeightMm: z.number().positive(),
 });
 
 templatesRouter.get('/templates', requirePermission('templates.view'), async (_request, response) => {
@@ -24,13 +32,43 @@ templatesRouter.post('/templates', requirePermission('templates.create'), async 
     return;
   }
 
-  const template = await createTemplate({
-    name: parsed.data.name,
-    tagNames: parsed.data.tagNames,
-    createdById: response.locals.user?.id === 'bootstrap-admin' ? null : response.locals.user?.id ?? null,
-  });
+  try {
+    const template = await createTemplate({
+      name: parsed.data.name,
+      code: parsed.data.code,
+      tagNames: parsed.data.tagNames,
+      createdById: response.locals.user?.id === 'bootstrap-admin' ? null : response.locals.user?.id ?? null,
+    });
 
-  response.status(201).json({ ok: true, template });
+    response.status(201).json({ ok: true, template });
+  } catch {
+    response.status(409).json({ message: 'No se pudo crear la plantilla. Revisa que el codigo no exista.' });
+  }
+});
+
+templatesRouter.patch('/templates/:id/page-settings', requirePermission('templates.edit'), async (request, response) => {
+  const parsed = updatePageSettingsSchema.safeParse(request.body);
+
+  if (!parsed.success) {
+    response.status(400).json({ message: 'Datos invalidos para guardar la hoja.' });
+    return;
+  }
+
+  try {
+    const template = await updateTemplatePageSettings(request.params.id, parsed.data);
+    response.json({ ok: true, template });
+  } catch {
+    response.status(404).json({ message: 'No se encontro la plantilla actual.' });
+  }
+});
+
+templatesRouter.post('/templates/:id/versions', requirePermission('templates.edit'), async (request, response) => {
+  try {
+    const template = await createTemplateVersion(request.params.id, response.locals.user?.id ?? null);
+    response.status(201).json({ ok: true, template });
+  } catch {
+    response.status(404).json({ message: 'No se encontro la plantilla actual.' });
+  }
 });
 
 templatesRouter.patch('/templates/:id/publish', requirePermission('templates.publish'), async (request, response) => {

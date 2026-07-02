@@ -43,7 +43,7 @@ const drawerWidth = 260;
 const miniDrawerWidth = 72;
 
 export function PrivateLayout() {
-  const { user, setUser, mode, toggleMode, headerAction, headerActionOpen, openHeaderAction, closeHeaderAction } = useAppContext();
+  const { user, setUser, mode, toggleMode, headerAction, headerActionOpen, openHeaderAction, closeHeaderAction, headerControls, setHeaderControls } = useAppContext();
   const theme = useTheme();
   const downLg = useMediaQuery(theme.breakpoints.down('lg'));
   const location = useLocation();
@@ -60,7 +60,8 @@ export function PrivateLayout() {
 
   useEffect(() => {
     closeHeaderAction();
-  }, [closeHeaderAction, location.pathname]);
+    setHeaderControls(null);
+  }, [closeHeaderAction, location.pathname, setHeaderControls]);
 
   const activeItem = items.find((item) => (
     location.pathname === item.path || (location.pathname === '/' && item.path === '/templates')
@@ -263,6 +264,7 @@ export function PrivateLayout() {
             {activeItem?.label ?? 'Plantillas'}
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
+          {headerControls}
           {headerAction ? (
             <Button onClick={openHeaderAction} size="small" variant="contained">
               {headerAction.label}

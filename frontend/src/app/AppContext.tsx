@@ -21,6 +21,8 @@ type AppContextValue = {
   headerActionOpen: boolean;
   openHeaderAction: () => void;
   closeHeaderAction: () => void;
+  headerControls: ReactNode;
+  setHeaderControls: (controls: ReactNode) => void;
 };
 
 export const AppContext = createContext<AppContextValue | null>(null);
