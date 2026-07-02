@@ -18,8 +18,15 @@ import {
   Card,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   InputAdornment,
+  List,
+  ListItemButton,
+  ListItemText,
   Menu,
   MenuItem,
   Stack,
@@ -137,6 +144,12 @@ export function TemplatesPage() {
   const [pageHeightMm, setPageHeightMm] = useState(297);
   const [designerTemplate, setDesignerTemplate] = useState<PdfmeTemplate | null>(null);
   const [versionMenuAnchor, setVersionMenuAnchor] = useState<HTMLElement | null>(null);
+  const [versionsDialogOpen, setVersionsDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [detailsName, setDetailsName] = useState('');
+  const [detailsCode, setDetailsCode] = useState('');
+  const [detailsTags, setDetailsTags] = useState('');
+  const [savingDetails, setSavingDetails] = useState(false);
   const designerRef = useRef<PdfmeDesignerHandle | null>(null);
 
   async function load() {
@@ -178,6 +191,9 @@ export function TemplatesPage() {
 
   function openEditor(template: TemplateItem) {
     setEditingTemplate(template);
+    setDetailsName(template.name);
+    setDetailsCode(template.code);
+    setDetailsTags(template.tags.join(', '));
     setPageFormat(template.pageFormat);
     setPageOrientation(template.pageOrientation === 'LANDSCAPE' ? 'LANDSCAPE' : 'PORTRAIT');
     setPageWidthMm(template.pageWidthMm);
@@ -295,6 +311,8 @@ export function TemplatesPage() {
       await saveSettings();
       const payload = await apiRequest<{ template: TemplateItem }>('/api/templates/' + editingTemplate.id + '/versions', { method: 'POST' });
       setEditingTemplate(payload.template);
+      setDesignerTemplate(buildPdfmeTemplate(payload.template));
+      setVersionMenuAnchor(null);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar una nueva version.');
@@ -318,11 +336,48 @@ export function TemplatesPage() {
       setPageHeightMm(payload.template.pageHeightMm);
       setDesignerTemplate(buildPdfmeTemplate(payload.template));
       setVersionMenuAnchor(null);
+      setVersionsDialogOpen(false);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cambiar de version.');
     } finally {
       setSwitchingVersion(false);
+    }
+  }
+
+  function openDetailsDialog() {
+    if (!editingTemplate) return;
+    setDetailsName(editingTemplate.name);
+    setDetailsCode(editingTemplate.code);
+    setDetailsTags(editingTemplate.tags.join(', '));
+    setVersionMenuAnchor(null);
+    setDetailsDialogOpen(true);
+  }
+
+  async function saveDetails() {
+    if (!editingTemplate) return;
+    setError('');
+    setSavingDetails(true);
+    try {
+      const tagNames = detailsTags.split(',').map((tag) => tag.trim()).filter(Boolean);
+      const payload = await apiRequest<{ template: TemplateItem }>('/api/templates/' + editingTemplate.id, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: detailsName,
+          code: detailsCode.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
+          tagNames,
+        }),
+      });
+      setEditingTemplate(payload.template);
+      setDetailsDialogOpen(false);
+      if (payload.template.code !== routeCode) {
+        navigate(`/templates/edit/${payload.template.code}`, { replace: true });
+      }
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar la plantilla.');
+    } finally {
+      setSavingDetails(false);
     }
   }
 
@@ -389,30 +444,16 @@ export function TemplatesPage() {
     setHeaderAction(null);
     setHeaderControls(
       <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flex: 1, minWidth: 0 }}>
-        <Button onClick={() => navigate('/templates')} startIcon={<ArrowLeftOutlined />}>Volver a plantillas</Button>
-        <Box sx={{ alignItems: 'center', display: 'flex', gap: 1, minWidth: 0 }}>
-          <Typography variant="subtitle2" noWrap>{editingTemplate.name}</Typography>
-          <Chip label={`v${editingTemplate.versionNumber}`} size="small" variant="outlined" />
+        <Button onClick={() => navigate('/templates')} startIcon={<ArrowLeftOutlined />}>Volver</Button>
+        <Box sx={{ alignItems: 'center', borderLeft: '1px solid', borderColor: 'divider', display: 'flex', gap: 1.25, minWidth: 0, pl: 2 }}>
+          <Typography sx={{ fontWeight: 600, maxWidth: { xs: 120, md: 260 } }} variant="subtitle2" noWrap>{editingTemplate.name}</Typography>
+          <Chip color="primary" label={`v${editingTemplate.versionNumber}`} size="small" variant="outlined" />
         </Box>
         <Box sx={{ flexGrow: 1 }} />
         {isPreviewRoute ? (
           <Button onClick={() => navigate(`/templates/edit/${editingTemplate.code}`)} size="small" startIcon={<EditOutlined />} variant="outlined">Editar</Button>
         ) : (
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {hasMultipleVersions ? (
-              <>
-                <IconButton disabled={saving || savingVersion || switchingVersion} onClick={(event) => setVersionMenuAnchor(event.currentTarget)} size="small">
-                  <EllipsisOutlined />
-                </IconButton>
-                <Menu anchorEl={versionMenuAnchor} onClose={() => setVersionMenuAnchor(null)} open={Boolean(versionMenuAnchor)}>
-                  {editingTemplateVersions.map((version) => (
-                    <MenuItem disabled={version.id === editingTemplate.versionId || switchingVersion} key={version.id} onClick={() => void switchVersion(version.id)}>
-                      v{version.versionNumber}{version.id === editingTemplate.versionId ? ' actual' : ''}
-                    </MenuItem>
-                  ))}
-                </Menu>
-              </>
-            ) : null}
             <TextField label="Formato" onChange={(event) => setFormat(event.target.value)} select size="small" sx={{ width: 120 }} value={pageFormat}>
               {pageFormats.map((format) => <MenuItem key={format.value} value={format.value}>{format.label}</MenuItem>)}
             </TextField>
@@ -424,21 +465,71 @@ export function TemplatesPage() {
             <Button disabled={saving || switchingVersion} onClick={() => void saveSettings()} size="small" startIcon={<SaveOutlined />} variant="contained">
               {saving ? 'Guardando...' : 'Guardar'}
             </Button>
-            <Button disabled={savingVersion || switchingVersion} onClick={() => void saveVersion()} size="small" startIcon={<CopyOutlined />} variant="outlined">
-              {savingVersion ? 'Creando...' : 'Guardar version'}
-            </Button>
+            <IconButton disabled={saving || savingVersion || switchingVersion || savingDetails} onClick={(event) => setVersionMenuAnchor(event.currentTarget)} size="small">
+              <EllipsisOutlined />
+            </IconButton>
+            <Menu anchorEl={versionMenuAnchor} onClose={() => setVersionMenuAnchor(null)} open={Boolean(versionMenuAnchor)}>
+              <MenuItem disabled={savingVersion} onClick={() => void saveVersion()}>
+                {savingVersion ? 'Creando version...' : 'Guardar version'}
+              </MenuItem>
+              <MenuItem disabled={!hasMultipleVersions} onClick={() => { setVersionMenuAnchor(null); setVersionsDialogOpen(true); }}>
+                Cambiar version
+              </MenuItem>
+              <MenuItem onClick={openDetailsDialog}>Renombrar</MenuItem>
+              <MenuItem onClick={openDetailsDialog}>Renombrar codigo</MenuItem>
+              <MenuItem onClick={openDetailsDialog}>Editar tags</MenuItem>
+            </Menu>
           </Stack>
         )}
       </Stack>,
     );
 
     return () => setHeaderControls(null);
-  }, [editingTemplate, editingTemplateVersions, hasMultipleVersions, isPreviewRoute, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, saving, savingVersion, search, setHeaderAction, setHeaderControls, switchingVersion, user, versionMenuAnchor]);
+  }, [editingTemplate, hasMultipleVersions, isPreviewRoute, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, saving, savingDetails, savingVersion, search, setHeaderAction, setHeaderControls, switchingVersion, user, versionMenuAnchor]);
 
   if (editingTemplate) {
     return (
       <Box sx={{ height: '100%', minHeight: 0, position: 'relative', width: '100%' }}>
         {error ? <Alert severity="error" sx={{ left: 16, position: 'absolute', right: 16, top: 16, zIndex: 2 }}>{error}</Alert> : null}
+        <Dialog fullWidth maxWidth="sm" onClose={() => setVersionsDialogOpen(false)} open={versionsDialogOpen}>
+          <DialogTitle>Cambiar version</DialogTitle>
+          <DialogContent dividers sx={{ maxHeight: '70vh', p: 0 }}>
+            <List disablePadding>
+              {editingTemplateVersions.map((version) => (
+                <ListItemButton
+                  disabled={version.id === editingTemplate.versionId || switchingVersion}
+                  key={version.id}
+                  onClick={() => void switchVersion(version.id)}
+                  selected={version.id === editingTemplate.versionId}
+                >
+                  <ListItemText
+                    primary={`Version ${version.versionNumber}`}
+                    secondary={`${version.pageCount} hoja${version.pageCount === 1 ? '' : 's'} · ${new Date(version.updatedAt).toLocaleString()}`}
+                  />
+                </ListItemButton>
+              ))}
+            </List>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setVersionsDialogOpen(false)}>Cerrar</Button>
+          </DialogActions>
+        </Dialog>
+        <Dialog fullWidth maxWidth="sm" onClose={() => setDetailsDialogOpen(false)} open={detailsDialogOpen}>
+          <DialogTitle>Datos de plantilla</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2} sx={{ pt: 1 }}>
+              <TextField fullWidth label="Nombre" onChange={(event) => setDetailsName(event.target.value)} value={detailsName} />
+              <TextField fullWidth helperText="Identificador usado por apps/API." label="Codigo" onChange={(event) => setDetailsCode(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))} value={detailsCode} />
+              <TextField fullWidth helperText="Separados por coma." label="Tags" onChange={(event) => setDetailsTags(event.target.value)} value={detailsTags} />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDetailsDialogOpen(false)}>Cancelar</Button>
+            <Button disabled={savingDetails} onClick={() => void saveDetails()} variant="contained">
+              {savingDetails ? 'Guardando...' : 'Guardar'}
+            </Button>
+          </DialogActions>
+        </Dialog>
         <Box sx={{ height: '100%', minHeight: 0, width: '100%' }}>
           <Card sx={{ bgcolor: 'background.default', borderRadius: 0, boxShadow: 'none', height: '100%', minWidth: 0, overflow: 'hidden' }}>
             {designerTemplate ? (

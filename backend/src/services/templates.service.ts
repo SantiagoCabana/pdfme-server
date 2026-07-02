@@ -172,6 +172,40 @@ export async function createTemplate(input: {
   return mapTemplate(template);
 }
 
+export async function updateTemplateDetails(id: string, input: {
+  name?: string;
+  code?: string;
+  tagNames?: string[];
+}) {
+  const normalizedTags = input.tagNames
+    ? Array.from(new Set(input.tagNames.map((tag) => tag.trim()).filter(Boolean)))
+    : undefined;
+
+  const template = await prisma.template.update({
+    where: { id },
+    data: {
+      name: input.name?.trim(),
+      code: input.code?.trim(),
+      tags: normalizedTags
+        ? {
+          deleteMany: {},
+          create: normalizedTags.map((name) => ({
+            tag: {
+              connectOrCreate: {
+                where: { name },
+                create: { name },
+              },
+            },
+          })),
+        }
+        : undefined,
+    },
+    include: templateInclude,
+  });
+
+  return mapTemplate(template);
+}
+
 export async function updateTemplatePageSettings(id: string, input: {
   pageFormat: 'A4' | 'LETTER' | 'LEGAL' | 'CUSTOM';
   pageOrientation: 'PORTRAIT' | 'LANDSCAPE';

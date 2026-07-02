@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 
 import { authenticateApiKey } from '../services/api-credentials.service.js';
-import { createTemplate, createTemplateVersion, deleteTemplate, listTemplateCatalog, setCurrentTemplateVersion, updateTemplatePageSettings } from '../services/templates.service.js';
+import { createTemplate, createTemplateVersion, deleteTemplate, listTemplateCatalog, setCurrentTemplateVersion, updateTemplateDetails, updateTemplatePageSettings } from '../services/templates.service.js';
 import { requirePermission } from '../middleware/session-auth.js';
 
 export const templatesRouter = Router();
@@ -20,6 +20,12 @@ const updatePageSettingsSchema = z.object({
   pageWidthMm: z.number().positive(),
   pageHeightMm: z.number().positive(),
   designerJson: z.unknown().optional(),
+});
+
+const updateTemplateDetailsSchema = z.object({
+  name: z.string().min(2).optional(),
+  code: z.string().min(3).regex(/^[a-z0-9_]+$/).optional(),
+  tagNames: z.array(z.string().min(1)).optional(),
 });
 
 templatesRouter.get('/templates', requirePermission('templates.view'), async (_request, response) => {
@@ -45,6 +51,22 @@ templatesRouter.post('/templates', requirePermission('templates.create'), async 
     response.status(201).json({ ok: true, template });
   } catch {
     response.status(409).json({ message: 'No se pudo crear la plantilla. Revisa que el codigo no exista.' });
+  }
+});
+
+templatesRouter.patch('/templates/:id', requirePermission('templates.edit'), async (request, response) => {
+  const parsed = updateTemplateDetailsSchema.safeParse(request.body);
+
+  if (!parsed.success) {
+    response.status(400).json({ message: 'Datos invalidos para actualizar la plantilla.' });
+    return;
+  }
+
+  try {
+    const template = await updateTemplateDetails(request.params.id, parsed.data);
+    response.json({ ok: true, template });
+  } catch {
+    response.status(409).json({ message: 'No se pudo actualizar la plantilla. Revisa que el codigo no exista.' });
   }
 });
 
