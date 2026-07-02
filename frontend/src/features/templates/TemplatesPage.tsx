@@ -29,6 +29,7 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  Divider,
   Stack,
   Table,
   TableBody,
@@ -207,6 +208,17 @@ export function TemplatesPage() {
   const visibleTemplates = filteredTemplates.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   const editingTemplateVersions = editingTemplate?.versions ?? [];
   const hasMultipleVersions = editingTemplateVersions.length > 1;
+  const designerWorkspaceKey = editingTemplate
+    ? [
+      editingTemplate.id,
+      editingTemplate.versionId,
+      pageFormat,
+      pageOrientation,
+      pageWidthMm,
+      pageHeightMm,
+      isPreviewRoute ? 'preview' : 'edit',
+    ].join(':')
+    : 'empty';
 
   useEffect(() => {
     setPage(0);
@@ -459,24 +471,53 @@ export function TemplatesPage() {
 
     setHeaderAction(null);
     setHeaderControls(
-      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flex: 1, minWidth: 0 }}>
-        <Button onClick={() => navigate('/templates')} startIcon={<ArrowLeftOutlined />}>Volver</Button>
-        <Box sx={{ alignItems: 'center', borderLeft: '1px solid', borderColor: 'divider', display: 'flex', gap: 1.25, minWidth: 0, pl: 2 }}>
-          <Typography sx={{ fontWeight: 600, maxWidth: { xs: 120, md: 260 } }} variant="subtitle2" noWrap>{editingTemplate.name}</Typography>
-          <Chip color="primary" label={`v${editingTemplate.versionNumber}`} size="small" variant="outlined" />
+      <Box
+        sx={{
+          alignItems: 'center',
+          columnGap: 1.5,
+          display: 'grid',
+          flex: 1,
+          gridTemplateColumns: {
+            xs: 'minmax(0, 1fr) auto',
+            md: 'auto auto minmax(120px, 1fr) auto',
+          },
+          minWidth: 0,
+          width: '100%',
+        }}
+      >
+        <Button onClick={() => navigate('/templates')} startIcon={<ArrowLeftOutlined />} sx={{ flexShrink: 0 }}>Volver</Button>
+        <Divider flexItem orientation="vertical" sx={{ display: { xs: 'none', md: 'block' } }} />
+        <Box sx={{ alignItems: 'center', display: { xs: 'none', sm: 'flex' }, gap: 1.25, minWidth: 0 }}>
+          <Typography sx={{ fontWeight: 600, maxWidth: { xs: 110, sm: 180, md: 240 } }} variant="subtitle2" noWrap>{editingTemplate.name}</Typography>
+          <Chip color="primary" label={`v${editingTemplate.versionNumber}`} size="small" sx={{ flexShrink: 0 }} variant="outlined" />
         </Box>
         {isPreviewRoute ? (
           <Button onClick={() => navigate(`/templates/edit/${editingTemplate.code}`)} size="small" startIcon={<EditOutlined />} sx={{ ml: 'auto' }} variant="outlined">Editar</Button>
         ) : (
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', ml: 'auto' }}>
-            <TextField label="Formato" onChange={(event) => setFormat(event.target.value)} select size="small" sx={{ width: 120 }} value={pageFormat}>
-              {pageFormats.map((format) => <MenuItem key={format.value} value={format.value}>{format.label}</MenuItem>)}
-            </TextField>
-            <TextField label="Ancho mm" onChange={(event) => { const next = Number(event.target.value); setPageWidthMm(next); setDesignerTemplate((current) => updatePdfmeBasePdf(current, { width: next })); }} size="small" sx={{ width: 110 }} type="number" value={pageWidthMm} />
-            <TextField label="Alto mm" onChange={(event) => { const next = Number(event.target.value); setPageHeightMm(next); setDesignerTemplate((current) => updatePdfmeBasePdf(current, { height: next })); }} size="small" sx={{ width: 110 }} type="number" value={pageHeightMm} />
-            <Button onClick={toggleOrientation} size="small" startIcon={<RetweetOutlined />} variant="outlined">
-              {pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}
-            </Button>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'flex-end', justifySelf: 'end', minWidth: 0 }}>
+            <Box
+              sx={{
+                alignItems: 'center',
+                bgcolor: 'background.paper',
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1.5,
+                display: 'flex',
+                gap: 0.75,
+                maxWidth: '100%',
+                px: 0.75,
+                py: 0.5,
+              }}
+            >
+              <TextField label="Formato" onChange={(event) => setFormat(event.target.value)} select size="small" sx={{ width: 100 }} value={pageFormat}>
+                {pageFormats.map((format) => <MenuItem key={format.value} value={format.value}>{format.label}</MenuItem>)}
+              </TextField>
+              <TextField label="Ancho" onChange={(event) => { const next = Number(event.target.value); setPageWidthMm(next); setDesignerTemplate((current) => updatePdfmeBasePdf(current, { width: next })); }} size="small" sx={{ width: 86 }} type="number" value={pageWidthMm} />
+              <TextField label="Alto" onChange={(event) => { const next = Number(event.target.value); setPageHeightMm(next); setDesignerTemplate((current) => updatePdfmeBasePdf(current, { height: next })); }} size="small" sx={{ width: 86 }} type="number" value={pageHeightMm} />
+              <Button onClick={toggleOrientation} size="small" startIcon={<RetweetOutlined />} sx={{ minWidth: 112, whiteSpace: 'nowrap' }} variant="outlined">
+                {pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}
+              </Button>
+            </Box>
             <Button disabled={saving || switchingVersion} onClick={() => void saveSettings()} size="small" startIcon={<SaveOutlined />} variant="contained">
               {saving ? 'Guardando...' : 'Guardar'}
             </Button>
@@ -494,7 +535,7 @@ export function TemplatesPage() {
             </Menu>
           </Stack>
         )}
-      </Stack>,
+      </Box>,
     );
 
     return () => setHeaderControls(null);
@@ -551,11 +592,11 @@ export function TemplatesPage() {
             </Button>
           </DialogActions>
         </Dialog>
-        <Box sx={{ height: '100%', minHeight: 0, width: '100%' }}>
+        <Box className="pdfme-workspace" sx={{ height: '100%', minHeight: 0, width: '100%' }}>
           <Card sx={{ bgcolor: 'background.default', borderRadius: 0, boxShadow: 'none', height: '100%', minWidth: 0, overflow: 'hidden' }}>
             {designerTemplate ? (
               <Suspense fallback={<Box sx={{ display: 'grid', minHeight: 680, placeItems: 'center' }}><CircularProgress size={24} /></Box>}>
-                {isPreviewRoute ? <PdfmeViewer template={designerTemplate} /> : <PdfmeDesigner onChange={setDesignerTemplate} ref={designerRef} template={designerTemplate} />}
+                {isPreviewRoute ? <PdfmeViewer key={designerWorkspaceKey} template={designerTemplate} /> : <PdfmeDesigner key={designerWorkspaceKey} onChange={setDesignerTemplate} ref={designerRef} template={designerTemplate} />}
               </Suspense>
             ) : <Box sx={{ display: 'grid', minHeight: 680, placeItems: 'center' }}><CircularProgress size={24} /></Box>}
           </Card>

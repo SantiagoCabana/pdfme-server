@@ -261,7 +261,7 @@ export function PrivateLayout() {
           <IconButton aria-label="open drawer" color="secondary" edge="start" onClick={() => setOpen((value) => !value)} sx={{ display: { xs: 'inline-flex', lg: 'none' } }}>
             {open ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
           </IconButton>
-          {headerControls ? headerControls : (
+          {headerControls ? <Box sx={{ display: 'flex', flex: 1, minWidth: 0, width: '100%' }}>{headerControls}</Box> : (
             <>
               <Typography
                 color="text.primary"

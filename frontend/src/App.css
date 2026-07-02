@@ -20,3 +20,32 @@ small {
 .pdfme-designer-canvas{
   margin-top: 15px;
 }
+
+.pdfme-workspace {
+  background: #f0f2f8;
+}
+
+[data-theme="dark"] .pdfme-workspace {
+  background: #111936;
+  color-scheme: dark;
+}
+
+[data-theme="dark"] .pdfme-workspace input,
+[data-theme="dark"] .pdfme-workspace textarea,
+[data-theme="dark"] .pdfme-workspace select {
+  background-color: #1e2746;
+  border-color: #303b5f;
+  color: #f5f5f5;
+}
+
+[data-theme="dark"] .pdfme-workspace button {
+  color: inherit;
+}
+
+[data-theme="dark"] .pdfme-workspace [class*="sidebar"],
+[data-theme="dark"] .pdfme-workspace [class*="panel"],
+[data-theme="dark"] .pdfme-workspace [class*="toolbar"] {
+  background-color: #1e2746;
+  border-color: #303b5f;
+  color: #f5f5f5;
+}
