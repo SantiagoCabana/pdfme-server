@@ -261,14 +261,41 @@ export function PrivateLayout() {
           <IconButton aria-label="open drawer" color="secondary" edge="start" onClick={() => setOpen((value) => !value)} sx={{ display: { xs: 'inline-flex', lg: 'none' } }}>
             {open ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
           </IconButton>
-          {headerControls ?? (
+          {headerControls ? headerControls : (
             <>
-              <Typography variant="h5" color="text.primary" sx={{ minWidth: { xs: 0, md: 180 }, display: { xs: 'none', sm: 'block' } }} noWrap>
+              <Typography
+                color="text.primary"
+                noWrap
+                sx={{
+                  fontWeight: 700,
+                  fontSize: '1.45rem',
+                  minWidth: { xs: 0, md: 180 },
+                  display: { xs: 'none', sm: 'block' },
+                  letterSpacing: '-0.02em',
+                }}
+              >
                 {activeItem?.label ?? 'Plantillas'}
               </Typography>
               <Box sx={{ flexGrow: 1 }} />
               {headerAction ? (
-                <Button onClick={openHeaderAction} size="small" variant="contained">
+                <Button
+                  disabled={headerAction.disabled}
+                  onClick={headerAction.onClick ? headerAction.onClick : openHeaderAction}
+                  size="medium"
+                  variant="contained"
+                  sx={{
+                    borderRadius: '6px',
+                    px: 3,
+                    py: 0.75,
+                    fontWeight: 600,
+                    boxShadow: '0 2px 4px rgba(22, 119, 255, 0.2)',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 8px rgba(22, 119, 255, 0.3)',
+                    }
+                  }}
+                >
                   {headerAction.label}
                 </Button>
               ) : null}
@@ -291,20 +318,7 @@ export function PrivateLayout() {
           {drawer}
         </Drawer>
       </Box>
-      <Box
-        component="main"
-        sx={{
-          boxSizing: 'border-box',
-          flexGrow: 1,
-          height: isTemplateWorkspace ? '100vh' : 'auto',
-          minHeight: isTemplateWorkspace ? '100vh' : 0,
-          minWidth: 0,
-          overflow: isTemplateWorkspace ? 'hidden' : 'visible',
-          p: isTemplateWorkspace ? 0 : { xs: 2, md: 3 },
-          pt: isTemplateWorkspace ? '58px' : { xs: 9, md: 10 },
-          transition: sidebarTransition,
-        }}
-      >
+      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 }, pt: { xs: 9, md: 10 }, height: '100vh', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden', transition: sidebarTransition }}>
         <Outlet />
       </Box>
     </Box>

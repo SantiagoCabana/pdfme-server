@@ -404,12 +404,12 @@ export function TemplatesPage() {
   }
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
       {error ? <Alert severity="error">{error}</Alert> : null}
-      <Card>
-        <TableContainer>
-          <Table>
-            <TableHead><TableRow><TableCell>Plantilla</TableCell><TableCell>Estado</TableCell><TableCell>Version</TableCell><TableCell>Hoja</TableCell><TableCell>Tags</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
+      <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <TableContainer sx={{ flexGrow: 1, overflowY: 'auto' }}>
+          <Table stickyHeader>
+            <TableHead><TableRow><TableCell sx={{ py: 2 }}>Plantilla</TableCell><TableCell sx={{ py: 2 }}>Estado</TableCell><TableCell sx={{ py: 2 }}>Version</TableCell><TableCell sx={{ py: 2 }}>Hoja</TableCell><TableCell sx={{ py: 2 }}>Tags</TableCell><TableCell align="right" sx={{ py: 2 }}>Acciones</TableCell></TableRow></TableHead>
             <TableBody>
               {loading ? <TableRow><TableCell align="center" colSpan={6}><CircularProgress size={24} /></TableCell></TableRow> : null}
               {!loading && filteredTemplates.length === 0 ? <TableRow><TableCell colSpan={6}>No hay plantillas.</TableCell></TableRow> : null}

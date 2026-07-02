@@ -2,11 +2,13 @@ import { createContext, useContext, type ReactNode } from 'react';
 import type { SessionUser } from './types';
 import type { ThemeMode } from '../theme/mantisTheme';
 
-type HeaderAction = {
+export type HeaderAction = {
   label: string;
   title?: string;
-  content: ReactNode;
+  content?: ReactNode;
   maxWidth?: 'xs' | 'sm' | 'md' | 'lg';
+  onClick?: () => void;
+  disabled?: boolean;
 } | null;
 
 type AppContextValue = {

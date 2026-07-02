@@ -127,11 +127,11 @@ export function UsersPage() {
   }, [closeHeaderAction, creating, displayName, email, password, roleCode, setHeaderAction]);
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
       {error ? <Alert severity="error">{error}</Alert> : null}
-      <Card>
-        <TableContainer>
-          <Table>
+      <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <TableContainer sx={{ flexGrow: 1, overflowY: 'auto' }}>
+          <Table stickyHeader>
             <TableHead><TableRow><TableCell>Usuario</TableCell><TableCell>Rol</TableCell><TableCell>Estado</TableCell><TableCell>Ultimo acceso</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
             <TableBody>
               {loading ? <TableRow><TableCell colSpan={5} align="center"><CircularProgress size={24} /></TableCell></TableRow> : null}

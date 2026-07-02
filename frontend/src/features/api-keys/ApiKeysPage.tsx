@@ -88,10 +88,78 @@ export function ApiKeysPage() {
   const visibleCredentials = credentials.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
       {error ? <Alert severity="error">{error}</Alert> : null}
       {rawKey ? <Alert severity="info"><strong>Clave generada:</strong> <code>{rawKey}</code>. Guardala ahora; no se volvera a mostrar completa.</Alert> : null}
-      <Card><TableContainer><Table><TableHead><TableRow><TableCell>Nombre</TableCell><TableCell>Identificador</TableCell><TableCell>Estado</TableCell><TableCell>Expira</TableCell><TableCell>Ultimo uso</TableCell><TableCell align="right"></TableCell></TableRow></TableHead><TableBody>{loading ? <TableRow><TableCell align="center" colSpan={6}><CircularProgress size={24} /></TableCell></TableRow> : null}{!loading && credentials.length === 0 ? <TableRow><TableCell colSpan={6}>No hay claves.</TableCell></TableRow> : null}{!loading ? visibleCredentials.map((credential) => <TableRow key={credential.id}><TableCell>{credential.name}</TableCell><TableCell>{credential.prefix}</TableCell><TableCell><Chip label={statusLabel(credential.status)} size="small" /></TableCell><TableCell>{formatDate(credential.expiresAt)}</TableCell><TableCell>{formatDate(credential.lastUsedAt)}</TableCell><TableCell align="right">{credential.status === 'ACTIVE' ? <Button color="error" disabled={revokingId === credential.id} onClick={() => void revoke(credential.id)} size="small" startIcon={<StopOutlined />}>{revokingId === credential.id ? 'Revocando...' : 'Revocar'}</Button> : null}</TableCell></TableRow>) : null}</TableBody></Table></TableContainer><TablePagination component="div" count={credentials.length} labelRowsPerPage="Filas por pagina" onPageChange={(_event, nextPage) => setPage(nextPage)} onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }} page={page} rowsPerPage={rowsPerPage} rowsPerPageOptions={[10, 25, 50]} /></Card>
+      <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <TableContainer sx={{ flexGrow: 1, overflowY: 'auto' }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell>Nombre</TableCell>
+                <TableCell>Identificador</TableCell>
+                <TableCell>Estado</TableCell>
+                <TableCell>Expira</TableCell>
+                <TableCell>Ultimo uso</TableCell>
+                <TableCell align="right"></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell align="center" colSpan={6}>
+                    <CircularProgress size={24} />
+                  </TableCell>
+                </TableRow>
+              ) : null}
+              {!loading && credentials.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6}>No hay claves.</TableCell>
+                </TableRow>
+              ) : null}
+              {!loading
+                ? visibleCredentials.map((credential) => (
+                    <TableRow key={credential.id}>
+                      <TableCell>{credential.name}</TableCell>
+                      <TableCell>{credential.prefix}</TableCell>
+                      <TableCell>
+                        <Chip label={statusLabel(credential.status)} size="small" />
+                      </TableCell>
+                      <TableCell>{formatDate(credential.expiresAt)}</TableCell>
+                      <TableCell>{formatDate(credential.lastUsedAt)}</TableCell>
+                      <TableCell align="right">
+                        {credential.status === 'ACTIVE' ? (
+                          <Button
+                            color="error"
+                            disabled={revokingId === credential.id}
+                            onClick={() => void revoke(credential.id)}
+                            size="small"
+                            startIcon={<StopOutlined />}
+                          >
+                            {revokingId === credential.id ? 'Revocando...' : 'Revocar'}
+                          </Button>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                : null}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <TablePagination
+          component="div"
+          count={credentials.length}
+          labelRowsPerPage="Filas por pagina"
+          onPageChange={(_event, nextPage) => setPage(nextPage)}
+          onRowsPerPageChange={(event) => {
+            setRowsPerPage(Number(event.target.value));
+            setPage(0);
+          }}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          rowsPerPageOptions={[10, 25, 50]}
+        />
+      </Card>
     </Stack>
   );
 }
