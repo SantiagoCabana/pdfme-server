@@ -5,6 +5,7 @@ import { Alert, Box, Card, CircularProgress, Dialog, Stack, Table, TableBody, Ta
 import type { AccessPermissionItem, AccessRoleItem } from '../../app/types';
 import { apiRequest } from '../../shared/api/client';
 import { useAppContext } from '../../app/AppContext';
+import '../../styles/permissions.css';
 
 type PermissionMatrix = {
   roles: AccessRoleItem[];
@@ -42,98 +43,26 @@ interface CustomToggleSwitchProps {
 
 export function CustomToggleSwitch({ checked, onChange }: CustomToggleSwitchProps) {
   return (
-    <Box
+    <div
       onClick={onChange}
-      sx={{
-        position: 'relative',
-        width: 74,
-        height: 36,
-        borderRadius: '100px',
-        bgcolor: checked 
-          ? 'rgba(22, 119, 255, 0.12)' 
-          : 'rgba(211, 47, 47, 0.12)', 
-        cursor: 'pointer',
-        userSelect: 'none',
-        transition: '0.3s ease all',
-        overflow: 'hidden',
-        border: '1px solid',
-        borderColor: checked ? 'rgba(22, 119, 255, 0.3)' : 'rgba(211, 47, 47, 0.3)',
-        display: 'flex',
-        alignItems: 'center',
-        '&:hover': {
-          transform: 'scale(1.03)',
-          boxShadow: checked ? '0 2px 8px rgba(22, 119, 255, 0.2)' : '0 2px 8px rgba(211, 47, 47, 0.2)',
-        }
-      }}
+      className={`custom-toggle-switch ${checked ? 'checked' : 'unchecked'}`}
     >
-      {/* Background Text */}
-      <Typography
-        sx={{
-          position: 'absolute',
-          left: checked ? 12 : 'auto',
-          right: checked ? 'auto' : 12,
-          color: checked ? '#1677ff' : '#d32f2f',
-          fontSize: '0.6875rem', 
-          fontWeight: 800,
-          pointerEvents: 'none',
-          textTransform: 'uppercase',
-          transition: 'all 0.3s ease',
-        }}
-      >
+      <span className={`custom-toggle-switch-text ${checked ? 'checked' : 'unchecked'}`}>
         {checked ? 'SÍ' : 'NO'}
-      </Typography>
-
-      {/* Slider Knob */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 3,
-          left: checked ? 41 : 3, 
-          width: 28,
-          height: 28,
-          borderRadius: '50%',
-          bgcolor: checked ? '#1677ff' : '#d32f2f',
-          transition: '0.3s cubic-bezier(0.18, 0.89, 0.35, 1.15) all, left 0.3s cubic-bezier(0.18, 0.89, 0.35, 1.15)',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
-        }}
-      />
-    </Box>
+      </span>
+      <div className={`custom-toggle-switch-knob ${checked ? 'checked' : 'unchecked'}`} />
+    </div>
   );
 }
 
 export function CustomActionsButton({ onClick }: { onClick: () => void }) {
   return (
-    <Box
+    <button
       onClick={onClick}
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '10px 24px',
-        border: '0',
-        borderRadius: '100px',
-        bgcolor: '#1677ff',
-        color: '#ffffff',
-        fontWeight: 'bold',
-        fontSize: '0.8125rem',
-        cursor: 'pointer',
-        userSelect: 'none',
-        transition: 'all 0.5s ease',
-        '&:hover': {
-          bgcolor: '#6fc5ff',
-          boxShadow: '0 0 20px rgba(111, 197, 255, 0.5)',
-          transform: 'scale(1.1)',
-        },
-        '&:active': {
-          bgcolor: '#0958d9',
-          boxShadow: 'none',
-          transform: 'scale(0.98)',
-          transition: 'all 0.25s ease',
-        }
-      }}
+      className="custom-actions-button"
     >
       Ver acciones
-    </Box>
+    </button>
   );
 }
 

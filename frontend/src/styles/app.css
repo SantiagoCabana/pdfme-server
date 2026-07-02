@@ -1,18 +1,57 @@
-:root {
-  --bg: #eef3f7;
-  --surface: #ffffff;
-  --text: #17212b;
-  --muted: #667085;
-  --line: #d8e0e8;
-  --brand: #0b5c7a;
+html,
+body,
+#root {
+  min-height: 100%;
 }
 
-* { box-sizing: border-box; }
-html, body, #root { min-height: 100%; }
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
-a { color: inherit; }
+
+code {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+small {
+  color: inherit;
+  opacity: 0.72;
+}
+
+.pdfme-designer-canvas {
+  margin-top: 15px;
+}
+
+.pdfme-workspace .pdfme-designer-left-sidebar {
+  bottom: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
+.pdfme-workspace {
+  background: #f0f2f8;
+}
+
+[data-theme="dark"] .pdfme-workspace {
+  background: #111936;
+  color-scheme: dark;
+}
+
+[data-theme="dark"] .pdfme-workspace input,
+[data-theme="dark"] .pdfme-workspace textarea,
+[data-theme="dark"] .pdfme-workspace select {
+  background-color: #1e2746;
+  border-color: #303b5f;
+  color: #f5f5f5;
+}
+
+[data-theme="dark"] .pdfme-workspace button {
+  color: inherit;
+}
+
+[data-theme="dark"] .pdfme-workspace [class*="sidebar"],
+[data-theme="dark"] .pdfme-workspace [class*="panel"],
+[data-theme="dark"] .pdfme-workspace [class*="toolbar"] {
+  background-color: #1e2746;
+  border-color: #303b5f;
+  color: #f5f5f5;
+}

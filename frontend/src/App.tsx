@@ -17,7 +17,7 @@ import { PermissionsPage } from './features/permissions/PermissionsPage';
 import { PrivateLayout } from './layout/PrivateLayout';
 import { apiRequest } from './shared/api/client';
 import { createMantisTheme, type ThemeMode } from './theme/mantisTheme';
-import './App.css';
+import './styles/app.css';
 
 export default function App() {
   const [user, setUser] = useState<SessionUser | null>(null);
