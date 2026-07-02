@@ -3,6 +3,8 @@ import { z } from 'zod';
 
 import { requirePermission } from '../middleware/session-auth.js';
 import { createUser, deleteUser, listRoles, listUsers, updateUser } from '../services/users.service.js';
+import { setAuthCookie } from '../auth/session-token.js';
+import { loadUserSession } from '../auth/auth.service.js';
 
 export const usersRouter = Router();
 
@@ -52,6 +54,12 @@ usersRouter.patch('/users/:id', requirePermission('users.manage'), async (reques
 
   try {
     const user = await updateUser({ id: request.params.id, ...parsed.data });
+    if (user && response.locals.user && user.id === response.locals.user.id) {
+      const sessionUser = await loadUserSession(user.id);
+      if (sessionUser) {
+        setAuthCookie(response, sessionUser);
+      }
+    }
     response.json({ ok: true, user });
   } catch {
     response.status(404).json({ message: 'No se encontro el usuario.' });
