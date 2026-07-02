@@ -48,6 +48,7 @@ function mapTemplate(template: Prisma.TemplateGetPayload<{
     pageHeightMm: firstPage?.pageHeightMm ?? 297,
     paddingVerticalMm: firstPage?.paddingVerticalMm ?? 12,
     paddingHorizontalMm: firstPage?.paddingHorizontalMm ?? 12,
+    designerJson: firstPage?.designerJson ?? DEFAULT_DESIGNER_JSON,
     tags: template.tags.map((entry) => entry.tag.name),
     createdAt: template.createdAt.toISOString(),
     updatedAt: template.updatedAt.toISOString(),
@@ -131,6 +132,7 @@ export async function updateTemplatePageSettings(id: string, input: {
   pageOrientation: 'PORTRAIT' | 'LANDSCAPE';
   pageWidthMm: number;
   pageHeightMm: number;
+  designerJson?: Prisma.InputJsonValue;
 }) {
   const currentVersion = await prisma.templateVersion.findFirstOrThrow({
     where: { templateId: id, isCurrent: true },
@@ -149,6 +151,7 @@ export async function updateTemplatePageSettings(id: string, input: {
       pageOrientation: input.pageOrientation,
       pageWidthMm: input.pageWidthMm,
       pageHeightMm: input.pageHeightMm,
+      designerJson: input.designerJson ?? undefined,
     },
   });
 

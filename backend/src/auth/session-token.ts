@@ -4,8 +4,6 @@ import type { Response } from 'express';
 import { env } from '../env.js';
 import type { SessionUser } from './auth.service.js';
 
-const MAX_AGE_SECONDS = 60 * 60 * 12;
-
 type TokenPayload = SessionUser & {
   tokenVersion: number;
   exp: number;
@@ -33,7 +31,7 @@ function safeEqual(left: string, right: string) {
 export function createAuthToken(user: SessionUser) {
   const payload: TokenPayload = {
     ...user,
-    exp: Math.floor(Date.now() / 1000) + MAX_AGE_SECONDS,
+    exp: Math.floor(Date.now() / 1000) + env.AUTH_COOKIE_MAX_AGE_SECONDS,
   };
   const data = encode(payload);
   const signature = sign(data);
@@ -67,7 +65,7 @@ export function setAuthCookie(response: Response, user: SessionUser) {
     secure: env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: MAX_AGE_SECONDS * 1000,
+    maxAge: env.AUTH_COOKIE_MAX_AGE_SECONDS * 1000,
   });
 }
 

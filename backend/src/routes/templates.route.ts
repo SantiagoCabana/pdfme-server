@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import type { Prisma } from '@prisma/client';
 
 import { authenticateApiKey } from '../services/api-credentials.service.js';
 import { createTemplate, createTemplateVersion, deleteTemplate, listTemplateCatalog, publishTemplate, updateTemplatePageSettings } from '../services/templates.service.js';
@@ -18,6 +19,7 @@ const updatePageSettingsSchema = z.object({
   pageOrientation: z.enum(['PORTRAIT', 'LANDSCAPE']),
   pageWidthMm: z.number().positive(),
   pageHeightMm: z.number().positive(),
+  designerJson: z.unknown().optional(),
 });
 
 templatesRouter.get('/templates', requirePermission('templates.view'), async (_request, response) => {
@@ -55,7 +57,10 @@ templatesRouter.patch('/templates/:id/page-settings', requirePermission('templat
   }
 
   try {
-    const template = await updateTemplatePageSettings(request.params.id, parsed.data);
+    const template = await updateTemplatePageSettings(request.params.id, {
+      ...parsed.data,
+      designerJson: parsed.data.designerJson as Prisma.InputJsonValue | undefined,
+    });
     response.json({ ok: true, template });
   } catch {
     response.status(404).json({ message: 'No se encontro la plantilla actual.' });

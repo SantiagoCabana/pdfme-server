@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeftOutlined,
   CopyOutlined,
   DeleteOutlined,
   EditOutlined,
-  PictureOutlined,
   PlusOutlined,
   RetweetOutlined,
   SaveOutlined,
@@ -17,7 +16,6 @@ import {
   Card,
   Chip,
   CircularProgress,
-  Divider,
   InputAdornment,
   MenuItem,
   Stack,
@@ -31,11 +29,14 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import type { Template as PdfmeTemplate } from '@pdfme/common';
 
 import { can, statusLabel } from '../../app/session';
 import type { TemplateItem } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
+
+const PdfmeDesigner = lazy(() => import('./components/PdfmeDesigner').then((module) => ({ default: module.PdfmeDesigner })));
 
 const pageFormats = [
   { value: 'A4', label: 'A4', width: 210, height: 297 },
@@ -66,6 +67,40 @@ function buildCode(name: string, suffix: string) {
   return `${slugifyCode(name)}_${suffix}`;
 }
 
+function buildPdfmeTemplate(template: TemplateItem, options?: { pageWidthMm?: number; pageHeightMm?: number }) {
+  const storedTemplate = template.designerJson ?? {};
+  const storedBasePdf = typeof storedTemplate.basePdf === 'object' && storedTemplate.basePdf && !Array.isArray(storedTemplate.basePdf)
+    ? storedTemplate.basePdf
+    : {};
+
+  return {
+    ...storedTemplate,
+    schemas: Array.isArray(storedTemplate.schemas) ? storedTemplate.schemas : [[]],
+    basePdf: {
+      ...storedBasePdf,
+      width: options?.pageWidthMm ?? template.pageWidthMm,
+      height: options?.pageHeightMm ?? template.pageHeightMm,
+      padding: [0, 0, 0, 0],
+    },
+  } as PdfmeTemplate;
+}
+
+function updatePdfmeBasePdf(current: PdfmeTemplate | null, patch: { width?: number; height?: number }) {
+  if (!current) return current;
+  const basePdf = typeof current.basePdf === 'object' && current.basePdf && 'width' in current.basePdf && 'height' in current.basePdf
+    ? current.basePdf
+    : { width: 210, height: 297, padding: [0, 0, 0, 0] as [number, number, number, number] };
+
+  return {
+    ...current,
+    basePdf: {
+      ...basePdf,
+      ...patch,
+      padding: basePdf.padding ?? [0, 0, 0, 0],
+    },
+  };
+}
+
 export function TemplatesPage() {
   const { user, setHeaderAction, closeHeaderAction, setHeaderControls } = useAppContext();
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
@@ -87,6 +122,7 @@ export function TemplatesPage() {
   const [pageOrientation, setPageOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>('PORTRAIT');
   const [pageWidthMm, setPageWidthMm] = useState(210);
   const [pageHeightMm, setPageHeightMm] = useState(297);
+  const [designerTemplate, setDesignerTemplate] = useState<PdfmeTemplate | null>(null);
 
   async function load() {
     setLoading(true);
@@ -129,6 +165,7 @@ export function TemplatesPage() {
     setPageOrientation(template.pageOrientation === 'LANDSCAPE' ? 'LANDSCAPE' : 'PORTRAIT');
     setPageWidthMm(template.pageWidthMm);
     setPageHeightMm(template.pageHeightMm);
+    setDesignerTemplate(buildPdfmeTemplate(template));
     setError('');
   }
 
@@ -197,9 +234,10 @@ export function TemplatesPage() {
     try {
       const payload = await apiRequest<{ template: TemplateItem }>('/api/templates/' + editingTemplate.id + '/page-settings', {
         method: 'PATCH',
-        body: JSON.stringify({ pageFormat, pageOrientation, pageWidthMm, pageHeightMm }),
+        body: JSON.stringify({ pageFormat, pageOrientation, pageWidthMm, pageHeightMm, designerJson: designerTemplate }),
       });
       setEditingTemplate(payload.template);
+      setDesignerTemplate(buildPdfmeTemplate(payload.template));
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar la plantilla.');
@@ -245,9 +283,11 @@ export function TemplatesPage() {
     if (pageOrientation === 'LANDSCAPE') {
       setPageWidthMm(selectedFormat.height);
       setPageHeightMm(selectedFormat.width);
+      setDesignerTemplate((current) => updatePdfmeBasePdf(current, { width: selectedFormat.height, height: selectedFormat.width }));
     } else {
       setPageWidthMm(selectedFormat.width);
       setPageHeightMm(selectedFormat.height);
+      setDesignerTemplate((current) => updatePdfmeBasePdf(current, { width: selectedFormat.width, height: selectedFormat.height }));
     }
   }
 
@@ -255,6 +295,7 @@ export function TemplatesPage() {
     setPageOrientation((value) => value === 'PORTRAIT' ? 'LANDSCAPE' : 'PORTRAIT');
     setPageWidthMm(pageHeightMm);
     setPageHeightMm(pageWidthMm);
+    setDesignerTemplate((current) => updatePdfmeBasePdf(current, { width: pageHeightMm, height: pageWidthMm }));
   }
 
   useEffect(() => {
@@ -269,8 +310,8 @@ export function TemplatesPage() {
         <TextField label="Formato" onChange={(event) => setFormat(event.target.value)} select size="small" sx={{ width: 120 }} value={pageFormat}>
           {pageFormats.map((format) => <MenuItem key={format.value} value={format.value}>{format.label}</MenuItem>)}
         </TextField>
-        <TextField label="Ancho mm" onChange={(event) => setPageWidthMm(Number(event.target.value))} size="small" sx={{ width: 110 }} type="number" value={pageWidthMm} />
-        <TextField label="Alto mm" onChange={(event) => setPageHeightMm(Number(event.target.value))} size="small" sx={{ width: 110 }} type="number" value={pageHeightMm} />
+        <TextField label="Ancho mm" onChange={(event) => { const next = Number(event.target.value); setPageWidthMm(next); setDesignerTemplate((current) => updatePdfmeBasePdf(current, { width: next })); }} size="small" sx={{ width: 110 }} type="number" value={pageWidthMm} />
+        <TextField label="Alto mm" onChange={(event) => { const next = Number(event.target.value); setPageHeightMm(next); setDesignerTemplate((current) => updatePdfmeBasePdf(current, { height: next })); }} size="small" sx={{ width: 110 }} type="number" value={pageHeightMm} />
         <Button onClick={toggleOrientation} size="small" startIcon={<RetweetOutlined />} variant="outlined">
           {pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}
         </Button>
@@ -287,8 +328,6 @@ export function TemplatesPage() {
   }, [editingTemplate, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, saving, savingVersion, setHeaderAction, setHeaderControls]);
 
   if (editingTemplate) {
-    const pageScale = Math.min(1.45, 720 / Math.max(pageWidthMm, pageHeightMm));
-
     return (
       <Stack spacing={2}>
         {error ? <Alert severity="error">{error}</Alert> : null}
@@ -299,33 +338,13 @@ export function TemplatesPage() {
             <Typography color="text.secondary" variant="caption">{editingTemplate.code} · v{editingTemplate.versionNumber}</Typography>
           </Box>
         </Stack>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '240px minmax(0, 1fr)' }, gap: 2, minHeight: 'calc(100vh - 170px)' }}>
-          <Card sx={{ p: 2, alignSelf: 'start' }}>
-            <Typography variant="subtitle2">Componentes</Typography>
-            <Typography color="text.secondary" sx={{ mt: 0.5 }} variant="caption">
-              Los fondos, firmas, sellos y logos se trataran como imagenes PNG para impresion.
-            </Typography>
-            <Divider sx={{ my: 2 }} />
-            <Button fullWidth startIcon={<PictureOutlined />} variant="outlined">Imagen PNG</Button>
-          </Card>
-          <Card sx={{ minWidth: 0, overflow: 'auto', p: 3, bgcolor: 'background.default' }}>
-            <Box sx={{ minWidth: pageWidthMm * pageScale + 48, minHeight: pageHeightMm * pageScale + 48, display: 'grid', placeItems: 'center' }}>
-              <Box
-                sx={{
-                  width: pageWidthMm * pageScale,
-                  height: pageHeightMm * pageScale,
-                  bgcolor: 'background.paper',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  boxShadow: '0 18px 42px rgba(15, 23, 42, 0.14)',
-                  position: 'relative',
-                }}
-              >
-                <Box sx={{ position: 'absolute', inset: 16, border: '1px dashed', borderColor: 'divider', display: 'grid', placeItems: 'center', color: 'text.secondary' }}>
-                  <Typography variant="body2">Lienzo de plantilla pdfme</Typography>
-                </Box>
-              </Box>
-            </Box>
+        <Box sx={{ minHeight: 'calc(100vh - 170px)' }}>
+          <Card sx={{ minWidth: 0, overflow: 'hidden', bgcolor: 'background.default' }}>
+            {designerTemplate ? (
+              <Suspense fallback={<Box sx={{ display: 'grid', minHeight: 680, placeItems: 'center' }}><CircularProgress size={24} /></Box>}>
+                <PdfmeDesigner onChange={setDesignerTemplate} template={designerTemplate} />
+              </Suspense>
+            ) : <Box sx={{ display: 'grid', minHeight: 680, placeItems: 'center' }}><CircularProgress size={24} /></Box>}
           </Card>
         </Box>
       </Stack>

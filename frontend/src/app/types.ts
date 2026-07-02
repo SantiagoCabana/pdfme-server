@@ -1,3 +1,5 @@
+import type { Template as PdfmeTemplate } from '@pdfme/common';
+
 export type SessionUser = {
   id: string;
   email: string;
@@ -18,6 +20,9 @@ export type TemplateItem = {
   pageOrientation: string;
   pageWidthMm: number;
   pageHeightMm: number;
+  paddingVerticalMm: number;
+  paddingHorizontalMm: number;
+  designerJson: Partial<PdfmeTemplate>;
   tags: string[];
   updatedAt: string;
 };

@@ -16,6 +16,9 @@
     "@fontsource/public-sans": "^5.2.7",
     "@mui/material": "^9.1.2",
     "@mui/system": "^9.1.2",
+    "@pdfme/common": "^6.1.11",
+    "@pdfme/schemas": "^6.1.11",
+    "@pdfme/ui": "^6.1.11",
     "@tanstack/react-query": "^5.81.5",
     "@tanstack/react-table": "^8.21.3",
     "@vitejs/plugin-react": "^4.5.2",
@@ -34,6 +37,6 @@
     "vite": "^6.3.5"
   },
   "engines": {
-    "node": ">=18.20.8"
+    "node": ">=20.19.5"
   }
 }
