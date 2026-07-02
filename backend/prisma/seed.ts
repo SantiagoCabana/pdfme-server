@@ -66,17 +66,18 @@ async function main() {
     return;
   }
 
-  const adminUser = await prisma.userAccount.upsert({
-    where: { email: process.env.ADMIN_EMAIL.toLowerCase() },
-    update: {
-      displayName: 'Administrador',
-      passwordHash: await bcrypt.hash(process.env.ADMIN_PASSWORD, 10),
-      isSuperAdmin: true,
-      status: 'ACTIVE',
-      tokenVersion: { increment: 1 },
-    },
-    create: {
-      email: process.env.ADMIN_EMAIL.toLowerCase(),
+  const adminEmail = process.env.ADMIN_EMAIL.toLowerCase();
+  const existingAdminUser = await prisma.userAccount.findUnique({
+    where: { email: adminEmail },
+  });
+
+  if (existingAdminUser) {
+    return;
+  }
+
+  const adminUser = await prisma.userAccount.create({
+    data: {
+      email: adminEmail,
       displayName: 'Administrador',
       passwordHash: await bcrypt.hash(process.env.ADMIN_PASSWORD, 10),
       isSuperAdmin: true,

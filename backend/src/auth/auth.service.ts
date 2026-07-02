@@ -94,18 +94,6 @@ export function invalidateSessionCache(userId: string) {
 export async function authenticateUser(email: string, password: string): Promise<SessionUser | null> {
   const normalizedEmail = email.trim().toLowerCase();
 
-  if (normalizedEmail === env.ADMIN_EMAIL.toLowerCase() && password === env.ADMIN_PASSWORD) {
-    return {
-      id: 'bootstrap-admin',
-      email: env.ADMIN_EMAIL,
-      displayName: 'Bootstrap Admin',
-      roles: ['ADMIN'],
-      permissions: ['*'],
-      isSuperAdmin: true,
-      tokenVersion: 0,
-    };
-  }
-
   const user = await findUserWithRoles(normalizedEmail);
 
   if (!user || user.status !== 'ACTIVE') {
