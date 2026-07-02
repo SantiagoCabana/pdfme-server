@@ -58,10 +58,15 @@ export function PrivateLayout() {
     { path: '/permissions', label: 'Permisos', icon: <SafetyCertificateOutlined />, visible: can(user, 'users.manage') },
   ], [user]);
 
+  const currentSegment = location.pathname.split('/')[1] || '';
+
   useEffect(() => {
     closeHeaderAction();
+  }, [closeHeaderAction, location.pathname]);
+
+  useEffect(() => {
     setHeaderControls(null);
-  }, [closeHeaderAction, location.pathname, setHeaderControls]);
+  }, [currentSegment, setHeaderControls]);
 
   const activeItem = items.find((item) => (
     location.pathname === item.path || location.pathname.startsWith(`${item.path}/`) || (location.pathname === '/' && item.path === '/templates')
