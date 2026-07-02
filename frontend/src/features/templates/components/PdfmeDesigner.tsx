@@ -19,7 +19,7 @@ import {
   time,
 } from '@pdfme/schemas';
 
-const plugins = {
+export const pdfmePlugins = {
   text,
   multiVariableText,
   image,
@@ -53,7 +53,7 @@ export function PdfmeDesigner({ template, onChange }: PdfmeDesignerProps) {
     const designer = new Designer({
       domContainer: containerRef.current,
       template,
-      plugins,
+      plugins: pdfmePlugins,
       options: {
         lang: 'es',
       },

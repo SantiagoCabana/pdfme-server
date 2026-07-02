@@ -70,6 +70,8 @@ export default function App() {
       children: [
         { index: true, element: <Navigate to="/templates" replace /> },
         { path: 'templates', element: <TemplatesPage /> },
+        { path: 'templates/edit/:code', element: <TemplatesPage /> },
+        { path: 'templates/preview/:code', element: <TemplatesPage /> },
         { path: 'api-keys', element: <ApiKeysPage /> },
         { path: 'tags', element: <TagsPage /> },
         { path: 'users', element: <UsersPage /> },

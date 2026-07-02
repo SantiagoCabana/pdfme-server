@@ -64,7 +64,7 @@ export function PrivateLayout() {
   }, [closeHeaderAction, location.pathname, setHeaderControls]);
 
   const activeItem = items.find((item) => (
-    location.pathname === item.path || (location.pathname === '/' && item.path === '/templates')
+    location.pathname === item.path || location.pathname.startsWith(`${item.path}/`) || (location.pathname === '/' && item.path === '/templates')
   ));
 
   if (!user) return <Navigate to="/login" replace />;
@@ -142,7 +142,7 @@ export function PrivateLayout() {
       <Box sx={{ flex: 1, overflowY: 'auto', py: 1.5, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
         <List sx={{ py: 0.5 }}>
           {items.filter((item) => item.visible).map((item) => {
-            const selected = location.pathname === item.path || (location.pathname === '/' && item.path === '/templates');
+            const selected = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`) || (location.pathname === '/' && item.path === '/templates');
             return (
               <Tooltip disableHoverListener={!collapsed} key={item.path} placement="right" title={item.label}>
                 <ListItemButton
@@ -260,16 +260,19 @@ export function PrivateLayout() {
           <IconButton aria-label="open drawer" color="secondary" edge="start" onClick={() => setOpen((value) => !value)} sx={{ display: { xs: 'inline-flex', lg: 'none' } }}>
             {open ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
           </IconButton>
-          <Typography variant="h5" color="text.primary" sx={{ minWidth: { xs: 0, md: 180 }, display: { xs: 'none', sm: 'block' } }} noWrap>
-            {activeItem?.label ?? 'Plantillas'}
-          </Typography>
-          <Box sx={{ flexGrow: 1 }} />
-          {headerControls}
-          {headerAction ? (
-            <Button onClick={openHeaderAction} size="small" variant="contained">
-              {headerAction.label}
-            </Button>
-          ) : null}
+          {headerControls ?? (
+            <>
+              <Typography variant="h5" color="text.primary" sx={{ minWidth: { xs: 0, md: 180 }, display: { xs: 'none', sm: 'block' } }} noWrap>
+                {activeItem?.label ?? 'Plantillas'}
+              </Typography>
+              <Box sx={{ flexGrow: 1 }} />
+              {headerAction ? (
+                <Button onClick={openHeaderAction} size="small" variant="contained">
+                  {headerAction.label}
+                </Button>
+              ) : null}
+            </>
+          )}
         </Toolbar>
       </AppBar>
       <Dialog fullWidth maxWidth={headerAction?.maxWidth ?? 'sm'} onClose={closeHeaderAction} open={Boolean(headerAction && headerActionOpen)}>
