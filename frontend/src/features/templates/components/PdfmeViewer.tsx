@@ -66,7 +66,7 @@ export function PdfmeViewer({ template }: PdfmeViewerProps) {
   return (
     <>
       {error ? <Alert severity="error">{error}</Alert> : null}
-      <div ref={containerRef} style={{ height: '100%', minHeight: 0, width: '100%' }} />
+      <div ref={containerRef} className="pdfme-container" />
     </>
   );
 }

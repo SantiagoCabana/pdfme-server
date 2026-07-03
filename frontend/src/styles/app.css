@@ -89,3 +89,13 @@ div.selectable-locked {
 .schema-type-icon-text {
   font-weight: bold;
 }
+
+.logo-link {
+  text-decoration: none;
+}
+
+.pdfme-container {
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+}

@@ -135,7 +135,7 @@ export function PrivateLayout() {
           </Tooltip>
         ) : (
           <>
-            <RouterLink aria-label="Logo" to="/templates" style={{ textDecoration: 'none' }}>
+            <RouterLink aria-label="Logo" to="/templates" className="logo-link">
               <Box sx={{ display: 'grid', placeItems: 'start', width: 118, overflow: 'hidden', transition: sidebarTransition }}><MantisLogo /></Box>
             </RouterLink>
             <Tooltip title="Ocultar sidebar">

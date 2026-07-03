@@ -109,5 +109,5 @@ export const PdfmeDesigner = forwardRef<PdfmeDesignerHandle, PdfmeDesignerProps>
     skipNextTemplateSyncRef.current = false;
   }, [template]);
 
-  return <div ref={containerRef} style={{ height: '100%', minHeight: 0, width: '100%' }} />;
+  return <div ref={containerRef} className="pdfme-container" />;
 });

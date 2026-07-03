@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DeleteOutlined, EditOutlined, TagsOutlined } from '@ant-design/icons';
-import { Alert, Button, Card, CircularProgress, Dialog, DialogContent, DialogTitle, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField } from '@mui/material';
+import { Alert, Button, Card, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField } from '@mui/material';
 
 import type { TagItem } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
@@ -19,6 +19,7 @@ export function TagsPage() {
   const [deletingId, setDeletingId] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [tagToDelete, setTagToDelete] = useState<TagItem | null>(null);
 
   async function load() {
     setLoading(true);
@@ -117,7 +118,7 @@ export function TagsPage() {
                   <TableCell align="right">
                     <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
                       <Button onClick={() => openEdit(tag)} size="small" startIcon={<EditOutlined />}>Editar</Button>
-                      <Button color="error" disabled={deletingId === tag.id} onClick={() => void remove(tag.id)} size="small" startIcon={<DeleteOutlined />}>{deletingId === tag.id ? 'Eliminando...' : 'Eliminar'}</Button>
+                      <Button color="error" disabled={deletingId === tag.id} onClick={() => setTagToDelete(tag)} size="small" startIcon={<DeleteOutlined />}>{deletingId === tag.id ? 'Eliminando...' : 'Eliminar'}</Button>
                     </Stack>
                   </TableCell>
                 </TableRow>
@@ -145,6 +146,33 @@ export function TagsPage() {
             <Button disabled={saving} startIcon={<EditOutlined />} type="submit" variant="contained">{saving ? 'Guardando...' : 'Guardar cambios'}</Button>
           </Stack>
         </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(tagToDelete)}
+        onClose={() => setTagToDelete(null)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Confirmar eliminación</DialogTitle>
+        <DialogContent dividers sx={{ py: 2 }}>
+          <span>¿Estás seguro que quieres eliminar el tag "{tagToDelete?.name}"?</span>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTagToDelete(null)}>No</Button>
+          <Button
+            color="error"
+            onClick={async () => {
+              if (tagToDelete) {
+                await remove(tagToDelete.id);
+                setTagToDelete(null);
+              }
+            }}
+            variant="contained"
+          >
+            Sí
+          </Button>
+        </DialogActions>
       </Dialog>
     </Stack>
   );

@@ -243,6 +243,7 @@ export function TemplatesPage() {
   const [detailsTags, setDetailsTags] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
   const [loadingBackground, setLoadingBackground] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<TemplateItem | null>(null);
   const designerRef = useRef<PdfmeDesignerHandle | null>(null);
   const backgroundInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -1032,7 +1033,7 @@ export function TemplatesPage() {
             <TableBody>
               {loading ? <TableRow><TableCell align="center" colSpan={5}><CircularProgress size={24} /></TableCell></TableRow> : null}
               {!loading && filteredTemplates.length === 0 ? <TableRow><TableCell colSpan={5}>No hay plantillas.</TableCell></TableRow> : null}
-              {!loading ? visibleTemplates.map((template) => <TableRow key={template.id}><TableCell><Box><strong>{template.name}</strong><br /><small>{template.code}</small></Box></TableCell><TableCell>v{template.versionNumber}</TableCell><TableCell>{template.pageFormat} {template.pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}</TableCell><TableCell>{template.tags.join(', ') || 'Sin etiquetas'}</TableCell><TableCell align="right"><Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}><Button onClick={() => navigate(`/templates/preview/${template.code}`)} size="small" startIcon={<EyeOutlined />}>Preview</Button><Button onClick={() => navigate(`/templates/edit/${template.code}`)} size="small" startIcon={<EditOutlined />}>Editar</Button>{can(user, 'templates.delete') ? <Button color="error" disabled={deletingId === template.id} onClick={() => void remove(template.id)} size="small" startIcon={<DeleteOutlined />}>{deletingId === template.id ? 'Eliminando...' : 'Eliminar'}</Button> : null}</Stack></TableCell></TableRow>) : null}
+              {!loading ? visibleTemplates.map((template) => <TableRow key={template.id}><TableCell><Box><strong>{template.name}</strong><br /><small>{template.code}</small></Box></TableCell><TableCell>v{template.versionNumber}</TableCell><TableCell>{template.pageFormat} {template.pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}</TableCell><TableCell>{template.tags.join(', ') || 'Sin etiquetas'}</TableCell><TableCell align="right"><Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}><Button onClick={() => navigate(`/templates/preview/${template.code}`)} size="small" startIcon={<EyeOutlined />}>Preview</Button><Button onClick={() => navigate(`/templates/edit/${template.code}`)} size="small" startIcon={<EditOutlined />}>Editar</Button>{can(user, 'templates.delete') ? <Button color="error" disabled={deletingId === template.id} onClick={() => setTemplateToDelete(template)} size="small" startIcon={<DeleteOutlined />}>{deletingId === template.id ? 'Eliminando...' : 'Eliminar'}</Button> : null}</Stack></TableCell></TableRow>) : null}
             </TableBody>
           </Table>
         </TableContainer>
@@ -1047,6 +1048,33 @@ export function TemplatesPage() {
           rowsPerPageOptions={[10, 25, 50]}
         />
       </Card>
+
+      <Dialog
+        open={Boolean(templateToDelete)}
+        onClose={() => setTemplateToDelete(null)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Confirmar eliminación</DialogTitle>
+        <DialogContent dividers sx={{ py: 2 }}>
+          <span>¿Estás seguro que quieres eliminar la plantilla "{templateToDelete?.name}"?</span>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTemplateToDelete(null)}>No</Button>
+          <Button
+            color="error"
+            onClick={async () => {
+              if (templateToDelete) {
+                await remove(templateToDelete.id);
+                setTemplateToDelete(null);
+              }
+            }}
+            variant="contained"
+          >
+            Sí
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }

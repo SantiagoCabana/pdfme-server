@@ -21,18 +21,17 @@ const roleOrder: Record<string, number> = {
 };
 
 const getRoleIcon = (code: string) => {
-  const iconStyle = { fontSize: '1.05rem', marginRight: '6px', opacity: 0.8 };
   switch (code) {
     case 'SUPERADMIN':
-      return <SettingOutlined style={{ ...iconStyle, color: '#f5222d' }} />;
+      return <SettingOutlined className="role-icon role-icon-superadmin" />;
     case 'ADMIN':
-      return <SettingOutlined style={iconStyle} />;
+      return <SettingOutlined className="role-icon" />;
     case 'EDITOR':
-      return <EditOutlined style={iconStyle} />;
+      return <EditOutlined className="role-icon" />;
     case 'VIEWER':
-      return <EyeOutlined style={iconStyle} />;
+      return <EyeOutlined className="role-icon" />;
     default:
-      return <UserOutlined style={iconStyle} />;
+      return <UserOutlined className="role-icon" />;
   }
 };
 

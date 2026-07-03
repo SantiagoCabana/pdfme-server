@@ -109,3 +109,14 @@
   transform: scale(0.98);
   transition: all 0.25s ease;
 }
+
+/* Role Icons styling */
+.role-icon {
+  font-size: 1.05rem;
+  margin-right: 6px;
+  opacity: 0.8;
+}
+
+.role-icon-superadmin {
+  color: #f5222d;
+}

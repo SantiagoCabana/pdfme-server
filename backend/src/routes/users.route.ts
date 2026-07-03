@@ -7,6 +7,8 @@ import { setAuthCookie } from '../auth/session-token.js';
 import { loadUserSession } from '../auth/auth.service.js';
 import { prisma } from '../prisma.js';
 import { logAuditEvent, getSpanishRole } from '../services/audit.service.js';
+import { env } from '../env.js';
+import { verifyPassword } from '../auth/password.js';
 
 export const usersRouter = Router();
 
@@ -145,6 +147,35 @@ usersRouter.patch('/users/:id', requirePermission('users.manage'), async (reques
 usersRouter.delete('/users/:id', requirePermission('users.manage'), async (request, response) => {
   if (request.params.id === response.locals.user?.id) {
     response.status(400).json({ message: 'No puedes eliminar tu propio usuario.' });
+    return;
+  }
+
+  const { password } = request.body;
+  if (!password) {
+    response.status(400).json({ message: 'La contraseña de verificación es requerida.' });
+    return;
+  }
+
+  const currentUser = response.locals.user;
+  if (!currentUser) {
+    response.status(401).json({ message: 'No autenticado.' });
+    return;
+  }
+
+  let isValid = false;
+  if (currentUser.id === 'bootstrap-admin') {
+    isValid = password === env.ADMIN_PASSWORD;
+  } else {
+    const actor = await prisma.userAccount.findUnique({
+      where: { id: currentUser.id }
+    });
+    if (actor) {
+      isValid = await verifyPassword(password, actor.passwordHash);
+    }
+  }
+
+  if (!isValid) {
+    response.status(400).json({ message: 'La contraseña ingresada es incorrecta.' });
     return;
   }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
-import { Alert, Button, Card, Chip, CircularProgress, Dialog, DialogContent, DialogTitle, MenuItem, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField } from '@mui/material';
+import { Alert, Button, Card, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField } from '@mui/material';
 
 import { formatDate, statusLabel } from '../../app/session';
 import type { InternalUser } from '../../app/types';
@@ -29,6 +29,9 @@ export function UsersPage() {
   const [deletingId, setDeletingId] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [userToDelete, setUserToDelete] = useState<InternalUser | null>(null);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [deletingError, setDeletingError] = useState('');
 
   async function load() {
     setLoading(true);
@@ -92,14 +95,20 @@ export function UsersPage() {
     }
   }
 
-  async function remove(id: string) {
+  async function remove(id: string, passwordVal: string) {
     setError('');
+    setDeletingError('');
     setDeletingId(id);
     try {
-      await apiRequest('/api/users/' + id, { method: 'DELETE' });
+      await apiRequest('/api/users/' + id, {
+        method: 'DELETE',
+        body: JSON.stringify({ password: passwordVal }),
+      });
       await load();
+      setUserToDelete(null);
+      setConfirmPassword('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo eliminar el usuario.');
+      setDeletingError(err instanceof Error ? err.message : 'No se pudo eliminar el usuario.');
     } finally {
       setDeletingId('');
     }
@@ -145,7 +154,7 @@ export function UsersPage() {
                   <TableCell align="right">
                     <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
                       <Button onClick={() => openEdit(item)} size="small" startIcon={<EditOutlined />}>Editar</Button>
-                      <Button color="error" disabled={deletingId === item.id} onClick={() => void remove(item.id)} size="small" startIcon={<DeleteOutlined />}>{deletingId === item.id ? 'Eliminando...' : 'Eliminar'}</Button>
+                      <Button color="error" disabled={deletingId === item.id} onClick={() => { setUserToDelete(item); setConfirmPassword(''); setDeletingError(''); }} size="small" startIcon={<DeleteOutlined />}>{deletingId === item.id ? 'Eliminando...' : 'Eliminar'}</Button>
                     </Stack>
                   </TableCell>
                 </TableRow>
@@ -180,6 +189,52 @@ export function UsersPage() {
             <Button disabled={saving} startIcon={<EditOutlined />} type="submit" variant="contained">{saving ? 'Guardando...' : 'Guardar cambios'}</Button>
           </Stack>
         </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(userToDelete)}
+        onClose={() => setUserToDelete(null)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Confirmar eliminación</DialogTitle>
+        <DialogContent dividers sx={{ py: 2 }}>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            {deletingError ? <Alert severity="error">{deletingError}</Alert> : null}
+            <span>Para eliminar el usuario "{userToDelete?.displayName}", ingrese su contraseña para validar su identidad:</span>
+            <TextField
+              autoFocus
+              fullWidth
+              label="Contraseña"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              onKeyDown={async (e) => {
+                if (e.key === 'Enter' && confirmPassword && deletingId !== userToDelete?.id) {
+                  e.preventDefault();
+                  if (userToDelete) {
+                    await remove(userToDelete.id, confirmPassword);
+                  }
+                }
+              }}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUserToDelete(null)}>Cancelar</Button>
+          <Button
+            color="error"
+            disabled={!confirmPassword || deletingId === userToDelete?.id}
+            onClick={async () => {
+              if (userToDelete) {
+                await remove(userToDelete.id, confirmPassword);
+              }
+            }}
+            variant="contained"
+          >
+            {deletingId === userToDelete?.id ? 'Eliminando...' : 'Aceptar'}
+          </Button>
+        </DialogActions>
       </Dialog>
     </Stack>
   );
