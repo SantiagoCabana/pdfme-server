@@ -584,7 +584,9 @@ export function TemplatesPage() {
 
   useEffect(() => {
     if (!designerTemplate) {
-      setLockedSchemaNames([]);
+      if (lockedSchemaNames.length > 0) {
+        setLockedSchemaNames([]);
+      }
       prevSchemasRef.current = {};
       lastLoadedTemplateIdRef.current = null;
       return;
@@ -628,13 +630,17 @@ export function TemplatesPage() {
           const isLocked = lockedSchemaNames.includes(schema.name);
 
           if (isLocked) {
+            if (!el.classList.contains('selectable-locked')) {
+              el.classList.add('selectable-locked');
+            }
             if (el.classList.contains('selectable')) {
               el.classList.remove('selectable');
-              el.classList.add('selectable-locked');
             }
           } else {
             if (el.classList.contains('selectable-locked')) {
               el.classList.remove('selectable-locked');
+            }
+            if (!el.classList.contains('selectable')) {
               el.classList.add('selectable');
             }
           }
@@ -671,11 +677,13 @@ export function TemplatesPage() {
 
         const isLocked = lockedSchemaNames.includes(schemaName);
         const desiredTitle = isLocked ? 'Desbloquear' : 'Bloquear';
+        const deseadoState = isLocked ? 'locked' : 'unlocked';
 
         let lockBtn = rowDiv.querySelector('.sidebar-lock-btn') as HTMLButtonElement | null;
         if (!lockBtn) {
           lockBtn = document.createElement('button');
           lockBtn.className = 'sidebar-lock-btn';
+          lockBtn.setAttribute('data-state', deseadoState);
           lockBtn.style.background = 'none';
           lockBtn.style.border = 'none';
           lockBtn.style.cursor = 'pointer';
@@ -710,9 +718,7 @@ export function TemplatesPage() {
           });
 
           rowDiv.appendChild(lockBtn);
-        }
 
-        if (lockBtn.title !== desiredTitle) {
           lockBtn.title = desiredTitle;
           if (isLocked) {
             lockBtn.style.color = '#ff4d4f';
@@ -729,6 +735,26 @@ export function TemplatesPage() {
               </svg>
             `;
           }
+        } else {
+          if (lockBtn.getAttribute('data-state') !== deseadoState) {
+            lockBtn.setAttribute('data-state', deseadoState);
+            lockBtn.title = desiredTitle;
+            if (isLocked) {
+              lockBtn.style.color = '#ff4d4f';
+              lockBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                  <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                </svg>
+              `;
+            } else {
+              lockBtn.style.color = 'rgba(0, 0, 0, 0.45)';
+              lockBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                  <path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z"/>
+                </svg>
+              `;
+            }
+          }
         }
       });
     };
@@ -736,12 +762,28 @@ export function TemplatesPage() {
     handleDOMUpdate();
     const t1 = setTimeout(handleDOMUpdate, 50);
     const t2 = setTimeout(handleDOMUpdate, 200);
-    const intervalId = setInterval(handleDOMUpdate, 300);
+
+    let frameId: number;
+    const observer = new MutationObserver(() => {
+      cancelAnimationFrame(frameId);
+      frameId = requestAnimationFrame(() => {
+        handleDOMUpdate();
+      });
+    });
+
+    const workspaceEl = document.querySelector('.pdfme-workspace');
+    if (workspaceEl) {
+      observer.observe(workspaceEl, {
+        childList: true,
+        subtree: true,
+      });
+    }
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
-      clearInterval(intervalId);
+      cancelAnimationFrame(frameId);
+      observer.disconnect();
     };
   }, [designerTemplate, lockedSchemaNames]);
 
@@ -753,17 +795,16 @@ export function TemplatesPage() {
   }
 
   function getSchemaIcon(type: string) {
-    const iconStyle = { fontSize: '0.9rem', opacity: 0.7 };
     switch (type) {
       case 'text':
-        return <span style={{ ...iconStyle, fontWeight: 'bold' }}>T</span>;
+        return <span className="schema-type-icon schema-type-icon-text">T</span>;
       case 'image':
-        return <PictureOutlined style={iconStyle} />;
+        return <PictureOutlined className="schema-type-icon" />;
       case 'qrcode':
       case 'code128':
-        return <BarcodeOutlined style={iconStyle} />;
+        return <BarcodeOutlined className="schema-type-icon" />;
       default:
-        return <FileTextOutlined style={iconStyle} />;
+        return <FileTextOutlined className="schema-type-icon" />;
     }
   }
 
@@ -977,16 +1018,7 @@ export function TemplatesPage() {
             ) : <Box sx={{ display: 'grid', minHeight: 680, placeItems: 'center' }}><CircularProgress size={24} /></Box>}
           </Card>
         </Box>
-        {lockedSchemaNames.length > 0 && (
-          <style>
-            {lockedSchemaNames.map((name) => `
-              div.selectable-locked[title="${name}"],
-              div.selectable[title="${name}"] {
-                pointer-events: none !important;
-              }
-            `).join('\n')}
-          </style>
-        )}      </Box>
+      </Box>
     );
   }
 

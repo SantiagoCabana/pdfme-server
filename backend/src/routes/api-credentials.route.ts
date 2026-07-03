@@ -7,6 +7,8 @@ import {
   revokeApiCredential,
 } from '../services/api-credentials.service.js';
 import { requirePermission } from '../middleware/session-auth.js';
+import { prisma } from '../prisma.js';
+import { logAuditEvent, getSpanishRole } from '../services/audit.service.js';
 
 export const apiCredentialsRouter = Router();
 
@@ -36,12 +38,48 @@ apiCredentialsRouter.post('/api-credentials', requirePermission('api_keys.manage
     createdById: response.locals.user?.id === 'bootstrap-admin' ? null : response.locals.user?.id ?? null,
   });
 
+  const actor = response.locals.user;
+  const actorRole = getSpanishRole(actor?.roles, actor?.isSuperAdmin);
+  const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha creado una clave API con nombre "${result.credential.name}"`;
+  await logAuditEvent({
+    actorId: actor?.id ?? null,
+    action: 'Crear clave API',
+    entityType: 'API_KEY',
+    entityId: result.credential.id,
+    metadata: {
+      detail,
+      actorName: actor?.displayName || 'Desconocido',
+      actorRole,
+      credentialName: result.credential.name,
+      credentialPrefix: result.credential.prefix,
+      expiresAt: result.credential.expiresAt,
+    }
+  });
+
   response.status(201).json({ ok: true, credential: result.credential, rawKey: result.rawKey });
 });
 
 apiCredentialsRouter.patch('/api-credentials/:id/revoke', requirePermission('api_keys.manage'), async (request, response) => {
   try {
     const credential = await revokeApiCredential(request.params.id, response.locals.user?.id ?? null);
+
+    const actor = response.locals.user;
+    const actorRole = getSpanishRole(actor?.roles, actor?.isSuperAdmin);
+    const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha revocado la clave API "${credential.name}"`;
+    await logAuditEvent({
+      actorId: actor?.id ?? null,
+      action: 'Revocar clave API',
+      entityType: 'API_KEY',
+      entityId: credential.id,
+      metadata: {
+        detail,
+        actorName: actor?.displayName || 'Desconocido',
+        actorRole,
+        credentialName: credential.name,
+        credentialPrefix: credential.prefix,
+      }
+    });
+
     response.json({ ok: true, credential });
   } catch {
     response.status(404).json({ message: 'No se encontro la clave API.' });

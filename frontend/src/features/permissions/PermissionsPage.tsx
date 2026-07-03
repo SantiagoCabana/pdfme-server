@@ -111,6 +111,7 @@ export function PermissionsPage() {
     return [
       { key: 'access', label: 'GESTIONAR USUARIOS' },
       { key: 'api', label: 'GESTIONAR CLAVES API' },
+      { key: 'audit', label: 'REGISTRO DE AUDITORÍA' },
       { key: 'templates', label: 'TEMPLATES' },
     ].filter((cat) => (groupedPermissions[cat.key]?.length ?? 0) > 0);
   }, [groupedPermissions]);
@@ -254,6 +255,17 @@ export function PermissionsPage() {
                           );
                         } else if (category.key === 'api') {
                           const permissionCode = 'api_keys.manage';
+                          const checked = draft[role.id]?.includes(permissionCode) ?? false;
+                          return (
+                            <TableCell key={role.id} sx={{ py: 4.5, verticalAlign: 'middle' }}>
+                              <CustomToggleSwitch
+                                checked={checked}
+                                onChange={() => togglePermission(role.id, permissionCode)}
+                              />
+                            </TableCell>
+                          );
+                        } else if (category.key === 'audit') {
+                          const permissionCode = 'audit.view';
                           const checked = draft[role.id]?.includes(permissionCode) ?? false;
                           return (
                             <TableCell key={role.id} sx={{ py: 4.5, verticalAlign: 'middle' }}>

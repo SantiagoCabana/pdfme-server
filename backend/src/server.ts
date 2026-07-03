@@ -10,6 +10,7 @@ import { renderRouter } from './routes/render.route.js';
 import { templatesRouter } from './routes/templates.route.js';
 import { tagsRouter } from './routes/tags.route.js';
 import { usersRouter } from './routes/users.route.js';
+import { auditRouter } from './routes/audit.route.js';
 
 const app = express();
 
@@ -60,6 +61,7 @@ app.use('/api', apiCredentialsRouter);
 app.use('/api', templatesRouter);
 app.use('/api', tagsRouter);
 app.use('/api', usersRouter);
+app.use('/api', auditRouter);
 app.use('/api', permissionsRouter);
 app.use('/api', renderRouter);
 

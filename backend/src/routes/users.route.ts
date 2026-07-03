@@ -5,6 +5,8 @@ import { requirePermission } from '../middleware/session-auth.js';
 import { createUser, deleteUser, listRoles, listUsers, updateUser } from '../services/users.service.js';
 import { setAuthCookie } from '../auth/session-token.js';
 import { loadUserSession } from '../auth/auth.service.js';
+import { prisma } from '../prisma.js';
+import { logAuditEvent, getSpanishRole } from '../services/audit.service.js';
 
 export const usersRouter = Router();
 
@@ -38,6 +40,25 @@ usersRouter.post('/users', requirePermission('users.manage'), async (request, re
 
   try {
     const user = await createUser(parsed.data);
+    if (user) {
+      const actor = response.locals.user;
+      const actorRole = getSpanishRole(actor?.roles, actor?.isSuperAdmin);
+      const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha creado el Usuario ${user.displayName}`;
+      await logAuditEvent({
+        actorId: actor?.id ?? null,
+        action: 'Crear usuario',
+        entityType: 'USER',
+        entityId: user.id,
+        metadata: {
+          detail,
+          actorName: actor?.displayName || 'Desconocido',
+          actorRole,
+          targetName: user.displayName,
+          targetEmail: user.email,
+          targetRole: parsed.data.roleCode,
+        }
+      });
+    }
     response.status(201).json({ ok: true, user });
   } catch {
     response.status(409).json({ message: 'No se pudo crear el usuario. Revisa si el correo ya existe.' });
@@ -53,7 +74,62 @@ usersRouter.patch('/users/:id', requirePermission('users.manage'), async (reques
   }
 
   try {
+    const originalUser = await prisma.userAccount.findUnique({
+      where: { id: request.params.id },
+      include: { roles: { include: { accessRole: true } } }
+    });
+
     const user = await updateUser({ id: request.params.id, ...parsed.data });
+    
+    if (originalUser && user) {
+      const actor = response.locals.user;
+      const actorRole = getSpanishRole(actor?.roles, actor?.isSuperAdmin);
+      const changes: string[] = [];
+      const changeMeta: any = {};
+
+      if (parsed.data.password) {
+        changes.push('contraseña');
+        changeMeta.password = true;
+      }
+      if (parsed.data.displayName && parsed.data.displayName !== originalUser.displayName) {
+        changes.push(`nombre a "${parsed.data.displayName}"`);
+        changeMeta.displayName = { old: originalUser.displayName, new: parsed.data.displayName };
+      }
+      if (parsed.data.status && parsed.data.status !== originalUser.status) {
+        changes.push(`estado a "${parsed.data.status}"`);
+        changeMeta.status = { old: originalUser.status, new: parsed.data.status };
+      }
+      const oldRole = originalUser.roles.map((r) => r.accessRole.code)[0] || '';
+      if (parsed.data.roleCode && parsed.data.roleCode !== oldRole) {
+        changes.push(`rol a "${parsed.data.roleCode}"`);
+        changeMeta.roleCode = { old: oldRole, new: parsed.data.roleCode };
+      }
+
+      if (changes.length > 0) {
+        let detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha actualizado el Usuario ${originalUser.displayName}`;
+        if (parsed.data.password && changes.length === 1) {
+          detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha cambiado la contraseña del Usuario ${originalUser.displayName}`;
+        } else {
+          detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha cambiado ${changes.join(', ')} del Usuario ${originalUser.displayName}`;
+        }
+
+        await logAuditEvent({
+          actorId: actor?.id ?? null,
+          action: 'Actualizar usuario',
+          entityType: 'USER',
+          entityId: user.id,
+          metadata: {
+            detail,
+            actorName: actor?.displayName || 'Desconocido',
+            actorRole,
+            targetName: originalUser.displayName,
+            targetEmail: originalUser.email,
+            changes: changeMeta
+          }
+        });
+      }
+    }
+
     if (user && response.locals.user && user.id === response.locals.user.id) {
       const sessionUser = await loadUserSession(user.id);
       if (sessionUser) {
@@ -73,7 +149,31 @@ usersRouter.delete('/users/:id', requirePermission('users.manage'), async (reque
   }
 
   try {
+    const targetUser = await prisma.userAccount.findUnique({
+      where: { id: request.params.id }
+    });
+
     await deleteUser(request.params.id);
+
+    if (targetUser) {
+      const actor = response.locals.user;
+      const actorRole = getSpanishRole(actor?.roles, actor?.isSuperAdmin);
+      const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha eliminado el Usuario ${targetUser.displayName}`;
+      await logAuditEvent({
+        actorId: actor?.id ?? null,
+        action: 'Eliminar usuario',
+        entityType: 'USER',
+        entityId: request.params.id,
+        metadata: {
+          detail,
+          actorName: actor?.displayName || 'Desconocido',
+          actorRole,
+          targetName: targetUser.displayName,
+          targetEmail: targetUser.email
+        }
+      });
+    }
+
     response.json({ ok: true });
   } catch {
     response.status(404).json({ message: 'No se encontro el usuario.' });

@@ -10,12 +10,13 @@ const permissionSeed = [
   ['templates.delete', 'Eliminar plantillas', 'templates'],
   ['api_keys.manage', 'Gestionar claves API', 'api'],
   ['users.manage', 'Gestionar usuarios', 'access'],
+  ['audit.view', 'Registro de auditoría', 'audit'],
 ] as const;
 
 const roleSeed = {
   VIEWER: ['templates.view'],
   EDITOR: ['templates.view', 'templates.edit'],
-  MANAGER: ['templates.view', 'templates.edit', 'templates.create', 'templates.delete', 'api_keys.manage'],
+  MANAGER: ['templates.view', 'templates.edit', 'templates.create', 'templates.delete', 'api_keys.manage', 'audit.view'],
   ADMIN: permissionSeed.map(([code]) => code),
 };
 

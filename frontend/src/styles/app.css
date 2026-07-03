@@ -55,3 +55,39 @@ small {
   border-color: #303b5f;
   color: #f5f5f5;
 }
+
+/* Elementos bloqueados en el canvas */
+div.selectable-locked {
+  pointer-events: none !important;
+  user-select: none !important;
+  border: 1px dashed rgba(255, 77, 79, 0.4) !important;
+}
+
+/* Candados de la barra lateral */
+.sidebar-lock-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  outline: none;
+  transition: transform 0.15s ease;
+  pointer-events: auto !important;
+}
+
+.sidebar-lock-btn:hover {
+  transform: scale(1.15);
+}
+
+/* Iconos de tipos de esquema en la barra lateral */
+.schema-type-icon {
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+.schema-type-icon-text {
+  font-weight: bold;
+}

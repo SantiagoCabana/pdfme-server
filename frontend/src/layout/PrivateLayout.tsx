@@ -24,6 +24,7 @@ import {
 import {
   ApiOutlined,
   FileTextOutlined,
+  HistoryOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -55,6 +56,7 @@ export function PrivateLayout() {
     { path: '/api-keys', label: 'Claves API', icon: <ApiOutlined />, visible: can(user, 'api_keys.manage') },
     { path: '/tags', label: 'Tags', icon: <TagsOutlined />, visible: can(user, 'templates.edit') },
     { path: '/users', label: 'Usuarios', icon: <UserOutlined />, visible: can(user, 'users.manage') },
+    { path: '/audit-logs', label: 'Auditoría', icon: <HistoryOutlined />, visible: can(user, 'audit.view') },
     { path: '/permissions', label: 'Permisos', icon: <SafetyCertificateOutlined />, visible: can(user, 'users.manage') },
   ], [user]);
 
