@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { DeleteOutlined, EditOutlined, TagsOutlined } from '@ant-design/icons';
-import { Alert, Button, Card, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField } from '@mui/material';
+import { Alert, Box, Button, Card, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
+import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 
 import type { TagItem } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
@@ -17,8 +18,8 @@ export function TagsPage() {
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState('');
-  const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [page, setPage] = useState(0);
   const [tagToDelete, setTagToDelete] = useState<TagItem | null>(null);
 
   async function load() {
@@ -32,8 +33,6 @@ export function TagsPage() {
   }
 
   useEffect(() => { void load().catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar.')); }, []);
-
-  const visibleTags = tags.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -104,38 +103,31 @@ export function TagsPage() {
   return (
     <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
       {error ? <Alert severity="error">{error}</Alert> : null}
-      <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <TableContainer sx={{ flexGrow: 1, overflowY: 'auto' }}>
-          <Table stickyHeader>
-            <TableHead><TableRow><TableCell>Tag</TableCell><TableCell>Plantillas</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
-            <TableBody>
-              {loading ? <TableRow><TableCell colSpan={3} align="center"><CircularProgress size={24} /></TableCell></TableRow> : null}
-              {!loading && tags.length === 0 ? <TableRow><TableCell colSpan={3}>No hay tags.</TableCell></TableRow> : null}
-              {!loading ? visibleTags.map((tag) => (
-                <TableRow key={tag.id}>
-                  <TableCell><strong>{tag.name}</strong></TableCell>
-                  <TableCell>{tag.templateCount}</TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
-                      <Button onClick={() => openEdit(tag)} size="small" startIcon={<EditOutlined />}>Editar</Button>
-                      <Button color="error" disabled={deletingId === tag.id} onClick={() => setTagToDelete(tag)} size="small" startIcon={<DeleteOutlined />}>{deletingId === tag.id ? 'Eliminando...' : 'Eliminar'}</Button>
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              )) : null}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          component="div"
-          count={tags.length}
-          labelRowsPerPage="Filas por pagina"
-          onPageChange={(_event, nextPage) => setPage(nextPage)}
-          onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }}
-          page={page}
-          rowsPerPage={rowsPerPage}
-          rowsPerPageOptions={[10, 25, 50]}
-        />
+      <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0 }}>
+        {loading ? (
+          <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : tags.length === 0 ? (
+          <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
+            <Typography>No hay tags.</Typography>
+          </Box>
+        ) : (
+          <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <DataTable
+              columns={['Tag', 'Plantillas', { name: 'Acciones', sort: false }]}
+              data={tags.slice(page * rowsPerPage, (page + 1) * rowsPerPage).map((tag) => [
+                <strong key="n">{tag.name}</strong>,
+                tag.templateCount,
+                <Stack key="a" direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+                  <Button onClick={() => openEdit(tag)} size="small" startIcon={<EditOutlined />}>Editar</Button>
+                  <Button color="error" disabled={deletingId === tag.id} onClick={() => setTagToDelete(tag)} size="small" startIcon={<DeleteOutlined />}>{deletingId === tag.id ? 'Eliminando...' : 'Eliminar'}</Button>
+                </Stack>,
+              ])}
+            />
+            <PaginationBar page={page} setPage={setPage} rowsPerPage={rowsPerPage} setRowsPerPage={setRowsPerPage} total={tags.length} />
+          </Box>
+        )}
       </Card>
 
       <Dialog fullWidth maxWidth="xs" onClose={() => setEditingTag(null)} open={Boolean(editingTag)}>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
-import { Alert, Button, Card, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField } from '@mui/material';
+import { Alert, Box, Button, Card, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 
 import { formatDate, statusLabel } from '../../app/session';
 import type { InternalUser } from '../../app/types';
@@ -27,8 +28,8 @@ export function UsersPage() {
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState('');
-  const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [page, setPage] = useState(0);
   const [userToDelete, setUserToDelete] = useState<InternalUser | null>(null);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [deletingError, setDeletingError] = useState('');
@@ -44,8 +45,6 @@ export function UsersPage() {
   }
 
   useEffect(() => { void load().catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar.')); }, []);
-
-  const visibleUsers = users.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -138,40 +137,33 @@ export function UsersPage() {
   return (
     <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
       {error ? <Alert severity="error">{error}</Alert> : null}
-      <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <TableContainer sx={{ flexGrow: 1, overflowY: 'auto' }}>
-          <Table stickyHeader>
-            <TableHead><TableRow><TableCell>Usuario</TableCell><TableCell>Rol</TableCell><TableCell>Estado</TableCell><TableCell>Ultimo acceso</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
-            <TableBody>
-              {loading ? <TableRow><TableCell colSpan={5} align="center"><CircularProgress size={24} /></TableCell></TableRow> : null}
-              {!loading && users.length === 0 ? <TableRow><TableCell colSpan={5}>No hay usuarios.</TableCell></TableRow> : null}
-              {!loading ? visibleUsers.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell><strong>{item.displayName}</strong><br /><small>{item.email}</small></TableCell>
-                  <TableCell>{item.roles.join(', ') || 'Sin rol'}</TableCell>
-                  <TableCell><Chip label={statusLabel(item.status)} size="small" /></TableCell>
-                  <TableCell>{formatDate(item.lastLoginAt)}</TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
-                      <Button onClick={() => openEdit(item)} size="small" startIcon={<EditOutlined />}>Editar</Button>
-                      <Button color="error" disabled={deletingId === item.id} onClick={() => { setUserToDelete(item); setConfirmPassword(''); setDeletingError(''); }} size="small" startIcon={<DeleteOutlined />}>{deletingId === item.id ? 'Eliminando...' : 'Eliminar'}</Button>
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              )) : null}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          component="div"
-          count={users.length}
-          labelRowsPerPage="Filas por pagina"
-          onPageChange={(_event, nextPage) => setPage(nextPage)}
-          onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }}
-          page={page}
-          rowsPerPage={rowsPerPage}
-          rowsPerPageOptions={[10, 25, 50]}
-        />
+      <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0 }}>
+        {loading ? (
+          <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : users.length === 0 ? (
+          <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
+            <Typography>No hay usuarios.</Typography>
+          </Box>
+        ) : (
+          <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <DataTable
+              columns={['Usuario', 'Rol', 'Estado', 'Último acceso', { name: 'Acciones', sort: false }]}
+              data={users.slice(page * rowsPerPage, (page + 1) * rowsPerPage).map((item) => [
+                <div key="u"><strong>{item.displayName}</strong><br /><small>{item.email}</small></div>,
+                item.roles.join(', ') || 'Sin rol',
+                <Chip key="s" label={statusLabel(item.status)} size="small" />,
+                formatDate(item.lastLoginAt),
+                <Stack key="a" direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+                  <Button onClick={() => openEdit(item)} size="small" startIcon={<EditOutlined />}>Editar</Button>
+                  <Button color="error" disabled={deletingId === item.id} onClick={() => { setUserToDelete(item); setConfirmPassword(''); setDeletingError(''); }} size="small" startIcon={<DeleteOutlined />}>{deletingId === item.id ? 'Eliminando...' : 'Eliminar'}</Button>
+                </Stack>,
+              ])}
+            />
+            <PaginationBar page={page} setPage={setPage} rowsPerPage={rowsPerPage} setRowsPerPage={setRowsPerPage} total={users.length} />
+          </Box>
+        )}
       </Card>
 
       <Dialog fullWidth maxWidth="sm" onClose={() => setEditingUser(null)} open={Boolean(editingUser)}>

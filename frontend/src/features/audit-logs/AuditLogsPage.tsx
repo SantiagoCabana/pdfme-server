@@ -7,14 +7,9 @@ import {
   CircularProgress,
   Dialog,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Typography,
 } from '@mui/material';
+import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 
 import { apiRequest } from '../../shared/api/client';
 import { useAppContext } from '../../app/AppContext';
@@ -52,12 +47,59 @@ function cleanActivityText(text: string): string {
     .replace(/\s*a la Versión\s+\d+/gi, '');
 }
 
+function highlightActivityText(text: string) {
+  const clean = cleanActivityText(text);
+  const regex = /(eliminar|eliminó|eliminado|eliminada|eliminación|revocar|revocó|revocado|revocada|revocación|crear|creó|creado|creada|creación|editar|editó|editado|editada|modificar|modificó|modificado|modificada|actualizar|actualizó|actualizado|actualizada|cambiar|cambió|cambiado|cambiada)/gi;
+  const matchRegex = /^(eliminar|eliminó|eliminado|eliminada|eliminación|revocar|revocó|revocado|revocada|revocación|crear|creó|creado|creada|creación|editar|editó|editado|editada|modificar|modificó|modificado|modificada|actualizar|actualizó|actualizado|actualizada|cambiar|cambió|cambiado|cambiada)$/i;
+  const parts = clean.split(regex);
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (matchRegex.test(part)) {
+          const lower = part.toLowerCase();
+          let cls = 'audit-highlight-gray';
+          if (
+            lower.includes('eliminar') ||
+            lower.includes('eliminó') ||
+            lower.includes('eliminado') ||
+            lower.includes('eliminada') ||
+            lower.includes('eliminación') ||
+            lower.includes('revocar') ||
+            lower.includes('revocó') ||
+            lower.includes('revocado') ||
+            lower.includes('revocada') ||
+            lower.includes('revocación')
+          ) {
+            cls = 'audit-highlight-red';
+          } else if (
+            lower.includes('crear') ||
+            lower.includes('creó') ||
+            lower.includes('creado') ||
+            lower.includes('creada') ||
+            lower.includes('creación')
+          ) {
+            cls = 'audit-highlight-blue';
+          }
+          return (
+            <span key={index} className={cls}>
+              {part}
+            </span>
+          );
+        }
+        return <span key={index}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 export function AuditLogsPage() {
   const { mode } = useAppContext();
   const [events, setEvents] = useState<AuditEventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<AuditEventItem | null>(null);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [page, setPage] = useState(0);
 
   async function loadLogs() {
     setLoading(true);
@@ -170,60 +212,37 @@ export function AuditLogsPage() {
   return (
     <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
       {error ? <Alert severity="error">{error}</Alert> : null}
-      <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <TableContainer sx={{ flexGrow: 1, overflowY: 'auto' }} className="audit-table-container">
-          <Table stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', width: 140 }}>FECHA</TableCell>
-                <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem' }}>ACTIVIDAD</TableCell>
-                <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem', width: 100, textAlign: 'center' }}>ACCIONES</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell align="center" colSpan={3} sx={{ py: 6 }}>
-                    <CircularProgress size={24} />
-                  </TableCell>
-                </TableRow>
-              ) : null}
-              {!loading && events.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={3} sx={{ py: 6, textAlign: 'center' }}>
-                    No hay registros de auditoría disponibles.
-                  </TableCell>
-                </TableRow>
-              ) : null}
-              {!loading
-                ? events.map((event) => (
-                    <TableRow key={event.id} hover>
-                      <TableCell sx={{ py: 2, fontSize: '0.8125rem' }}>{formatDateOnly(event.createdAt)}</TableCell>
-                      <TableCell sx={{ py: 2, fontSize: '0.8125rem' }}>
-                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                          <span>{cleanActivityText(event.metadata?.detail || event.action)}</span>
-                          {event.entityType === 'TEMPLATE' && event.metadata?.versionNumber && (
-                            <span className="audit-table-version-badge">
-                              v{event.metadata.versionNumber}
-                            </span>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ py: 2, textAlign: 'center' }}>
-                        <button
-                          className="audit-detail-btn"
-                          title="Ver detalles"
-                          onClick={() => setSelectedEvent(event)}
-                        >
-                          <EyeOutlined />
-                        </button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                : null}
-            </TableBody>
-          </Table>
-        </TableContainer>
+      <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0 }}>
+        {loading ? (
+          <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : events.length === 0 ? (
+          <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
+            <Typography>No hay registros de auditoría disponibles.</Typography>
+          </Box>
+        ) : (
+          <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <DataTable
+              columns={['Fecha', 'Actividad', { name: 'Acciones', sort: false }]}
+              data={events.slice(page * rowsPerPage, (page + 1) * rowsPerPage).map((event) => [
+                formatDateOnly(event.createdAt),
+                <Box key="act" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                  <span>{highlightActivityText(event.metadata?.detail || event.action)}</span>
+                  {event.entityType === 'TEMPLATE' && event.metadata?.versionNumber && (
+                    <span className="audit-table-version-badge">v{event.metadata.versionNumber}</span>
+                  )}
+                </Box>,
+                <Box key="btn" sx={{ display: 'flex', justifyContent: 'center' }}>
+                  <button className="audit-detail-btn" title="Ver detalles" onClick={() => setSelectedEvent(event)}>
+                    <EyeOutlined />
+                  </button>
+                </Box>,
+              ])}
+            />
+            <PaginationBar page={page} setPage={setPage} rowsPerPage={rowsPerPage} setRowsPerPage={setRowsPerPage} total={events.length} />
+          </Box>
+        )}
       </Card>
 
       <Dialog
@@ -247,7 +266,7 @@ export function AuditLogsPage() {
             <Box className="audit-detail-grid">
               <div className="audit-detail-label">Actividad</div>
               <div className="audit-detail-value audit-detail-value-bold">
-                {cleanActivityText(selectedEvent.metadata?.detail || selectedEvent.action)}
+                {highlightActivityText(selectedEvent.metadata?.detail || selectedEvent.action)}
               </div>
 
               <div className="audit-detail-label">Usuario</div>

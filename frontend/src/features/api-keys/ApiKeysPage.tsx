@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { KeyOutlined, StopOutlined } from '@ant-design/icons';
-import { Alert, Button, Card, Chip, CircularProgress, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField, MenuItem } from '@mui/material';
+import { Alert, Box, Button, Card, Chip, CircularProgress, Stack, TextField, MenuItem, Typography } from '@mui/material';
+import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 
 import { buildExpiryDate, formatDate, statusLabel } from '../../app/session';
 import type { ApiCredential } from '../../app/types';
@@ -17,8 +18,8 @@ export function ApiKeysPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [revokingId, setRevokingId] = useState('');
-  const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [page, setPage] = useState(0);
 
   async function load() {
     setLoading(true);
@@ -85,80 +86,43 @@ export function ApiKeysPage() {
     }
   }
 
-  const visibleCredentials = credentials.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
 
   return (
     <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
       {error ? <Alert severity="error">{error}</Alert> : null}
       {rawKey ? <Alert severity="info"><strong>Clave generada:</strong> <code>{rawKey}</code>. Guardala ahora; no se volvera a mostrar completa.</Alert> : null}
-      <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <TableContainer sx={{ flexGrow: 1, overflowY: 'auto' }}>
-          <Table stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell>Nombre</TableCell>
-                <TableCell>Identificador</TableCell>
-                <TableCell>Estado</TableCell>
-                <TableCell>Expira</TableCell>
-                <TableCell>Ultimo uso</TableCell>
-                <TableCell align="right"></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell align="center" colSpan={6}>
-                    <CircularProgress size={24} />
-                  </TableCell>
-                </TableRow>
-              ) : null}
-              {!loading && credentials.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6}>No hay claves.</TableCell>
-                </TableRow>
-              ) : null}
-              {!loading
-                ? visibleCredentials.map((credential) => (
-                    <TableRow key={credential.id}>
-                      <TableCell>{credential.name}</TableCell>
-                      <TableCell>{credential.prefix}</TableCell>
-                      <TableCell>
-                        <Chip label={statusLabel(credential.status)} size="small" />
-                      </TableCell>
-                      <TableCell>{formatDate(credential.expiresAt)}</TableCell>
-                      <TableCell>{formatDate(credential.lastUsedAt)}</TableCell>
-                      <TableCell align="right">
-                        {credential.status === 'ACTIVE' ? (
-                          <Button
-                            color="error"
-                            disabled={revokingId === credential.id}
-                            onClick={() => void revoke(credential.id)}
-                            size="small"
-                            startIcon={<StopOutlined />}
-                          >
-                            {revokingId === credential.id ? 'Revocando...' : 'Revocar'}
-                          </Button>
-                        ) : null}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                : null}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          component="div"
-          count={credentials.length}
-          labelRowsPerPage="Filas por pagina"
-          onPageChange={(_event, nextPage) => setPage(nextPage)}
-          onRowsPerPageChange={(event) => {
-            setRowsPerPage(Number(event.target.value));
-            setPage(0);
-          }}
-          page={page}
-          rowsPerPage={rowsPerPage}
-          rowsPerPageOptions={[10, 25, 50]}
-        />
+      <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0 }}>
+        {loading ? (
+          <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : credentials.length === 0 ? (
+          <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
+            <Typography>No hay claves.</Typography>
+          </Box>
+        ) : (
+          <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <DataTable
+              columns={['Nombre', 'Identificador', 'Estado', 'Expira', 'Último uso', { name: 'Acciones', sort: false }]}
+              data={credentials.slice(page * rowsPerPage, (page + 1) * rowsPerPage).map((credential) => [
+                credential.name,
+                credential.prefix,
+                <Chip key="s" label={statusLabel(credential.status)} size="small" />,
+                formatDate(credential.expiresAt),
+                formatDate(credential.lastUsedAt),
+                <Box key="a" sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  {credential.status === 'ACTIVE' ? (
+                    <Button color="error" disabled={revokingId === credential.id} onClick={() => void revoke(credential.id)} size="small" startIcon={<StopOutlined />}>
+                      {revokingId === credential.id ? 'Revocando...' : 'Revocar'}
+                    </Button>
+                  ) : null}
+                </Box>,
+              ])}
+            />
+            <PaginationBar page={page} setPage={setPage} rowsPerPage={rowsPerPage} setRowsPerPage={setRowsPerPage} total={credentials.length} />
+          </Box>
+        )}
       </Card>
     </Stack>
   );

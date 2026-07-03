@@ -18,6 +18,7 @@ import { AuditLogsPage } from './features/audit-logs/AuditLogsPage';
 import { PrivateLayout } from './layout/PrivateLayout';
 import { apiRequest } from './shared/api/client';
 import { createMantisTheme, type ThemeMode } from './theme/mantisTheme';
+import 'gridjs/dist/theme/mermaid.css';
 import './styles/app.css';
 
 export default function App() {

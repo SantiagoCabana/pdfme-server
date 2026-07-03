@@ -36,17 +36,12 @@ import {
   MenuItem,
   Divider,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TablePagination,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
+import { Grid, _ } from 'gridjs-react';
+import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 import type { Schema, Template as PdfmeTemplate } from '@pdfme/common';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
@@ -227,8 +222,8 @@ export function TemplatesPage() {
   const [savingVersion, setSavingVersion] = useState(false);
   const [switchingVersion, setSwitchingVersion] = useState(false);
   const [deletingId, setDeletingId] = useState('');
-  const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [page, setPage] = useState(0);
   const [pageFormat, setPageFormat] = useState('A4');
   const [pageOrientation, setPageOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>('PORTRAIT');
   const [pageWidthMm, setPageWidthMm] = useState(210);
@@ -298,7 +293,7 @@ export function TemplatesPage() {
     ));
   }, [search, templates]);
 
-  const visibleTemplates = filteredTemplates.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
   const editingTemplateVersions = editingTemplate?.versions ?? [];
   const hasMultipleVersions = editingTemplateVersions.length > 1;
   const designerWorkspaceKey = editingTemplate
@@ -313,9 +308,6 @@ export function TemplatesPage() {
     ].join(':')
     : 'empty';
 
-  useEffect(() => {
-    setPage(0);
-  }, [search]);
 
   function resetCreateForm() {
     const suffix = randomSuffix();
@@ -825,7 +817,7 @@ export function TemplatesPage() {
           <TextField
             fullWidth
             label="Buscar plantilla"
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => { setSearch(event.target.value); setPage(0); }}
             placeholder="Nombre o codigo"
             size="small"
             slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlined /></InputAdornment> } }}
@@ -1026,27 +1018,38 @@ export function TemplatesPage() {
   return (
     <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
       {error ? <Alert severity="error">{error}</Alert> : null}
-      <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <TableContainer sx={{ flexGrow: 1, overflowY: 'auto' }}>
-          <Table stickyHeader>
-            <TableHead><TableRow><TableCell sx={{ py: 2 }}>Plantilla</TableCell><TableCell sx={{ py: 2 }}>Version</TableCell><TableCell sx={{ py: 2 }}>Hoja</TableCell><TableCell sx={{ py: 2 }}>Tags</TableCell><TableCell align="right" sx={{ py: 2 }}>Acciones</TableCell></TableRow></TableHead>
-            <TableBody>
-              {loading ? <TableRow><TableCell align="center" colSpan={5}><CircularProgress size={24} /></TableCell></TableRow> : null}
-              {!loading && filteredTemplates.length === 0 ? <TableRow><TableCell colSpan={5}>No hay plantillas.</TableCell></TableRow> : null}
-              {!loading ? visibleTemplates.map((template) => <TableRow key={template.id}><TableCell><Box><strong>{template.name}</strong><br /><small>{template.code}</small></Box></TableCell><TableCell>v{template.versionNumber}</TableCell><TableCell>{template.pageFormat} {template.pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}</TableCell><TableCell>{template.tags.join(', ') || 'Sin etiquetas'}</TableCell><TableCell align="right"><Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}><Button onClick={() => navigate(`/templates/preview/${template.code}`)} size="small" startIcon={<EyeOutlined />}>Preview</Button><Button onClick={() => navigate(`/templates/edit/${template.code}`)} size="small" startIcon={<EditOutlined />}>Editar</Button>{can(user, 'templates.delete') ? <Button color="error" disabled={deletingId === template.id} onClick={() => setTemplateToDelete(template)} size="small" startIcon={<DeleteOutlined />}>{deletingId === template.id ? 'Eliminando...' : 'Eliminar'}</Button> : null}</Stack></TableCell></TableRow>) : null}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          component="div"
-          count={filteredTemplates.length}
-          labelRowsPerPage="Filas por pagina"
-          onPageChange={(_event, nextPage) => setPage(nextPage)}
-          onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }}
-          page={page}
-          rowsPerPage={rowsPerPage}
-          rowsPerPageOptions={[10, 25, 50]}
-        />
+      <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0 }}>
+        {loading ? (
+          <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : filteredTemplates.length === 0 ? (
+          <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
+            <Typography>No hay plantillas.</Typography>
+          </Box>
+        ) : (
+          <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <DataTable
+              columns={['Plantilla', 'Version', 'Hoja', 'Tags', { name: 'Acciones', sort: false }]}
+              data={filteredTemplates.slice(page * rowsPerPage, (page + 1) * rowsPerPage).map((template) => [
+                <Box key="n"><strong>{template.name}</strong><br /><small>{template.code}</small></Box>,
+                `v${template.versionNumber}`,
+                `${template.pageFormat} ${template.pageOrientation === 'LANDSCAPE' ? 'Horizontal' : 'Vertical'}`,
+                template.tags.join(', ') || 'Sin etiquetas',
+                <Stack key="a" direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
+                  <Button onClick={() => navigate(`/templates/preview/${template.code}`)} size="small" startIcon={<EyeOutlined />}>Preview</Button>
+                  <Button onClick={() => navigate(`/templates/edit/${template.code}`)} size="small" startIcon={<EditOutlined />}>Editar</Button>
+                  {can(user, 'templates.delete') ? (
+                    <Button color="error" disabled={deletingId === template.id} onClick={() => setTemplateToDelete(template)} size="small" startIcon={<DeleteOutlined />}>
+                      {deletingId === template.id ? 'Eliminando...' : 'Eliminar'}
+                    </Button>
+                  ) : null}
+                </Stack>,
+              ])}
+            />
+            <PaginationBar page={page} setPage={setPage} rowsPerPage={rowsPerPage} setRowsPerPage={setRowsPerPage} total={filteredTemplates.length} />
+          </Box>
+        )}
       </Card>
 
       <Dialog
