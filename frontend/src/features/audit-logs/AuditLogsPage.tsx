@@ -46,6 +46,12 @@ interface AuditEventItem {
   };
 }
 
+function cleanActivityText(text: string): string {
+  return text
+    .replace(/\s*\(Versión\s+\d+\)/gi, '')
+    .replace(/\s*a la Versión\s+\d+/gi, '');
+}
+
 export function AuditLogsPage() {
   const { mode } = useAppContext();
   const [events, setEvents] = useState<AuditEventItem[]>([]);
@@ -194,7 +200,14 @@ export function AuditLogsPage() {
                     <TableRow key={event.id} hover>
                       <TableCell sx={{ py: 2, fontSize: '0.8125rem' }}>{formatDateOnly(event.createdAt)}</TableCell>
                       <TableCell sx={{ py: 2, fontSize: '0.8125rem' }}>
-                        {event.metadata?.detail || event.action}
+                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                          <span>{cleanActivityText(event.metadata?.detail || event.action)}</span>
+                          {event.entityType === 'TEMPLATE' && event.metadata?.versionNumber && (
+                            <span className="audit-table-version-badge">
+                              v{event.metadata.versionNumber}
+                            </span>
+                          )}
+                        </Box>
                       </TableCell>
                       <TableCell sx={{ py: 2, textAlign: 'center' }}>
                         <button
@@ -234,7 +247,7 @@ export function AuditLogsPage() {
             <Box className="audit-detail-grid">
               <div className="audit-detail-label">Actividad</div>
               <div className="audit-detail-value audit-detail-value-bold">
-                {selectedEvent.metadata?.detail || selectedEvent.action}
+                {cleanActivityText(selectedEvent.metadata?.detail || selectedEvent.action)}
               </div>
 
               <div className="audit-detail-label">Usuario</div>

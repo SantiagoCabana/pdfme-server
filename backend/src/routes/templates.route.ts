@@ -60,7 +60,7 @@ templatesRouter.post('/templates', requirePermission('templates.create'), async 
 
     const actor = response.locals.user;
     const actorRole = getSpanishRole(actor?.roles, actor?.isSuperAdmin);
-    const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha creado la plantilla "${template.name}" (Versión 1)`;
+    const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha creado la plantilla "${template.name}"`;
     await logAuditEvent({
       actorId: actor?.id ?? null,
       action: 'Crear plantilla',
@@ -95,7 +95,7 @@ templatesRouter.patch('/templates/:id', requirePermission('templates.edit'), asy
 
     const actor = response.locals.user;
     const actorRole = getSpanishRole(actor?.roles, actor?.isSuperAdmin);
-    const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha editado la plantilla "${template.name}" (Versión ${template.versionNumber})`;
+    const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha editado la plantilla "${template.name}"`;
     await logAuditEvent({
       actorId: actor?.id ?? null,
       action: 'Editar plantilla',
@@ -133,7 +133,7 @@ templatesRouter.patch('/templates/:id/page-settings', requirePermission('templat
 
     const actor = response.locals.user;
     const actorRole = getSpanishRole(actor?.roles, actor?.isSuperAdmin);
-    const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha editado la plantilla "${template.name}" (Versión ${template.versionNumber})`;
+    const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha editado la plantilla "${template.name}"`;
     await logAuditEvent({
       actorId: actor?.id ?? null,
       action: 'Editar plantilla',
@@ -161,7 +161,7 @@ templatesRouter.post('/templates/:id/versions', requirePermission('templates.edi
 
     const actor = response.locals.user;
     const actorRole = getSpanishRole(actor?.roles, actor?.isSuperAdmin);
-    const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha creado una nueva versión (Versión ${template.versionNumber}) de la plantilla "${template.name}"`;
+    const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha creado una nueva versión de la plantilla "${template.name}"`;
     await logAuditEvent({
       actorId: actor?.id ?? null,
       action: 'Editar plantilla',
@@ -189,7 +189,7 @@ templatesRouter.patch('/templates/:id/versions/:versionId/current', requirePermi
 
     const actor = response.locals.user;
     const actorRole = getSpanishRole(actor?.roles, actor?.isSuperAdmin);
-    const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha cambiado la versión activa a la Versión ${template.versionNumber} de la plantilla "${template.name}"`;
+    const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha cambiado la versión activa de la plantilla "${template.name}"`;
     await logAuditEvent({
       actorId: actor?.id ?? null,
       action: 'Editar plantilla',
@@ -228,7 +228,7 @@ templatesRouter.delete('/templates/:id', requirePermission('templates.delete'), 
       const actor = response.locals.user;
       const actorRole = getSpanishRole(actor?.roles, actor?.isSuperAdmin);
       const currentVer = template.versions?.[0]?.versionNumber ?? 1;
-      const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha eliminado la plantilla "${template.name}" (Versión ${currentVer})`;
+      const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha eliminado la plantilla "${template.name}"`;
       await logAuditEvent({
         actorId: actor?.id ?? null,
         action: 'Eliminar plantilla',

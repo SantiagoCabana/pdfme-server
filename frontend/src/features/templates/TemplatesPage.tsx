@@ -408,7 +408,7 @@ export function TemplatesPage() {
         schemas: currentDesignerTemplate.schemas.map((pageSchemas) => {
           if (!Array.isArray(pageSchemas)) return pageSchemas;
           return pageSchemas.map((schema) => {
-            const isLocked = lockedSchemaNames.includes(schema.name);
+            const isLocked = lockedSchemaNames.map((n) => n.trim()).includes(schema.name?.trim() || '');
             return {
               ...schema,
               __isLocked: isLocked
@@ -657,7 +657,7 @@ export function TemplatesPage() {
         const rowDiv = li.querySelector('div') as HTMLDivElement | null;
         if (!rowDiv) return;
 
-        const span = rowDiv.querySelector('span[title="Editar"]') as HTMLSpanElement | null;
+        const span = (rowDiv.querySelector('span[title="Editar"]') || rowDiv.querySelector('span[title="Edit"]')) as HTMLSpanElement | null;
         if (!span) return;
 
         const schemaName = span.textContent?.trim();
@@ -785,7 +785,7 @@ export function TemplatesPage() {
       cancelAnimationFrame(frameId);
       observer.disconnect();
     };
-  }, [designerTemplate, lockedSchemaNames]);
+  }, [designerTemplate, lockedSchemaNames, editingTemplate]);
 
   function toggleLockSchema(pageIndex: number, schemaName: string) {
     setLockedSchemaNames((current) => {
@@ -929,7 +929,7 @@ export function TemplatesPage() {
     );
 
     return () => setHeaderControls(null);
-  }, [editingTemplate, hasMultipleVersions, isPreviewRoute, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, routeCode, saving, savingDetails, savingVersion, search, setHeaderAction, setHeaderControls, switchingVersion, user, versionMenuAnchor]);
+  }, [editingTemplate, hasMultipleVersions, isPreviewRoute, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, routeCode, saving, savingDetails, savingVersion, search, setHeaderAction, setHeaderControls, switchingVersion, user, versionMenuAnchor, designerTemplate, lockedSchemaNames]);
 
   useEffect(() => {
     const originalConfirm = window.confirm;
