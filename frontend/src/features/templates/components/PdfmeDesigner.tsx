@@ -19,7 +19,9 @@ import {
   time,
 } from '@pdfme/schemas';
 
+import type { ThemeMode } from '../../../theme/mantisTheme';
 import { loadPdfmeFonts } from './pdfmeFonts';
+import { createPdfmeTheme } from './pdfmeTheme';
 
 export const pdfmePlugins = {
   text,
@@ -41,6 +43,7 @@ export const pdfmePlugins = {
 };
 
 type PdfmeDesignerProps = {
+  mode: ThemeMode;
   template: PdfmeTemplate;
   onChange: (template: PdfmeTemplate) => void;
 };
@@ -49,11 +52,16 @@ export type PdfmeDesignerHandle = {
   getTemplate: () => PdfmeTemplate | null;
 };
 
-export const PdfmeDesigner = forwardRef<PdfmeDesignerHandle, PdfmeDesignerProps>(function PdfmeDesigner({ template, onChange }, ref) {
+export const PdfmeDesigner = forwardRef<PdfmeDesignerHandle, PdfmeDesignerProps>(function PdfmeDesigner({ mode, template, onChange }, ref) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const designerRef = useRef<Designer | null>(null);
   const internalTemplateRef = useRef<PdfmeTemplate | null>(null);
+  const modeRef = useRef(mode);
   const skipNextTemplateSyncRef = useRef(false);
+
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
 
   useImperativeHandle(ref, () => ({
     getTemplate: () => designerRef.current?.getTemplate() ?? internalTemplateRef.current,
@@ -74,6 +82,7 @@ export const PdfmeDesigner = forwardRef<PdfmeDesignerHandle, PdfmeDesignerProps>
         options: {
           font,
           lang: 'es',
+          theme: createPdfmeTheme(modeRef.current),
         },
       });
 
@@ -93,6 +102,14 @@ export const PdfmeDesigner = forwardRef<PdfmeDesignerHandle, PdfmeDesignerProps>
       skipNextTemplateSyncRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    designerRef.current?.updateOptions({
+      font: designerRef.current.getOptions().font,
+      lang: 'es',
+      theme: createPdfmeTheme(mode),
+    });
+  }, [mode]);
 
   const lastSchemasLengthRef = useRef(template.schemas.length);
 

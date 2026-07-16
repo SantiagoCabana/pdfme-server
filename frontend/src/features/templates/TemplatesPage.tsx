@@ -304,7 +304,7 @@ function updatePdfmeBackground(current: PdfmeTemplate | null, dataUrl: string, w
 }
 
 export function TemplatesPage() {
-  const { user, setHeaderAction, closeHeaderAction, openHeaderAction, setHeaderControls } = useAppContext();
+  const { user, mode, setHeaderAction, closeHeaderAction, openHeaderAction, setHeaderControls } = useAppContext();
   const navigate = useNavigate();
   const location = useLocation();
   const { code: routeCode } = useParams();
@@ -1039,7 +1039,7 @@ export function TemplatesPage() {
           <Card sx={{ bgcolor: 'background.default', borderRadius: 0, boxShadow: 'none', height: '100%', minWidth: 0, overflow: 'hidden' }}>
             {designerTemplate ? (
               <Suspense fallback={<LoadingState label="Cargando editor pdfme..." minHeight="100%" />}>
-                {isPreviewRoute ? <PdfmeViewer key={designerWorkspaceKey} template={designerTemplate} /> : <PdfmeDesigner key={designerWorkspaceKey} onChange={setDesignerTemplate} ref={designerRef} template={designerTemplate} />}
+                {isPreviewRoute ? <PdfmeViewer key={designerWorkspaceKey} mode={mode} template={designerTemplate} /> : <PdfmeDesigner key={designerWorkspaceKey} mode={mode} onChange={setDesignerTemplate} ref={designerRef} template={designerTemplate} />}
               </Suspense>
             ) : <LoadingState label="Preparando plantilla..." minHeight="100%" />}
           </Card>

@@ -3,16 +3,20 @@ import type { Template as PdfmeTemplate } from '@pdfme/common';
 import { Viewer } from '@pdfme/ui';
 import { Alert } from '@mui/material';
 
+import type { ThemeMode } from '../../../theme/mantisTheme';
 import { pdfmePlugins } from './PdfmeDesigner';
 import { loadPdfmeFonts } from './pdfmeFonts';
+import { createPdfmeTheme } from './pdfmeTheme';
 
 type PdfmeViewerProps = {
+  mode: ThemeMode;
   template: PdfmeTemplate;
 };
 
-export function PdfmeViewer({ template }: PdfmeViewerProps) {
+export function PdfmeViewer({ mode, template }: PdfmeViewerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<Viewer | null>(null);
+  const modeRef = useRef(mode);
   const [error, setError] = useState('');
   const previewInputs = useMemo(() => {
     const input: Record<string, string> = {};
@@ -25,6 +29,10 @@ export function PdfmeViewer({ template }: PdfmeViewerProps) {
 
     return [input];
   }, [template]);
+
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
 
   useEffect(() => {
     if (!containerRef.current) return undefined;
@@ -42,6 +50,7 @@ export function PdfmeViewer({ template }: PdfmeViewerProps) {
         options: {
           font,
           lang: 'es',
+          theme: createPdfmeTheme(modeRef.current),
         },
       });
 
@@ -57,6 +66,14 @@ export function PdfmeViewer({ template }: PdfmeViewerProps) {
       viewerRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    viewerRef.current?.updateOptions({
+      font: viewerRef.current.getOptions().font,
+      lang: 'es',
+      theme: createPdfmeTheme(mode),
+    });
+  }, [mode]);
 
   useEffect(() => {
     viewerRef.current?.updateTemplate(template);

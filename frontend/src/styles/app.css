@@ -46,13 +46,324 @@ small {
 }
 
 .pdfme-workspace {
-  background: #f0f2f8;
+  --pdfme-bg: #f0f2f8;
+  --pdfme-panel: #ffffff;
+  --pdfme-panel-soft: #fafafb;
+  --pdfme-panel-strong: #f5f5f5;
+  --pdfme-border: #e2e8f0;
+  --pdfme-border-strong: #d9d9d9;
+  --pdfme-text: #262626;
+  --pdfme-text-muted: #64748b;
+  --pdfme-icon: #262626;
+  --pdfme-ruler: #2f3338;
+  --pdfme-ruler-text: #f8fafc;
+  --pdfme-canvas-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  background: var(--pdfme-bg);
+}
+
+.pdfme-workspace,
+.pdfme-workspace .pdfme-container,
+.pdfme-workspace .pdfme-container > div,
+.pdfme-workspace .pdfme-designer-left-sidebar,
+.pdfme-workspace .pdfme-designer-right-sidebar,
+.pdfme-workspace .pdfme-designer-right-sidebar > div,
+.pdfme-workspace .pdfme-designer-header,
+.pdfme-workspace .pdfme-designer-topbar,
+.pdfme-workspace .pdfme-designer-sidebar,
+.pdfme-workspace .pdfme-designer-property-panel,
+.pdfme-workspace .pdfme-designer-detail-view,
+.pdfme-workspace .fr-panel,
+.pdfme-workspace .fr-form,
+.pdfme-workspace .ant-layout,
+.pdfme-workspace .ant-layout-content,
+.pdfme-workspace .ant-layout-sider,
+.pdfme-workspace .ant-tabs,
+.pdfme-workspace .ant-tabs-content,
+.pdfme-workspace .ant-collapse,
+.pdfme-workspace .ant-collapse-content,
+.pdfme-workspace .ant-card,
+.pdfme-workspace .ant-list,
+.pdfme-workspace .ant-table,
+.pdfme-workspace .ant-table-container,
+.pdfme-workspace .ant-table-thead > tr > th,
+.pdfme-workspace .ant-table-tbody > tr > td,
+.pdfme-workspace .ant-input,
+.pdfme-workspace .ant-input-number,
+.pdfme-workspace .ant-input-number-handler-wrap,
+.pdfme-workspace .ant-input-number-handler,
+.pdfme-workspace .ant-select-selector,
+.pdfme-workspace .ant-picker,
+.pdfme-workspace .ant-btn,
+.pdfme-workspace .ant-checkbox-inner,
+.pdfme-workspace .ant-radio-inner,
+.pdfme-workspace .ant-typography,
+.pdfme-workspace .anticon,
+.pdfme-workspace .lucide,
+.pdfme-workspace .pdfme-designer-detail-view .ant-btn-icon img[src^='data:image/svg+xml'],
+.pdfme-workspace .pdfme-designer-right-sidebar .ant-btn-icon img[src^='data:image/svg+xml'] {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease,
+    filter 150ms ease,
+    opacity 150ms ease !important;
+}
+
+.pdfme-workspace .pdfme-designer-canvas .selectable,
+.pdfme-workspace .pdfme-designer-canvas [data-pdfme-render-ready],
+.pdfme-workspace .pdfme-designer-canvas [id^='text-'],
+.pdfme-workspace .pdfme-designer-canvas canvas,
+.pdfme-workspace .pdfme-designer-canvas img {
+  transition: none !important;
+}
+
+[data-theme='dark'] .pdfme-workspace {
+  --pdfme-bg: #0f172a;
+  --pdfme-panel: #141c2f;
+  --pdfme-panel-soft: #172036;
+  --pdfme-panel-strong: #1e293b;
+  --pdfme-border: #26344f;
+  --pdfme-border-strong: #334155;
+  --pdfme-text: #e5e7eb;
+  --pdfme-text-muted: #94a3b8;
+  --pdfme-icon: #ffffff;
+  --pdfme-ruler: #0b1120;
+  --pdfme-ruler-text: #cbd5e1;
+  --pdfme-canvas-shadow: 0 12px 30px rgba(0, 0, 0, 0.38);
+}
+
+.pdfme-workspace .pdfme-container,
+.pdfme-workspace .pdfme-container > div {
+  background: var(--pdfme-bg) !important;
+}
+
+.pdfme-workspace .pdfme-designer-left-sidebar,
+.pdfme-workspace .pdfme-designer-right-sidebar,
+.pdfme-workspace .pdfme-designer-right-sidebar > div,
+.pdfme-workspace .pdfme-designer-header,
+.pdfme-workspace .pdfme-designer-topbar,
+.pdfme-workspace .pdfme-designer-sidebar,
+.pdfme-workspace .pdfme-designer-property-panel,
+.pdfme-workspace .pdfme-designer-detail-view,
+.pdfme-workspace .fr-panel,
+.pdfme-workspace .fr-form {
+  background: var(--pdfme-panel) !important;
+  border-color: var(--pdfme-border) !important;
+  color: var(--pdfme-text) !important;
+}
+
+.pdfme-workspace .pdfme-designer-left-sidebar {
+  border-right: 1px solid var(--pdfme-border) !important;
+}
+
+.pdfme-workspace .pdfme-designer-right-sidebar > div {
+  border-left: 1px solid var(--pdfme-border) !important;
+  font-family: "Public Sans", sans-serif !important;
+}
+
+.pdfme-workspace .pdfme-designer-canvas,
+.pdfme-workspace .pdfme-designer-content,
+.pdfme-workspace .pdfme-designer-main,
+.pdfme-workspace .pdfme-designer-preview {
+  background: var(--pdfme-bg) !important;
+}
+
+.pdfme-workspace .pdfme-designer-canvas > div,
+.pdfme-workspace .pdfme-designer-paper {
+  box-shadow: var(--pdfme-canvas-shadow);
+}
+
+[data-theme='dark'] .ant-dropdown-menu,
+[data-theme='dark'] .ant-select-dropdown,
+[data-theme='dark'] .ant-picker-dropdown .ant-picker-panel-container {
+  background: #172036 !important;
+  border-color: #26344f !important;
+  color: #e5e7eb !important;
+}
+
+[data-theme='dark'] .ant-dropdown-menu-item,
+[data-theme='dark'] .ant-select-item,
+[data-theme='dark'] .ant-picker-cell,
+[data-theme='dark'] .ant-picker-header,
+[data-theme='dark'] .ant-picker-content th {
+  color: #e5e7eb !important;
+}
+
+[data-theme='dark'] .ant-dropdown-menu-item:hover,
+[data-theme='dark'] .ant-select-item-option-active,
+[data-theme='dark'] .ant-select-item-option-selected,
+[data-theme='dark'] .ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner {
+  background: #1e293b !important;
+}
+
+.pdfme-workspace .pdfme-designer-ruler,
+.pdfme-workspace .pdfme-designer-ruler-horizontal,
+.pdfme-workspace .pdfme-designer-ruler-vertical {
+  background: var(--pdfme-ruler) !important;
+  color: var(--pdfme-ruler-text) !important;
+}
+
+.pdfme-workspace .ant-layout,
+.pdfme-workspace .ant-layout-content,
+.pdfme-workspace .ant-layout-sider,
+.pdfme-workspace .ant-tabs,
+.pdfme-workspace .ant-tabs-content,
+.pdfme-workspace .ant-collapse,
+.pdfme-workspace .ant-collapse-content,
+.pdfme-workspace .ant-card,
+.pdfme-workspace .ant-list,
+.pdfme-workspace .ant-table,
+.pdfme-workspace .ant-table-container,
+.pdfme-workspace .ant-table-thead > tr > th,
+.pdfme-workspace .ant-table-tbody > tr > td {
+  background: var(--pdfme-panel) !important;
+  border-color: var(--pdfme-border) !important;
+  color: var(--pdfme-text) !important;
+}
+
+.pdfme-workspace .ant-table-tbody > tr:hover > td,
+.pdfme-workspace .ant-collapse-header,
+.pdfme-workspace .ant-tabs-tab:hover,
+.pdfme-workspace .ant-dropdown-menu,
+.pdfme-workspace .ant-select-dropdown,
+.pdfme-workspace .ant-picker-dropdown .ant-picker-panel-container {
+  background: var(--pdfme-panel-soft) !important;
+  color: var(--pdfme-text) !important;
+}
+
+.pdfme-workspace .ant-typography,
+.pdfme-workspace .pdfme-designer-detail-view strong,
+.pdfme-workspace .pdfme-designer-detail-view label,
+.pdfme-workspace .pdfme-designer-detail-view .ant-form-item-control-input-content span,
+.pdfme-workspace .pdfme-designer-detail-view .fr-header-title,
+.pdfme-workspace .pdfme-designer-detail-view .ant-card-head-title,
+.pdfme-workspace .ant-form-item-label > label,
+.pdfme-workspace .ant-tabs-tab,
+.pdfme-workspace .ant-tabs-tab-btn,
+.pdfme-workspace .ant-collapse-header,
+.pdfme-workspace .ant-select-selection-item,
+.pdfme-workspace .ant-input,
+.pdfme-workspace .ant-input-number,
+.pdfme-workspace .ant-input-number-input,
+.pdfme-workspace .ant-picker-input > input,
+.pdfme-workspace .ant-checkbox-wrapper,
+.pdfme-workspace .ant-radio-wrapper {
+  color: var(--pdfme-text) !important;
+}
+
+.pdfme-workspace .pdfme-designer-canvas .selectable-locked,
+.pdfme-workspace .pdfme-designer-canvas .selectable-locked *,
+.pdfme-workspace .selectable-locked,
+.pdfme-workspace .selectable-locked * {
+  outline-color: #ff4d4f !important;
+  border-color: #ff4d4f !important;
+}
+
+.pdfme-workspace .ant-btn-icon,
+.pdfme-workspace .anticon,
+.pdfme-workspace .anticon svg,
+.pdfme-workspace .lucide,
+.pdfme-workspace .pdfme-designer-left-sidebar svg,
+.pdfme-workspace .pdfme-designer-right-sidebar svg,
+.pdfme-workspace .pdfme-designer-left-sidebar [title],
+.pdfme-workspace .pdfme-designer-left-sidebar [title] svg {
+  color: var(--pdfme-icon) !important;
+  stroke: currentColor !important;
+}
+
+.pdfme-workspace .pdfme-designer-left-sidebar [title],
+.pdfme-workspace .pdfme-designer-left-sidebar button > div,
+.pdfme-workspace .pdfme-designer-left-sidebar .ant-btn {
+  color: var(--pdfme-icon) !important;
+}
+
+[data-theme='dark'] .pdfme-workspace .pdfme-designer-detail-view .ant-btn-icon img[src^='data:image/svg+xml'],
+[data-theme='dark'] .pdfme-workspace .pdfme-designer-right-sidebar .ant-btn-icon img[src^='data:image/svg+xml'] {
+  filter: brightness(0) invert(1) !important;
+  opacity: 0.92;
+}
+
+[data-theme='dark'] .pdfme-workspace .pdfme-designer-detail-view .ant-btn[disabled] .ant-btn-icon img[src^='data:image/svg+xml'],
+[data-theme='dark'] .pdfme-workspace .pdfme-designer-right-sidebar .ant-btn[disabled] .ant-btn-icon img[src^='data:image/svg+xml'] {
+  opacity: 0.38;
+}
+
+.pdfme-workspace .ant-form-item-extra,
+.pdfme-workspace .ant-form-item-explain,
+.pdfme-workspace .ant-empty-description,
+.pdfme-workspace .ant-table-placeholder,
+.pdfme-workspace .ant-select-selection-placeholder,
+.pdfme-workspace .ant-input::placeholder,
+.pdfme-workspace .ant-picker-input > input::placeholder {
+  color: var(--pdfme-text-muted) !important;
+}
+
+.pdfme-workspace .ant-input,
+.pdfme-workspace .ant-input-number,
+.pdfme-workspace .ant-input-number-handler-wrap,
+.pdfme-workspace .ant-input-number-handler,
+.pdfme-workspace .ant-select-selector,
+.pdfme-workspace .ant-picker,
+.pdfme-workspace .ant-btn-default,
+.pdfme-workspace .ant-btn-dashed {
+  background: var(--pdfme-panel-soft) !important;
+  border-color: var(--pdfme-border-strong) !important;
+  color: var(--pdfme-text) !important;
+}
+
+.pdfme-workspace .ant-input-number-handler-wrap {
+  border-inline-start-color: var(--pdfme-border) !important;
+}
+
+.pdfme-workspace .ant-input-number-handler-down {
+  border-block-start-color: var(--pdfme-border) !important;
+}
+
+.pdfme-workspace .ant-checkbox-inner,
+.pdfme-workspace .ant-radio-inner {
+  background: var(--pdfme-panel-soft) !important;
+  border-color: var(--pdfme-border-strong) !important;
+}
+
+.pdfme-workspace .ant-checkbox-checked .ant-checkbox-inner,
+.pdfme-workspace .ant-radio-checked .ant-radio-inner {
+  background: var(--palette-primary-main) !important;
+  border-color: var(--palette-primary-main) !important;
+}
+
+.pdfme-workspace .ant-checkbox-checked .ant-checkbox-inner::after {
+  border-color: var(--palette-primary-contrastText) !important;
+}
+
+.pdfme-workspace .ant-btn-default:hover,
+.pdfme-workspace .ant-btn-dashed:hover,
+.pdfme-workspace .ant-input:hover,
+.pdfme-workspace .ant-input-number:hover,
+.pdfme-workspace .ant-select-selector:hover,
+.pdfme-workspace .ant-picker:hover {
+  background: var(--pdfme-panel-strong) !important;
+  border-color: var(--palette-primary-main) !important;
+}
+
+.pdfme-workspace .ant-btn-primary {
+  background: var(--palette-primary-main) !important;
+  border-color: var(--palette-primary-main) !important;
+  color: var(--palette-primary-contrastText) !important;
+}
+
+.pdfme-workspace .ant-divider,
+.pdfme-workspace .ant-tabs-ink-bar,
+.pdfme-workspace .ant-table-cell::before {
+  background: var(--pdfme-border) !important;
 }
 
 
 div.selectable-locked {
   pointer-events: none !important;
   user-select: none !important;
+  outline-color: #ff4d4f !important;
+  border-color: #ff4d4f !important;
 }
 
 /* Candados de la barra lateral */

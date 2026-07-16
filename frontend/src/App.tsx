@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
 import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import '@fontsource/public-sans/400.css';
@@ -40,7 +40,7 @@ export default function App() {
   const [headerControls, setHeaderControls] = useState<ReactNode>(null);
   const [mode, setMode] = useState<ThemeMode>(() => localStorage.getItem('pdfme-theme') === 'dark' ? 'dark' : 'light');
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.dataset.theme = mode;
     localStorage.setItem('pdfme-theme', mode);
   }, [mode]);
