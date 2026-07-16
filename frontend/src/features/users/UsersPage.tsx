@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
-import { Alert, Box, Button, Card, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { DataTable, PaginationBar } from '../../shared/components/DataTable';
+import { LoadingState } from '../../shared/components/LoadingState';
 
 import { formatDate, statusLabel } from '../../app/session';
 import type { InternalUser } from '../../app/types';
@@ -139,9 +140,7 @@ export function UsersPage() {
       {error ? <Alert severity="error">{error}</Alert> : null}
       <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0 }}>
         {loading ? (
-          <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
-            <CircularProgress size={24} />
-          </Box>
+          <LoadingState label="Cargando usuarios..." minHeight="100%" />
         ) : users.length === 0 ? (
           <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
             <Typography>No hay usuarios.</Typography>

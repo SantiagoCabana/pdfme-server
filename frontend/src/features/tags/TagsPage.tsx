@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { DeleteOutlined, EditOutlined, TagsOutlined } from '@ant-design/icons';
-import { Alert, Box, Button, Card, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
 import { DataTable, PaginationBar } from '../../shared/components/DataTable';
+import { LoadingState } from '../../shared/components/LoadingState';
 
 import type { TagItem } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
@@ -105,9 +106,7 @@ export function TagsPage() {
       {error ? <Alert severity="error">{error}</Alert> : null}
       <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0 }}>
         {loading ? (
-          <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
-            <CircularProgress size={24} />
-          </Box>
+          <LoadingState label="Cargando tags..." minHeight="100%" />
         ) : tags.length === 0 ? (
           <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
             <Typography>No hay tags.</Typography>

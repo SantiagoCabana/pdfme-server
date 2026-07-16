@@ -4,12 +4,12 @@ import {
   Alert,
   Box,
   Card,
-  CircularProgress,
   Dialog,
   Stack,
   Typography,
 } from '@mui/material';
 import { DataTable, PaginationBar } from '../../shared/components/DataTable';
+import { LoadingState } from '../../shared/components/LoadingState';
 
 import { apiRequest } from '../../shared/api/client';
 import { useAppContext } from '../../app/AppContext';
@@ -214,9 +214,7 @@ export function AuditLogsPage() {
       {error ? <Alert severity="error">{error}</Alert> : null}
       <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0 }}>
         {loading ? (
-          <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
-            <CircularProgress size={24} />
-          </Box>
+          <LoadingState label="Cargando auditoria..." minHeight="100%" />
         ) : events.length === 0 ? (
           <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
             <Typography>No hay registros de auditoría disponibles.</Typography>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import '@fontsource/public-sans/400.css';
@@ -8,18 +8,28 @@ import '@fontsource/public-sans/700.css';
 
 import { AppContext, type HeaderAction } from './app/AppContext';
 import type { SessionUser } from './app/types';
-import { LoginPage } from './features/auth/LoginPage';
-import { ApiKeysPage } from './features/api-keys/ApiKeysPage';
-import { TemplatesPage } from './features/templates/TemplatesPage';
-import { UsersPage } from './features/users/UsersPage';
-import { TagsPage } from './features/tags/TagsPage';
-import { PermissionsPage } from './features/permissions/PermissionsPage';
-import { AuditLogsPage } from './features/audit-logs/AuditLogsPage';
-import { PrivateLayout } from './layout/PrivateLayout';
 import { apiRequest } from './shared/api/client';
+import { AppBootLoader, LoadingState } from './shared/components/LoadingState';
 import { createMantisTheme, type ThemeMode } from './theme/mantisTheme';
 import 'gridjs/dist/theme/mermaid.css';
 import './styles/app.css';
+
+const LoginPage = lazy(() => import('./features/auth/LoginPage').then((module) => ({ default: module.LoginPage })));
+const ApiKeysPage = lazy(() => import('./features/api-keys/ApiKeysPage').then((module) => ({ default: module.ApiKeysPage })));
+const TemplatesPage = lazy(() => import('./features/templates/TemplatesPage').then((module) => ({ default: module.TemplatesPage })));
+const UsersPage = lazy(() => import('./features/users/UsersPage').then((module) => ({ default: module.UsersPage })));
+const TagsPage = lazy(() => import('./features/tags/TagsPage').then((module) => ({ default: module.TagsPage })));
+const PermissionsPage = lazy(() => import('./features/permissions/PermissionsPage').then((module) => ({ default: module.PermissionsPage })));
+const AuditLogsPage = lazy(() => import('./features/audit-logs/AuditLogsPage').then((module) => ({ default: module.AuditLogsPage })));
+const PrivateLayout = lazy(() => import('./layout/PrivateLayout').then((module) => ({ default: module.PrivateLayout })));
+
+function withRouteLoader(element: ReactNode) {
+  return (
+    <Suspense fallback={<LoadingState label="Cargando modulo..." minHeight="100%" />}>
+      {element}
+    </Suspense>
+  );
+}
 
 export default function App() {
   const [user, setUser] = useState<SessionUser | null>(null);
@@ -65,33 +75,35 @@ export default function App() {
   }), [bumpReloadDataToken, closeHeaderAction, headerAction, headerActionOpen, headerControls, mode, openHeaderAction, reloadDataToken, toggleMode, user]);
 
   const router = useMemo(() => createBrowserRouter([
-    { path: '/login', element: <LoginPage /> },
+    { path: '/login', element: withRouteLoader(<LoginPage />) },
     {
       path: '/',
-      element: <PrivateLayout />,
+      element: withRouteLoader(<PrivateLayout />),
       children: [
         { index: true, element: <Navigate to="/templates" replace /> },
-        { path: 'templates', element: <TemplatesPage /> },
-        { path: 'templates/edit/:code', element: <TemplatesPage /> },
-        { path: 'templates/preview/:code', element: <TemplatesPage /> },
-        { path: 'api-keys', element: <ApiKeysPage /> },
-        { path: 'tags', element: <TagsPage /> },
-        { path: 'users', element: <UsersPage /> },
-        { path: 'permissions', element: <PermissionsPage /> },
-        { path: 'audit-logs', element: <AuditLogsPage /> },
+        { path: 'templates', element: withRouteLoader(<TemplatesPage />) },
+        { path: 'templates/edit/:code', element: withRouteLoader(<TemplatesPage />) },
+        { path: 'templates/preview/:code', element: withRouteLoader(<TemplatesPage />) },
+        { path: 'api-keys', element: withRouteLoader(<ApiKeysPage />) },
+        { path: 'tags', element: withRouteLoader(<TagsPage />) },
+        { path: 'users', element: withRouteLoader(<UsersPage />) },
+        { path: 'permissions', element: withRouteLoader(<PermissionsPage />) },
+        { path: 'audit-logs', element: withRouteLoader(<AuditLogsPage />) },
       ],
     },
     { path: '*', element: <Navigate to={user ? '/templates' : '/login'} replace /> },
   ]), [user]);
 
-  if (loading) return null;
-
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AppContext.Provider value={contextValue}>
-        <RouterProvider router={router} />
-      </AppContext.Provider>
+      {loading ? (
+        <AppBootLoader />
+      ) : (
+        <AppContext.Provider value={contextValue}>
+          <RouterProvider router={router} />
+        </AppContext.Provider>
+      )}
     </ThemeProvider>
   );
 }

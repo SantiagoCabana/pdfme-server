@@ -43,6 +43,21 @@ function spaFallback() {
 
 export default defineConfig({
   appType: 'spa',
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('@pdfme') || id.includes('clawpdf')) return 'pdfme-vendor';
+          if (id.includes('@mui') || id.includes('@emotion')) return 'mui-vendor';
+          if (id.includes('@ant-design/icons')) return 'icons-vendor';
+          if (id.includes('gridjs')) return 'table-vendor';
+          if (id.includes('react')) return 'react-vendor';
+          return undefined;
+        },
+      },
+    },
+  },
   plugins: [spaFallback(), react()],
   server: {
     host: '0.0.0.0',

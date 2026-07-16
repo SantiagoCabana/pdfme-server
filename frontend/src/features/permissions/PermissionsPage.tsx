@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { SettingOutlined, EditOutlined, EyeOutlined, UserOutlined } from '@ant-design/icons';
-import { Alert, Box, Card, CircularProgress, Dialog, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { Alert, Box, Card, Dialog, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 
 import type { AccessPermissionItem, AccessRoleItem } from '../../app/types';
 import { apiRequest } from '../../shared/api/client';
 import { useAppContext } from '../../app/AppContext';
+import { LoadingState } from '../../shared/components/LoadingState';
 import '../../styles/permissions.css';
 
 type PermissionMatrix = {
@@ -183,6 +184,9 @@ export function PermissionsPage() {
     <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
       {error ? <Alert severity="error">{error}</Alert> : null}
       <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        {loading ? (
+          <LoadingState label="Cargando permisos..." minHeight="100%" />
+        ) : (
         <TableContainer sx={{ flexGrow: 1, overflowY: 'auto' }}>
           <Table stickyHeader>
             <TableHead>
@@ -201,20 +205,12 @@ export function PermissionsPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell align="center" colSpan={roles.length + 1}>
-                    <CircularProgress size={24} />
-                  </TableCell>
-                </TableRow>
-              ) : null}
-              {!loading && roles.length === 0 ? (
+              {roles.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5}>No hay roles.</TableCell>
                 </TableRow>
               ) : null}
-              {!loading
-                ? categories.map((category) => (
+              {categories.map((category) => (
                     <TableRow key={category.key}>
                       <TableCell sx={{ minWidth: 230, py: 4.5, verticalAlign: 'middle' }}>
                         <Box
@@ -283,11 +279,11 @@ export function PermissionsPage() {
                         }
                       })}
                     </TableRow>
-                  ))
-                : null}
+                  ))}
             </TableBody>
           </Table>
         </TableContainer>
+        )}
       </Card>
 
       <Dialog

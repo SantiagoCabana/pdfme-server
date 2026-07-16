@@ -22,7 +22,6 @@ import {
   Button,
   Card,
   Chip,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -40,8 +39,8 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { Grid, _ } from 'gridjs-react';
 import { DataTable, PaginationBar } from '../../shared/components/DataTable';
+import { LoadingState } from '../../shared/components/LoadingState';
 import type { Schema, Template as PdfmeTemplate } from '@pdfme/common';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
@@ -252,7 +251,10 @@ export function TemplatesPage() {
     }
   }
 
-  useEffect(() => { void load().catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar.')); }, []);
+  useEffect(() => {
+    if (routeCode) return;
+    void load().catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar.'));
+  }, [routeCode]);
 
   useEffect(() => {
     if (!routeCode) {
@@ -340,7 +342,6 @@ export function TemplatesPage() {
         body: JSON.stringify({ name, code }),
       });
       resetCreateForm();
-      await load();
       closeHeaderAction();
       navigate(`/templates/edit/${payload.template.code}`);
     } catch (err) {
@@ -420,7 +421,7 @@ export function TemplatesPage() {
       });
       setEditingTemplate(payload.template);
       setDesignerTemplate(buildPdfmeTemplate(payload.template));
-      await load();
+      if (!routeCode) await load();
       return payload.template;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar la plantilla.');
@@ -440,7 +441,7 @@ export function TemplatesPage() {
       setEditingTemplate(payload.template);
       setDesignerTemplate(buildPdfmeTemplate(payload.template));
       setVersionMenuAnchor(null);
-      await load();
+      if (!routeCode) await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar una nueva version.');
     } finally {
@@ -464,7 +465,7 @@ export function TemplatesPage() {
       setDesignerTemplate(buildPdfmeTemplate(payload.template));
       setVersionMenuAnchor(null);
       setVersionsDialogOpen(false);
-      await load();
+      if (!routeCode) await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cambiar de version.');
     } finally {
@@ -500,7 +501,7 @@ export function TemplatesPage() {
       if (payload.template.code !== routeCode) {
         navigate(`/templates/edit/${payload.template.code}`, { replace: true });
       }
-      await load();
+      if (!routeCode) await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo actualizar la plantilla.');
     } finally {
@@ -943,7 +944,7 @@ export function TemplatesPage() {
   if (routeCode && (loadingTemplate || !editingTemplate)) {
     return (
       <Box sx={{ display: 'grid', height: '100%', minHeight: 0, placeItems: 'center', width: '100%' }}>
-        {error ? <Alert severity="error">{error}</Alert> : <CircularProgress size={24} />}
+        {error ? <Alert severity="error">{error}</Alert> : <LoadingState label="Cargando plantilla..." minHeight="100%" />}
       </Box>
     );
   }
@@ -1005,10 +1006,10 @@ export function TemplatesPage() {
         <Box className="pdfme-workspace" sx={{ height: '100%', minHeight: 0, width: '100%' }}>
           <Card sx={{ bgcolor: 'background.default', borderRadius: 0, boxShadow: 'none', height: '100%', minWidth: 0, overflow: 'hidden' }}>
             {designerTemplate ? (
-              <Suspense fallback={<Box sx={{ display: 'grid', minHeight: 680, placeItems: 'center' }}><CircularProgress size={24} /></Box>}>
+              <Suspense fallback={<LoadingState label="Cargando editor pdfme..." minHeight="100%" />}>
                 {isPreviewRoute ? <PdfmeViewer key={designerWorkspaceKey} template={designerTemplate} /> : <PdfmeDesigner key={designerWorkspaceKey} onChange={setDesignerTemplate} ref={designerRef} template={designerTemplate} />}
               </Suspense>
-            ) : <Box sx={{ display: 'grid', minHeight: 680, placeItems: 'center' }}><CircularProgress size={24} /></Box>}
+            ) : <LoadingState label="Preparando plantilla..." minHeight="100%" />}
           </Card>
         </Box>
       </Box>
@@ -1020,9 +1021,7 @@ export function TemplatesPage() {
       {error ? <Alert severity="error">{error}</Alert> : null}
       <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0 }}>
         {loading ? (
-          <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
-            <CircularProgress size={24} />
-          </Box>
+          <LoadingState label="Cargando plantillas..." minHeight="100%" />
         ) : filteredTemplates.length === 0 ? (
           <Box sx={{ display: 'grid', placeItems: 'center', py: 6, flexGrow: 1 }}>
             <Typography>No hay plantillas.</Typography>
