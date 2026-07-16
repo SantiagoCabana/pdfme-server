@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Template as PdfmeTemplate } from '@pdfme/common';
-import { Viewer } from '@pdfme/ui';
+import type { Schema, Template as PdfmeTemplate } from '@pdfme/common';
+import { Form } from '@pdfme/ui';
 import { Alert } from '@mui/material';
 
 import type { ThemeMode } from '../../../theme/mantisTheme';
@@ -15,9 +15,13 @@ type PdfmeViewerProps = {
 
 export function PdfmeViewer({ mode, template }: PdfmeViewerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const viewerRef = useRef<Viewer | null>(null);
+  const formRef = useRef<Form | null>(null);
   const modeRef = useRef(mode);
   const [error, setError] = useState('');
+  const previewTemplate = useMemo<PdfmeTemplate>(() => ({
+    ...template,
+    schemas: (template.schemas ?? []).map((page) => page.map((schema) => ({ ...schema, readOnly: true }) as Schema)),
+  }), [template]);
   const previewInputs = useMemo(() => {
     const input: Record<string, string> = {};
 
@@ -28,7 +32,7 @@ export function PdfmeViewer({ mode, template }: PdfmeViewerProps) {
     }
 
     return [input];
-  }, [template]);
+  }, [previewTemplate]);
 
   useEffect(() => {
     modeRef.current = mode;
@@ -42,9 +46,9 @@ export function PdfmeViewer({ mode, template }: PdfmeViewerProps) {
     loadPdfmeFonts().then((font) => {
       if (!isMounted || !containerRef.current) return;
 
-      const viewer = new Viewer({
+      const form = new Form({
         domContainer: containerRef.current,
-        template,
+        template: previewTemplate,
         inputs: previewInputs,
         plugins: pdfmePlugins,
         options: {
@@ -54,7 +58,7 @@ export function PdfmeViewer({ mode, template }: PdfmeViewerProps) {
         },
       });
 
-      viewerRef.current = viewer;
+      formRef.current = form;
       setError('');
     }).catch(() => {
       if (isMounted) setError('No se pudo cargar la vista previa.');
@@ -62,23 +66,23 @@ export function PdfmeViewer({ mode, template }: PdfmeViewerProps) {
 
     return () => {
       isMounted = false;
-      viewerRef.current?.destroy();
-      viewerRef.current = null;
+      formRef.current?.destroy();
+      formRef.current = null;
     };
   }, []);
 
   useEffect(() => {
-    viewerRef.current?.updateOptions({
-      font: viewerRef.current.getOptions().font,
+    formRef.current?.updateOptions({
+      font: formRef.current.getOptions().font,
       lang: 'es',
       theme: createPdfmeTheme(mode),
     });
   }, [mode]);
 
   useEffect(() => {
-    viewerRef.current?.updateTemplate(template);
-    viewerRef.current?.setInputs(previewInputs);
-  }, [previewInputs, template]);
+    formRef.current?.updateTemplate(previewTemplate);
+    formRef.current?.setInputs(previewInputs);
+  }, [previewInputs, previewTemplate]);
 
   return (
     <>

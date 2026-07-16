@@ -101,7 +101,7 @@ export default function App() {
         <AppBootLoader />
       ) : (
         <AppContext.Provider value={contextValue}>
-          <RouterProvider router={router} />
+          <RouterProvider future={{ v7_startTransition: true }} router={router} />
         </AppContext.Provider>
       )}
     </ThemeProvider>
