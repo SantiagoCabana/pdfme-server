@@ -69,6 +69,130 @@ type BlankBasePdf = {
   staticSchema?: Schema[];
 };
 
+type EditorHeaderControlsProps = {
+  editingTemplate: TemplateItem;
+  hasMultipleVersions: boolean;
+  isPreviewRoute: boolean;
+  pageFormat: string;
+  pageHeightMm: number;
+  pageOrientation: 'PORTRAIT' | 'LANDSCAPE';
+  pageWidthMm: number;
+  saving: boolean;
+  savingDetails: boolean;
+  savingVersion: boolean;
+  switchingVersion: boolean;
+  onBack: () => void;
+  onClearBackground: () => void;
+  onEditPreview: () => void;
+  onFormatChange: (format: string) => void;
+  onHeightChange: (height: number) => void;
+  onOpenDetails: () => void;
+  onOpenVersions: () => void;
+  onSave: () => void;
+  onSaveVersion: () => void;
+  onToggleOrientation: () => void;
+  onWidthChange: (width: number) => void;
+};
+
+function EditorHeaderControls({
+  editingTemplate,
+  hasMultipleVersions,
+  isPreviewRoute,
+  pageFormat,
+  pageHeightMm,
+  pageOrientation,
+  pageWidthMm,
+  saving,
+  savingDetails,
+  savingVersion,
+  switchingVersion,
+  onBack,
+  onClearBackground,
+  onEditPreview,
+  onFormatChange,
+  onHeightChange,
+  onOpenDetails,
+  onOpenVersions,
+  onSave,
+  onSaveVersion,
+  onToggleOrientation,
+  onWidthChange,
+}: EditorHeaderControlsProps) {
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const closeMenu = () => setMenuAnchor(null);
+
+  return (
+    <Box
+      sx={{
+        alignItems: 'center',
+        columnGap: 1.5,
+        display: 'grid',
+        flex: 1,
+        gridTemplateColumns: {
+          xs: 'minmax(0, 1fr) auto',
+          md: 'auto auto minmax(120px, 1fr) auto',
+        },
+        minWidth: 0,
+        width: '100%',
+      }}
+    >
+      <Button onClick={onBack} startIcon={<ArrowLeftOutlined />} sx={{ flexShrink: 0 }}>Volver</Button>
+      <Divider flexItem orientation="vertical" sx={{ display: { xs: 'none', md: 'block' } }} />
+      <Box sx={{ alignItems: 'center', display: { xs: 'none', sm: 'flex' }, gap: 1.25, minWidth: 0 }}>
+        <Typography sx={{ fontWeight: 600, maxWidth: { xs: 110, sm: 180, md: 240 } }} variant="subtitle2" noWrap>{editingTemplate.name}</Typography>
+        <Chip color="primary" label={`v${editingTemplate.versionNumber}`} size="small" sx={{ flexShrink: 0 }} variant="outlined" />
+      </Box>
+      {isPreviewRoute ? (
+        <Button onClick={onEditPreview} size="small" startIcon={<EditOutlined />} sx={{ ml: 'auto' }} variant="outlined">Editar</Button>
+      ) : (
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'flex-end', justifySelf: 'end', minWidth: 0 }}>
+          <Box
+            sx={{
+              alignItems: 'center',
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 1.5,
+              display: 'flex',
+              gap: 0.75,
+              maxWidth: '100%',
+              px: 0.75,
+              py: 0.5,
+            }}
+          >
+            <TextField label="Formato" onChange={(event) => onFormatChange(event.target.value)} select size="small" sx={{ width: 100 }} value={pageFormat}>
+              {pageFormats.map((format) => <MenuItem key={format.value} value={format.value}>{format.label}</MenuItem>)}
+            </TextField>
+            <TextField label="Ancho" onChange={(event) => onWidthChange(Number(event.target.value))} size="small" sx={{ width: 86 }} type="number" value={pageWidthMm} />
+            <TextField label="Alto" onChange={(event) => onHeightChange(Number(event.target.value))} size="small" sx={{ width: 86 }} type="number" value={pageHeightMm} />
+            <Tooltip title={pageOrientation === 'LANDSCAPE' ? 'Cambiar a Vertical' : 'Cambiar a Horizontal'}>
+              <IconButton onClick={onToggleOrientation} color="primary" sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0, width: 40, height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                {pageOrientation === 'LANDSCAPE' ? <ColumnHeightOutlined /> : <ColumnWidthOutlined />}
+              </IconButton>
+            </Tooltip>
+          </Box>
+          <Button disabled={saving || switchingVersion} onClick={onSave} size="small" startIcon={<SaveOutlined />} variant="contained">
+            {saving ? 'Guardando...' : 'Guardar'}
+          </Button>
+          <IconButton disabled={saving || savingVersion || switchingVersion || savingDetails} onClick={(event) => setMenuAnchor(event.currentTarget)} size="small">
+            <EllipsisOutlined />
+          </IconButton>
+          <Menu anchorEl={menuAnchor} onClose={closeMenu} open={Boolean(menuAnchor)} transitionDuration={120}>
+            <MenuItem disabled={savingVersion} onClick={() => { closeMenu(); onSaveVersion(); }}>
+              {savingVersion ? 'Creando version...' : 'Guardar version'}
+            </MenuItem>
+            <MenuItem disabled={!hasMultipleVersions} onClick={() => { closeMenu(); onOpenVersions(); }}>
+              Cambiar version
+            </MenuItem>
+            <MenuItem onClick={() => { closeMenu(); onOpenDetails(); }}>Propiedades</MenuItem>
+            <MenuItem onClick={() => { closeMenu(); onClearBackground(); }}>Quitar fondo</MenuItem>
+          </Menu>
+        </Stack>
+      )}
+    </Box>
+  );
+}
+
 function randomSuffix() {
   const values = new Uint8Array(4);
   crypto.getRandomValues(values);
@@ -230,7 +354,6 @@ export function TemplatesPage() {
   const [pageHeightMm, setPageHeightMm] = useState(297);
   const [designerTemplate, setDesignerTemplate] = useState<PdfmeTemplate | null>(null);
   const [lockedSchemaNames, setLockedSchemaNames] = useState<string[]>([]);
-  const [versionMenuAnchor, setVersionMenuAnchor] = useState<HTMLElement | null>(null);
   const [versionsDialogOpen, setVersionsDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [detailsName, setDetailsName] = useState('');
@@ -441,7 +564,6 @@ export function TemplatesPage() {
       const payload = await apiRequest<{ template: TemplateItem }>('/api/templates/' + editingTemplate.id + '/versions', { method: 'POST' });
       setEditingTemplate(payload.template);
       setDesignerTemplate(buildPdfmeTemplate(payload.template));
-      setVersionMenuAnchor(null);
       if (!routeCode) await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar una nueva version.');
@@ -464,7 +586,6 @@ export function TemplatesPage() {
       setPageWidthMm(payload.template.pageWidthMm);
       setPageHeightMm(payload.template.pageHeightMm);
       setDesignerTemplate(buildPdfmeTemplate(payload.template));
-      setVersionMenuAnchor(null);
       setVersionsDialogOpen(false);
       if (!routeCode) await load();
     } catch (err) {
@@ -479,7 +600,6 @@ export function TemplatesPage() {
     setDetailsName(editingTemplate.name);
     setDetailsCode(editingTemplate.code);
     setDetailsTags(editingTemplate.tags.join(', '));
-    setVersionMenuAnchor(null);
     setDetailsDialogOpen(true);
   }
 
@@ -571,7 +691,6 @@ export function TemplatesPage() {
 
   function clearBackground() {
     setDesignerTemplate((current) => removePdfmeBackground(current));
-    setVersionMenuAnchor(null);
   }
 
   const prevSchemasRef = useRef<Record<string, string>>({});
@@ -835,78 +954,34 @@ export function TemplatesPage() {
 
     setHeaderAction(null);
     setHeaderControls(
-      <Box
-        sx={{
-          alignItems: 'center',
-          columnGap: 1.5,
-          display: 'grid',
-          flex: 1,
-          gridTemplateColumns: {
-            xs: 'minmax(0, 1fr) auto',
-            md: 'auto auto minmax(120px, 1fr) auto',
-          },
-          minWidth: 0,
-          width: '100%',
-        }}
-      >
-        <Button onClick={() => navigate('/templates')} startIcon={<ArrowLeftOutlined />} sx={{ flexShrink: 0 }}>Volver</Button>
-        <Divider flexItem orientation="vertical" sx={{ display: { xs: 'none', md: 'block' } }} />
-        <Box sx={{ alignItems: 'center', display: { xs: 'none', sm: 'flex' }, gap: 1.25, minWidth: 0 }}>
-          <Typography sx={{ fontWeight: 600, maxWidth: { xs: 110, sm: 180, md: 240 } }} variant="subtitle2" noWrap>{editingTemplate.name}</Typography>
-          <Chip color="primary" label={`v${editingTemplate.versionNumber}`} size="small" sx={{ flexShrink: 0 }} variant="outlined" />
-        </Box>
-        {isPreviewRoute ? (
-          <Button onClick={() => navigate(`/templates/edit/${editingTemplate.code}`)} size="small" startIcon={<EditOutlined />} sx={{ ml: 'auto' }} variant="outlined">Editar</Button>
-        ) : (
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'flex-end', justifySelf: 'end', minWidth: 0 }}>
-            <Box
-              sx={{
-                alignItems: 'center',
-                bgcolor: 'background.paper',
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 1.5,
-                display: 'flex',
-                gap: 0.75,
-                maxWidth: '100%',
-                px: 0.75,
-                py: 0.5,
-              }}
-            >
-              <TextField label="Formato" onChange={(event) => setFormat(event.target.value)} select size="small" sx={{ width: 100 }} value={pageFormat}>
-                {pageFormats.map((format) => <MenuItem key={format.value} value={format.value}>{format.label}</MenuItem>)}
-              </TextField>
-              <TextField label="Ancho" onChange={(event) => { const next = Number(event.target.value); setPageWidthMm(next); setDesignerTemplate((current) => updatePdfmeBasePdf(current, { width: next })); }} size="small" sx={{ width: 86 }} type="number" value={pageWidthMm} />
-              <TextField label="Alto" onChange={(event) => { const next = Number(event.target.value); setPageHeightMm(next); setDesignerTemplate((current) => updatePdfmeBasePdf(current, { height: next })); }} size="small" sx={{ width: 86 }} type="number" value={pageHeightMm} />
-              <Tooltip title={pageOrientation === 'LANDSCAPE' ? 'Cambiar a Vertical' : 'Cambiar a Horizontal'}>
-                <IconButton onClick={toggleOrientation} color="primary" sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0, width: 40, height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {pageOrientation === 'LANDSCAPE' ? <ColumnHeightOutlined /> : <ColumnWidthOutlined />}
-                </IconButton>
-              </Tooltip>
-            </Box>
-            <Button disabled={saving || switchingVersion} onClick={() => void saveSettings()} size="small" startIcon={<SaveOutlined />} variant="contained">
-              {saving ? 'Guardando...' : 'Guardar'}
-            </Button>
-            <IconButton disabled={saving || savingVersion || switchingVersion || savingDetails} onClick={(event) => setVersionMenuAnchor(event.currentTarget)} size="small">
-              <EllipsisOutlined />
-            </IconButton>
-            <Menu anchorEl={versionMenuAnchor} onClose={() => setVersionMenuAnchor(null)} open={Boolean(versionMenuAnchor)}>
-              <MenuItem disabled={savingVersion} onClick={() => void saveVersion()}>
-                {savingVersion ? 'Creando version...' : 'Guardar version'}
-              </MenuItem>
-              <MenuItem disabled={!hasMultipleVersions} onClick={() => { setVersionMenuAnchor(null); setVersionsDialogOpen(true); }}>
-                Cambiar version
-              </MenuItem>
-              <MenuItem onClick={openDetailsDialog}>Propiedades</MenuItem>
-              <MenuItem onClick={clearBackground}>Quitar fondo</MenuItem>
-            </Menu>
-          </Stack>
-        )}
-      </Box>,
+      <EditorHeaderControls
+        editingTemplate={editingTemplate}
+        hasMultipleVersions={hasMultipleVersions}
+        isPreviewRoute={isPreviewRoute}
+        onBack={() => navigate('/templates')}
+        onClearBackground={clearBackground}
+        onEditPreview={() => navigate(`/templates/edit/${editingTemplate.code}`)}
+        onFormatChange={setFormat}
+        onHeightChange={(next) => { setPageHeightMm(next); setDesignerTemplate((current) => updatePdfmeBasePdf(current, { height: next })); }}
+        onOpenDetails={openDetailsDialog}
+        onOpenVersions={() => setVersionsDialogOpen(true)}
+        onSave={() => { void saveSettings(); }}
+        onSaveVersion={() => { void saveVersion(); }}
+        onToggleOrientation={toggleOrientation}
+        onWidthChange={(next) => { setPageWidthMm(next); setDesignerTemplate((current) => updatePdfmeBasePdf(current, { width: next })); }}
+        pageFormat={pageFormat}
+        pageHeightMm={pageHeightMm}
+        pageOrientation={pageOrientation}
+        pageWidthMm={pageWidthMm}
+        saving={saving}
+        savingDetails={savingDetails}
+        savingVersion={savingVersion}
+        switchingVersion={switchingVersion}
+      />,
     );
 
     return () => setHeaderControls(null);
-  }, [editingTemplate, hasMultipleVersions, isPreviewRoute, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, routeCode, saving, savingDetails, savingVersion, search, setHeaderAction, setHeaderControls, switchingVersion, user, versionMenuAnchor, designerTemplate, lockedSchemaNames]);
+  }, [editingTemplate, hasMultipleVersions, isPreviewRoute, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, routeCode, saving, savingDetails, savingVersion, search, setHeaderAction, setHeaderControls, switchingVersion, user, designerTemplate, lockedSchemaNames]);
 
   useEffect(() => {
     const originalConfirm = window.confirm;
