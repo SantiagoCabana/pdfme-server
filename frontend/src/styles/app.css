@@ -8,6 +8,47 @@ body {
   margin: 0;
 }
 
+.app-scrollbar {
+  height: 100%;
+  max-height: 100%;
+}
+
+.app-scrollbar .simplebar-content-wrapper {
+  outline: none;
+}
+
+.app-scrollbar .simplebar-scrollbar::before {
+  background: rgba(100, 116, 139, 0.46);
+  border-radius: 999px;
+  inset: 3px;
+  opacity: 1;
+  transition: background-color 120ms ease, opacity 120ms ease;
+}
+
+.app-scrollbar .simplebar-scrollbar.simplebar-visible::before,
+.app-scrollbar:hover .simplebar-scrollbar::before {
+  opacity: 1;
+}
+
+.app-scrollbar .simplebar-track.simplebar-vertical {
+  width: 10px;
+}
+
+.app-scrollbar .simplebar-track.simplebar-horizontal {
+  height: 10px;
+}
+
+.app-scrollbar .simplebar-track.simplebar-horizontal .simplebar-scrollbar::before,
+.app-scrollbar .simplebar-track.simplebar-vertical .simplebar-scrollbar::before {
+  background: rgba(100, 116, 139, 0.42);
+}
+
+[data-theme='dark'] .app-scrollbar .simplebar-scrollbar::before,
+[data-theme='dark'] .app-scrollbar .simplebar-track.simplebar-horizontal .simplebar-scrollbar::before,
+[data-theme='dark'] .app-scrollbar .simplebar-track.simplebar-vertical .simplebar-scrollbar::before {
+  background: rgba(148, 163, 184, 0.48);
+}
+
 code {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }

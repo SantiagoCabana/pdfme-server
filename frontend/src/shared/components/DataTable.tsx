@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Box, Typography, Button } from '@mui/material';
+import { AppScrollbar } from './AppScrollbar';
 
 export interface DataTableColumn {
   name: string;
@@ -39,11 +40,10 @@ export function DataTable({ columns, data, height = '100%' }: DataTableProps) {
     : data;
 
   return (
-    <Box
+    <AppScrollbar
       sx={{
         flexGrow: 1,
         minHeight: 0,
-        overflow: 'auto',
         height,
         '& table': { width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' },
         '& thead th': {
@@ -108,7 +108,7 @@ export function DataTable({ columns, data, height = '100%' }: DataTableProps) {
           )}
         </tbody>
       </table>
-    </Box>
+    </AppScrollbar>
   );
 }
 

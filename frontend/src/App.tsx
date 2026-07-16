@@ -5,6 +5,7 @@ import '@fontsource/public-sans/400.css';
 import '@fontsource/public-sans/500.css';
 import '@fontsource/public-sans/600.css';
 import '@fontsource/public-sans/700.css';
+import 'simplebar-react/dist/simplebar.min.css';
 
 import { AppContext, type HeaderAction } from './app/AppContext';
 import type { SessionUser } from './app/types';

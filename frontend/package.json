@@ -35,6 +35,8 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^6.30.4",
+    "simplebar": "^6.3.3",
+    "simplebar-react": "^3.3.2",
     "sweetalert2": "^11.26.25",
     "tailwind-merge": "^3.6.0"
   },

@@ -5,6 +5,7 @@ import { Alert, Box, Card, Chip, Dialog, Stack, Table, TableBody, TableCell, Tab
 import type { AccessPermissionItem, AccessRoleItem } from '../../app/types';
 import { apiRequest } from '../../shared/api/client';
 import { useAppContext } from '../../app/AppContext';
+import { AppScrollbar } from '../../shared/components/AppScrollbar';
 import { LoadingState } from '../../shared/components/LoadingState';
 import '../../styles/permissions.css';
 
@@ -200,7 +201,8 @@ export function PermissionsPage() {
         {loading ? (
           <LoadingState label="Cargando permisos..." minHeight="100%" />
         ) : (
-        <TableContainer sx={{ flexGrow: 1, overflowY: 'auto' }}>
+        <AppScrollbar sx={{ flexGrow: 1 }}>
+        <TableContainer sx={{ overflow: 'visible' }}>
           <Table stickyHeader>
             <TableHead>
               <TableRow>
@@ -302,6 +304,7 @@ export function PermissionsPage() {
             </TableBody>
           </Table>
         </TableContainer>
+        </AppScrollbar>
         )}
       </Card>
 

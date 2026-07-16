@@ -38,6 +38,7 @@ import {
 import { useAppContext } from '../app/AppContext';
 import { can } from '../app/session';
 import { apiRequest } from '../shared/api/client';
+import { AppScrollbar } from '../shared/components/AppScrollbar';
 import { MantisLogo } from './MantisLogo';
 
 const drawerWidth = 260;
@@ -147,7 +148,7 @@ export function PrivateLayout() {
         )}
       </Box>
       <Divider />
-      <Box sx={{ flex: 1, overflowY: 'auto', py: 1.5, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
+      <AppScrollbar sx={{ flex: 1 }}>
         <List sx={{ py: 0.5 }}>
           {items.filter((item) => item.visible).map((item) => {
             const selected = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`) || (location.pathname === '/' && item.path === '/templates');
@@ -203,7 +204,7 @@ export function PrivateLayout() {
             );
           })}
         </List>
-      </Box>
+      </AppScrollbar>
 
       <Divider />
       <Box sx={{ p: collapsed ? 1 : 1.5, transition: sidebarTransition }}>
