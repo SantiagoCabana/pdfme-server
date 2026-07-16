@@ -13,6 +13,7 @@ import { usersRouter } from './routes/users.route.js';
 import { auditRouter } from './routes/audit.route.js';
 
 const app = express();
+app.set('etag', false);
 
 const configuredOrigins = new Set([
   env.FRONTEND_URL,
@@ -49,6 +50,19 @@ app.use(cors({
   },
   credentials: true,
 }));
+app.use('/api', (request, response, next) => {
+  const startedAt = process.hrtime.bigint();
+
+  response.setHeader('Cache-Control', 'no-store');
+  response.on('finish', () => {
+    if (env.NODE_ENV === 'production') return;
+
+    const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+    console.log(`${request.method} ${request.originalUrl} ${response.statusCode} ${elapsedMs.toFixed(1)}ms`);
+  });
+
+  next();
+});
 app.use(express.json({ limit: '10mb' }));
 
 app.get('/', (_request, response) => {

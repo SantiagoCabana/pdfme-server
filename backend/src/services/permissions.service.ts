@@ -1,21 +1,19 @@
 import { prisma } from '../prisma.js';
 
 export async function listPermissionMatrix() {
-  const [roles, permissions] = await Promise.all([
-    prisma.accessRole.findMany({
-      where: { status: true },
-      orderBy: { code: 'asc' },
-      include: {
-        permissions: {
-          include: { accessPermission: true },
-        },
+  const roles = await prisma.accessRole.findMany({
+    where: { status: true },
+    orderBy: { code: 'asc' },
+    include: {
+      permissions: {
+        include: { accessPermission: true },
       },
-    }),
-    prisma.accessPermission.findMany({
-      where: { status: true },
-      orderBy: [{ category: 'asc' }, { code: 'asc' }],
-    }),
-  ]);
+    },
+  });
+  const permissions = await prisma.accessPermission.findMany({
+    where: { status: true },
+    orderBy: [{ category: 'asc' }, { code: 'asc' }],
+  });
 
   return {
     roles: roles.map((role) => ({
