@@ -217,7 +217,7 @@ export function ApiKeysPage() {
                   >
                     {credential.name}
                   </Typography>
-                  <Typography color="text.secondary" variant="caption">Creada: {formatDate(credential.createdAt)}</Typography>
+                  <Typography color="text.secondary" variant="caption">{formatDate(credential.createdAt)}</Typography>
                 </Stack>,
                 <Stack key="code" spacing={0.25}>
                   <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
