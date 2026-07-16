@@ -11,14 +11,14 @@ export function createMantisTheme(mode: ThemeMode) {
       primary: { main: '#1677ff', light: '#69b1ff', dark: '#0958d9', contrastText: '#ffffff' },
       secondary: { main: '#8c8c8c' },
       background: {
-        default: isDark ? '#111936' : '#f0f2f8',
-        paper: isDark ? '#1e2746' : '#ffffff',
+        default: isDark ? '#101010' : '#f0f2f8',
+        paper: isDark ? '#171717' : '#ffffff',
       },
       text: {
         primary: isDark ? '#f5f5f5' : '#262626',
-        secondary: isDark ? '#bfbfbf' : '#8c8c8c',
+        secondary: isDark ? '#a3a3a3' : '#8c8c8c',
       },
-      divider: isDark ? '#303b5f' : '#f0f0f0',
+      divider: isDark ? '#2a2a2a' : '#f0f0f0',
     },
     typography: {
       fontFamily: 'Public Sans, sans-serif',
