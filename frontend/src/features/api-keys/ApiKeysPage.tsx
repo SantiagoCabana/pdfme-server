@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { CopyOutlined, DeleteOutlined, KeyOutlined } from '@ant-design/icons';
-import { Box, Button, Card, Chip, IconButton, Stack, Switch, TextField, MenuItem, Tooltip, Typography } from '@mui/material';
+import { CopyOutlined, DeleteOutlined, KeyOutlined, PoweroffOutlined } from '@ant-design/icons';
+import { Box, Button, Card, Chip, IconButton, Stack, TextField, MenuItem, Tooltip, Typography } from '@mui/material';
 import Swal from 'sweetalert2';
 import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 import { LoadingState } from '../../shared/components/LoadingState';
@@ -24,7 +24,7 @@ export function ApiKeysPage() {
 
   const toast = Swal.mixin({
     toast: true,
-    position: 'top-end',
+    position: 'top-start',
     showConfirmButton: false,
     timer: 1800,
     timerProgressBar: true,
@@ -114,10 +114,22 @@ export function ApiKeysPage() {
     const isActive = credential.status === 'ACTIVE';
     const nextAction = isActive ? 'disable' : 'activate';
 
+    const result = await Swal.fire({
+      icon: isActive ? 'warning' : 'question',
+      title: isActive ? 'Deshabilitar clave' : 'Activar clave',
+      text: credential.name,
+      confirmButtonText: isActive ? 'Deshabilitar' : 'Activar',
+      cancelButtonText: 'Cancelar',
+      showCancelButton: true,
+      confirmButtonColor: isActive ? '#d32f2f' : '#1677ff',
+    });
+
+    if (!result.isConfirmed) return;
+
     setTogglingId(credential.id);
     try {
-      await apiRequest(`/api/api-credentials/${credential.id}/${nextAction}`, { method: 'PATCH' });
-      await load();
+      const payload = await apiRequest<{ credential: ApiCredential }>(`/api/api-credentials/${credential.id}/${nextAction}`, { method: 'PATCH' });
+      setCredentials((current) => current.map((entry) => entry.id === credential.id ? payload.credential : entry));
       await toast.fire({ icon: 'success', title: isActive ? 'Clave deshabilitada' : 'Clave activada' });
     } catch (err) {
       showError(err instanceof Error ? err.message : 'No se pudo actualizar.');
@@ -188,16 +200,18 @@ export function ApiKeysPage() {
                   {credential.lastUsedIp ? <Typography color="text.secondary" variant="caption">IP: {credential.lastUsedIp}</Typography> : null}
                 </Stack>,
                 <Box key="a" sx={{ display: 'flex', gap: 0.75, alignItems: 'center', justifyContent: 'flex-end' }}>
-                  <Tooltip title={credential.status === 'ACTIVE' ? 'Deshabilitar' : 'Activar'}>
-                    <span>
-                      <Switch
-                        checked={credential.status === 'ACTIVE'}
-                        disabled={credential.status === 'EXPIRED' || togglingId === credential.id}
-                        onChange={() => void toggleStatus(credential)}
-                        size="small"
-                      />
-                    </span>
-                  </Tooltip>
+                  {credential.status !== 'EXPIRED' ? (
+                    <Button
+                      color={credential.status === 'ACTIVE' ? 'warning' : 'primary'}
+                      disabled={togglingId === credential.id}
+                      onClick={() => void toggleStatus(credential)}
+                      size="small"
+                      startIcon={<PoweroffOutlined />}
+                      variant="outlined"
+                    >
+                      {credential.status === 'ACTIVE' ? 'Deshabilitar' : 'Activar'}
+                    </Button>
+                  ) : null}
                   <Tooltip title="Eliminar clave">
                     <span>
                       <IconButton color="error" disabled={deletingId === credential.id} onClick={() => void remove(credential.id, credential.name)} size="small">
