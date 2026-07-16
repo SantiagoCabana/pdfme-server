@@ -40,7 +40,10 @@ export function ApiKeysPage() {
   }
 
   function shortCode(value: string) {
-    return value.length > 20 ? `${value.slice(0, 8)}...${value.slice(-6)}` : value;
+    if (value.length <= 12) return value;
+
+    const visibleLength = Math.max(4, Math.ceil(value.length * 0.1));
+    return `${value.slice(0, visibleLength)}...`;
   }
 
   async function load() {
