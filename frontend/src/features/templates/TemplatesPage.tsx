@@ -7,7 +7,6 @@ import {
   EyeOutlined,
   PictureOutlined,
   PlusOutlined,
-  RetweetOutlined,
   SaveOutlined,
   SearchOutlined,
   LockOutlined,
@@ -15,6 +14,8 @@ import {
   UnorderedListOutlined,
   BarcodeOutlined,
   FileTextOutlined,
+  ColumnHeightOutlined,
+  ColumnWidthOutlined,
 } from '@ant-design/icons';
 import {
   Alert,
@@ -879,25 +880,7 @@ export function TemplatesPage() {
               <TextField label="Alto" onChange={(event) => { const next = Number(event.target.value); setPageHeightMm(next); setDesignerTemplate((current) => updatePdfmeBasePdf(current, { height: next })); }} size="small" sx={{ width: 86 }} type="number" value={pageHeightMm} />
               <Tooltip title={pageOrientation === 'LANDSCAPE' ? 'Cambiar a Vertical' : 'Cambiar a Horizontal'}>
                 <IconButton onClick={toggleOrientation} color="primary" sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 0, width: 40, height: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {pageOrientation === 'LANDSCAPE' ? (
-                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                      {/* Background/Target page (vertical, semi-transparent) */}
-                      <rect x="13" y="2" width="8" height="12" rx="1.5" opacity="0.3" />
-                      {/* Active page (horizontal, solid) */}
-                      <rect x="2" y="9" width="12" height="8" rx="1.5" />
-                      {/* Rotate arrow */}
-                      <path d="M16 19a4 4 0 0 0 4-4v-1.5c0-.3-.2-.5-.5-.5s-.5.2-.5.5V15a3 3 0 0 1-3 3h-2.5l1.1-1.1c.2-.2.2-.5 0-.7a.5.5 0 0 0-.7 0l-2 2a.5.5 0 0 0 0 .7l2 2c.2.2.5.2.7 0c.2-.2.2-.5 0-.7L13.5 19H16z" />
-                    </svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                      {/* Background/Target page (horizontal, semi-transparent) */}
-                      <rect x="9" y="13" width="12" height="8" rx="1.5" opacity="0.3" />
-                      {/* Active page (vertical, solid) */}
-                      <rect x="2" y="2" width="8" height="12" rx="1.5" />
-                      {/* Rotate arrow */}
-                      <path d="M19 8a4 4 0 0 0-4-4h-1.5c-.3 0-.5.2-.5.5s.2.5.5.5H15a3 3 0 0 1 3 3v2.5l-1.1-1.1c-.2-.2-.5-.2-.7 0s-.2.5 0 .7l2 2c.2.2.5.2.7 0l2-2c.2-.2.2-.5 0-.7s-.5-.2-.7 0L19 10.5V8z" />
-                    </svg>
-                  )}
+                  {pageOrientation === 'LANDSCAPE' ? <ColumnHeightOutlined /> : <ColumnWidthOutlined />}
                 </IconButton>
               </Tooltip>
             </Box>
