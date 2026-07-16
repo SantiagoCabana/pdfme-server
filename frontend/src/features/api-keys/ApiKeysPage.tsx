@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { CopyOutlined, DeleteOutlined, KeyOutlined, PoweroffOutlined } from '@ant-design/icons';
-import { Box, Button, Card, Chip, IconButton, Stack, TextField, MenuItem, Tooltip, Typography } from '@mui/material';
+import { CopyOutlined, DeleteOutlined, KeyOutlined } from '@ant-design/icons';
+import { Box, Button, Card, Chip, IconButton, Stack, Switch, TextField, MenuItem, Tooltip, Typography } from '@mui/material';
 import Swal from 'sweetalert2';
 import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 import { LoadingState } from '../../shared/components/LoadingState';
@@ -15,6 +15,7 @@ export function ApiKeysPage() {
   const [credentials, setCredentials] = useState<ApiCredential[]>([]);
   const [name, setName] = useState('Servicio de documentos');
   const [expiryMode, setExpiryMode] = useState('never');
+  const [customExpiresAt, setCustomExpiresAt] = useState('');
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [togglingId, setTogglingId] = useState('');
@@ -46,6 +47,18 @@ export function ApiKeysPage() {
     return `${value.slice(0, visibleLength)}...`;
   }
 
+  function resolveExpiresAt() {
+    if (expiryMode === 'custom') {
+      return customExpiresAt ? new Date(customExpiresAt).toISOString() : null;
+    }
+
+    return buildExpiryDate(expiryMode);
+  }
+
+  function isVisuallyActive(credential: ApiCredential) {
+    return credential.status === 'ACTIVE' || credential.status === 'EXPIRED';
+  }
+
   async function load() {
     setLoading(true);
     try {
@@ -62,7 +75,7 @@ export function ApiKeysPage() {
     event.preventDefault();
     setCreating(true);
     try {
-      const payload = await apiRequest<{ rawKey: string }>('/api/api-credentials', { method: 'POST', body: JSON.stringify({ name, expiresAt: buildExpiryDate(expiryMode) }) });
+      const payload = await apiRequest<{ rawKey: string }>('/api/api-credentials', { method: 'POST', body: JSON.stringify({ name, expiresAt: resolveExpiresAt() }) });
       await load();
       closeHeaderAction();
       const result = await Swal.fire({
@@ -99,14 +112,25 @@ export function ApiKeysPage() {
             <MenuItem value="30">30 dias</MenuItem>
             <MenuItem value="90">90 dias</MenuItem>
             <MenuItem value="365">1 ano</MenuItem>
+            <MenuItem value="custom">Personalizado</MenuItem>
           </TextField>
-          <Button disabled={creating} startIcon={<KeyOutlined />} type="submit" variant="contained">{creating ? 'Creando...' : 'Crear clave'}</Button>
+          {expiryMode === 'custom' ? (
+            <TextField
+              fullWidth
+              label="Fecha y hora"
+              onChange={(event) => setCustomExpiresAt(event.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
+              type="datetime-local"
+              value={customExpiresAt}
+            />
+          ) : null}
+          <Button disabled={creating || (expiryMode === 'custom' && !customExpiresAt)} startIcon={<KeyOutlined />} type="submit" variant="contained">{creating ? 'Creando...' : 'Crear clave'}</Button>
         </Stack>
       ),
     });
 
     return () => setHeaderAction(null);
-  }, [closeHeaderAction, creating, expiryMode, name, setHeaderAction]);
+  }, [closeHeaderAction, creating, customExpiresAt, expiryMode, name, setHeaderAction]);
 
   async function toggleStatus(credential: ApiCredential) {
     if (credential.status === 'EXPIRED') return;
@@ -175,7 +199,7 @@ export function ApiKeysPage() {
         ) : (
           <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <DataTable
-              columns={['Nombre', 'Codigo', 'Estado', 'Expira', 'Ultimo uso', { name: 'Acciones', sort: false }]}
+              columns={['Nombre', 'Codigo', 'Estado', { name: 'Activo', sort: false }, 'Expira', 'Ultimo uso', { name: 'Acciones', sort: false }]}
               data={credentials.slice(page * rowsPerPage, (page + 1) * rowsPerPage).map((credential) => [
                 <Stack key="name" spacing={0.25}>
                   <Typography sx={{ fontWeight: 700, fontSize: '0.85rem' }}>{credential.name}</Typography>
@@ -194,24 +218,23 @@ export function ApiKeysPage() {
                   </Stack>
                 </Stack>,
                 <Chip key="s" label={statusLabel(credential.status)} size="small" />,
+                <Tooltip key="enabled" title={credential.status === 'EXPIRED' ? 'Expirada' : credential.status === 'ACTIVE' ? 'Deshabilitar' : 'Activar'}>
+                  <span>
+                    <Switch
+                      checked={isVisuallyActive(credential)}
+                      disabled={credential.status === 'EXPIRED' || togglingId === credential.id}
+                      onChange={() => void toggleStatus(credential)}
+                      size="small"
+                      sx={credential.status === 'EXPIRED' ? { opacity: 0.45, pointerEvents: 'none' } : undefined}
+                    />
+                  </span>
+                </Tooltip>,
                 formatDate(credential.expiresAt),
                 <Stack key="used" spacing={0.25}>
                   <Typography sx={{ fontSize: '0.82rem' }}>{formatDate(credential.lastUsedAt)}</Typography>
                   {credential.lastUsedIp ? <Typography color="text.secondary" variant="caption">IP: {credential.lastUsedIp}</Typography> : null}
                 </Stack>,
                 <Box key="a" sx={{ display: 'flex', gap: 0.75, alignItems: 'center', justifyContent: 'flex-end' }}>
-                  {credential.status !== 'EXPIRED' ? (
-                    <Button
-                      color={credential.status === 'ACTIVE' ? 'warning' : 'primary'}
-                      disabled={togglingId === credential.id}
-                      onClick={() => void toggleStatus(credential)}
-                      size="small"
-                      startIcon={<PoweroffOutlined />}
-                      variant="outlined"
-                    >
-                      {credential.status === 'ACTIVE' ? 'Deshabilitar' : 'Activar'}
-                    </Button>
-                  ) : null}
                   <Tooltip title="Eliminar clave">
                     <span>
                       <IconButton color="error" disabled={deletingId === credential.id} onClick={() => void remove(credential.id, credential.name)} size="small">

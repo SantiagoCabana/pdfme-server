@@ -83,7 +83,12 @@ apiCredentialsRouter.patch('/api-credentials/:id/disable', requirePermission('ap
     });
 
     response.json({ ok: true, credential });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'API_KEY_EXPIRED') {
+      response.status(400).json({ message: 'La clave expirada no se puede cambiar.' });
+      return;
+    }
+
     response.status(404).json({ message: 'No se encontro la clave API.' });
   }
 });
@@ -110,7 +115,12 @@ apiCredentialsRouter.patch('/api-credentials/:id/activate', requirePermission('a
     });
 
     response.json({ ok: true, credential });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'API_KEY_EXPIRED') {
+      response.status(400).json({ message: 'La clave expirada no se puede cambiar.' });
+      return;
+    }
+
     response.status(404).json({ message: 'No se encontro la clave API.' });
   }
 });

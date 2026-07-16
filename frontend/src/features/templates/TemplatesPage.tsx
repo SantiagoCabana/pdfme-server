@@ -82,7 +82,6 @@ type EditorHeaderControlsProps = {
   savingVersion: boolean;
   switchingVersion: boolean;
   onBack: () => void;
-  onClearBackground: () => void;
   onEditPreview: () => void;
   onFormatChange: (format: string) => void;
   onHeightChange: (height: number) => void;
@@ -107,7 +106,6 @@ function EditorHeaderControls({
   savingVersion,
   switchingVersion,
   onBack,
-  onClearBackground,
   onEditPreview,
   onFormatChange,
   onHeightChange,
@@ -185,7 +183,6 @@ function EditorHeaderControls({
               Cambiar version
             </MenuItem>
             <MenuItem onClick={() => { closeMenu(); onOpenDetails(); }}>Propiedades</MenuItem>
-            <MenuItem onClick={() => { closeMenu(); onClearBackground(); }}>Quitar fondo</MenuItem>
           </Menu>
         </Stack>
       )}
@@ -302,24 +299,6 @@ function updatePdfmeBackground(current: PdfmeTemplate | null, dataUrl: string, w
         backgroundSchema,
         ...staticSchema.filter((schema: any) => schema?.name !== backgroundSchemaName),
       ],
-    },
-  } as unknown as PdfmeTemplate;
-}
-
-function removePdfmeBackground(current: PdfmeTemplate | null) {
-  if (!current) return current;
-
-  const currentBasePdf = typeof current.basePdf === 'object' && current.basePdf && !Array.isArray(current.basePdf)
-    ? current.basePdf as Record<string, unknown>
-    : {};
-  const staticSchema = Array.isArray(currentBasePdf.staticSchema) ? currentBasePdf.staticSchema : [];
-
-  return {
-    ...current,
-    basePdf: {
-      ...currentBasePdf,
-      padding: currentBasePdf.padding ?? [0, 0, 0, 0],
-      staticSchema: staticSchema.filter((schema: any) => schema?.name !== backgroundSchemaName),
     },
   } as unknown as PdfmeTemplate;
 }
@@ -689,10 +668,6 @@ export function TemplatesPage() {
     reader.readAsDataURL(file);
   }
 
-  function clearBackground() {
-    setDesignerTemplate((current) => removePdfmeBackground(current));
-  }
-
   const prevSchemasRef = useRef<Record<string, string>>({});
   const lastLoadedTemplateIdRef = useRef<string | null>(null);
 
@@ -959,7 +934,6 @@ export function TemplatesPage() {
         hasMultipleVersions={hasMultipleVersions}
         isPreviewRoute={isPreviewRoute}
         onBack={() => navigate('/templates')}
-        onClearBackground={clearBackground}
         onEditPreview={() => navigate(`/templates/edit/${editingTemplate.code}`)}
         onFormatChange={setFormat}
         onHeightChange={(next) => { setPageHeightMm(next); setDesignerTemplate((current) => updatePdfmeBasePdf(current, { height: next })); }}

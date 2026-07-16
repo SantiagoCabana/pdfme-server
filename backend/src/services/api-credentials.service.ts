@@ -87,6 +87,15 @@ export async function createApiCredential(input: {
 }
 
 export async function disableApiCredential(id: string, revokedById?: string | null) {
+  const current = await prisma.apiCredential.findUniqueOrThrow({
+    where: { id },
+    select: { expiresAt: true, status: true },
+  });
+
+  if (current.status === 'EXPIRED' || (current.expiresAt && current.expiresAt.getTime() < Date.now())) {
+    throw new Error('API_KEY_EXPIRED');
+  }
+
   const credential = await prisma.apiCredential.update({
     where: { id },
     data: {
@@ -100,6 +109,15 @@ export async function disableApiCredential(id: string, revokedById?: string | nu
 }
 
 export async function activateApiCredential(id: string) {
+  const current = await prisma.apiCredential.findUniqueOrThrow({
+    where: { id },
+    select: { expiresAt: true, status: true },
+  });
+
+  if (current.status === 'EXPIRED' || (current.expiresAt && current.expiresAt.getTime() < Date.now())) {
+    throw new Error('API_KEY_EXPIRED');
+  }
+
   const credential = await prisma.apiCredential.update({
     where: { id },
     data: {
