@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Typography, Button } from '@mui/material';
+import { Box, Typography, Button, MenuItem, Select } from '@mui/material';
 import { AppScrollbar } from './AppScrollbar';
 
 export interface DataTableColumn {
@@ -144,15 +144,40 @@ export function PaginationBar({ page, setPage, rowsPerPage, setRowsPerPage, tota
       </Typography>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Typography variant="caption" color="text.secondary">Filas por página:</Typography>
-        <select
-          value={rowsPerPage}
-          onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(0); }}
-          style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #d9d9d9', fontSize: '0.75rem', outline: 'none', cursor: 'pointer', background: 'transparent' }}
+        <Select
+          size="small"
+          value={String(rowsPerPage)}
+          onChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }}
+          sx={{
+            minWidth: 72,
+            bgcolor: 'background.paper',
+            color: 'text.primary',
+            fontSize: '0.75rem',
+            '& .MuiSelect-select': {
+              py: 0.5,
+              pl: 1.25,
+              pr: 3,
+              minHeight: 'unset',
+            },
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'divider',
+            },
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'primary.main',
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'primary.main',
+              borderWidth: 1,
+            },
+            '& .MuiSvgIcon-root': {
+              color: 'text.secondary',
+            },
+          }}
         >
-          <option value={10}>10</option>
-          <option value={25}>25</option>
-          <option value={50}>50</option>
-        </select>
+          <MenuItem value="10">10</MenuItem>
+          <MenuItem value="25">25</MenuItem>
+          <MenuItem value="50">50</MenuItem>
+        </Select>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Button size="small" disabled={page === 0} onClick={() => setPage((p) => p - 1)} sx={{ minWidth: 'auto', px: 1 }}>{'<'}</Button>
           <Typography variant="caption" sx={{ px: 1, whiteSpace: 'nowrap' }}>{page + 1} / {totalPages}</Typography>
