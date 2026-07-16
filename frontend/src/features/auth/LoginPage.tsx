@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { LoginOutlined } from '@ant-design/icons';
-import { Alert, Avatar, Box, Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material';
 
 import { useAppContext } from '../../app/AppContext';
 import type { SessionUser } from '../../app/types';
+import { AppLogo } from '../../layout/AppLogo';
 import { apiRequest } from '../../shared/api/client';
 
 export function LoginPage() {
@@ -41,13 +42,10 @@ export function LoginPage() {
       <Card sx={{ width: '100%', maxWidth: 420, boxShadow: 3 }}>
         <CardContent sx={{ p: 4 }}>
           <Stack autoComplete="off" spacing={2.25} component="form" onSubmit={submit}>
-            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-              <Avatar variant="rounded" sx={{ bgcolor: 'primary.main', fontWeight: 700 }}>PS</Avatar>
-              <Box>
-                <Typography variant="caption" color="text.secondary">Pdfme Server</Typography>
-                <Typography variant="h4">Iniciar sesion</Typography>
-              </Box>
-            </Stack>
+            <Box sx={{ display: 'flex', justifyContent: 'center', pb: 0.5 }}>
+              <AppLogo />
+            </Box>
+            <Typography variant="h4" sx={{ textAlign: 'center' }}>Iniciar sesion</Typography>
             {error ? <Alert severity="error">{error}</Alert> : null}
             <TextField autoComplete="off" label="Correo" onChange={(event) => setEmail(event.target.value)} type="email" value={email} />
             <TextField autoComplete="new-password" label="Contrasena" onChange={(event) => setPassword(event.target.value)} type="password" value={password} />

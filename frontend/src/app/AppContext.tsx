@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import type { SessionUser } from './types';
-import type { ThemeMode } from '../theme/mantisTheme';
+import type { ThemeMode } from '../theme/appTheme';
 
 export type HeaderAction = {
   label: string;

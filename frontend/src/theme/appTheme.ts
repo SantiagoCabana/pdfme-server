@@ -2,7 +2,7 @@ import { createTheme } from '@mui/material/styles';
 
 export type ThemeMode = 'light' | 'dark';
 
-export function createMantisTheme(mode: ThemeMode) {
+export function createAppTheme(mode: ThemeMode) {
   const isDark = mode === 'dark';
 
   return createTheme({

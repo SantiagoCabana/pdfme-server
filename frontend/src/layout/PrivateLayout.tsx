@@ -39,7 +39,7 @@ import { useAppContext } from '../app/AppContext';
 import { can } from '../app/session';
 import { apiRequest } from '../shared/api/client';
 import { AppScrollbar } from '../shared/components/AppScrollbar';
-import { MantisLogo } from './MantisLogo';
+import { AppLogo } from './AppLogo';
 
 const drawerWidth = 260;
 const miniDrawerWidth = 72;
@@ -130,14 +130,14 @@ export function PrivateLayout() {
               }}
               type="button"
             >
-              <Box className="logoMark" sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}><MantisLogo /></Box>
+              <Box className="logoMark" sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}><AppLogo showText={false} /></Box>
               <Box className="toggleMark" sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 20 }}><MenuUnfoldOutlined /></Box>
             </Box>
           </Tooltip>
         ) : (
           <>
             <RouterLink aria-label="Logo" to="/templates" className="logo-link">
-              <Box sx={{ display: 'grid', placeItems: 'start', width: 118, overflow: 'hidden', transition: sidebarTransition }}><MantisLogo /></Box>
+              <Box sx={{ display: 'grid', placeItems: 'start', width: 178, overflow: 'hidden', transition: sidebarTransition }}><AppLogo /></Box>
             </RouterLink>
             <Tooltip title="Ocultar sidebar">
               <IconButton color="secondary" onClick={() => setOpen(false)} size="small" sx={{ display: { xs: 'none', lg: 'inline-flex' }, flexShrink: 0, mr: -0.5 }}>

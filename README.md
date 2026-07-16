@@ -112,7 +112,7 @@ Create `frontend/.env` from `frontend/.env.example` when needed:
 
 ```env
 VITE_API_BASE_URL=
-VITE_APP_NAME=Pdfme Server
+VITE_APP_NAME=PDF Server
 ```
 
 In development, leaving `VITE_API_BASE_URL` empty makes Vite proxy `/api` to `http://localhost:4000`.

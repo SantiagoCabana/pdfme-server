@@ -211,7 +211,7 @@ small {
 }
 
 [data-theme='dark'] .pdfme-workspace {
-  --pdfme-bg: #181818;
+  --pdfme-bg: #3a3a3a;
   --pdfme-panel: #1b1b1b;
   --pdfme-panel-soft: #222222;
   --pdfme-panel-strong: #282828;
@@ -226,6 +226,7 @@ small {
 }
 
 .pdfme-workspace .pdfme-container,
+.pdfme-designer-root,
 .pdfme-workspace .pdfme-container > div {
   background: var(--pdfme-bg) !important;
 }

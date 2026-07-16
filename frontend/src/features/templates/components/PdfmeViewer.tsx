@@ -3,7 +3,7 @@ import type { Schema, Template as PdfmeTemplate } from '@pdfme/common';
 import { Form } from '@pdfme/ui';
 import { Alert } from '@mui/material';
 
-import type { ThemeMode } from '../../../theme/mantisTheme';
+import type { ThemeMode } from '../../../theme/appTheme';
 import { pdfmePlugins } from './PdfmeDesigner';
 import { loadPdfmeFonts } from './pdfmeFonts';
 import { createPdfmeTheme } from './pdfmeTheme';

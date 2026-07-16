@@ -11,7 +11,7 @@ import { AppContext, type HeaderAction } from './app/AppContext';
 import type { SessionUser } from './app/types';
 import { apiRequest } from './shared/api/client';
 import { AppBootLoader, LoadingState } from './shared/components/LoadingState';
-import { createMantisTheme, type ThemeMode } from './theme/mantisTheme';
+import { createAppTheme, type ThemeMode } from './theme/appTheme';
 import 'gridjs/dist/theme/mermaid.css';
 import './styles/app.css';
 
@@ -53,7 +53,7 @@ export default function App() {
       .finally(() => setLoading(false));
   }, []);
 
-  const theme = useMemo(() => createMantisTheme(mode), [mode]);
+  const theme = useMemo(() => createAppTheme(mode), [mode]);
   const bumpReloadDataToken = useCallback(() => setReloadDataToken((value) => value + 1), []);
   const toggleMode = useCallback(() => setMode((value) => value === 'dark' ? 'light' : 'dark'), []);
   const openHeaderAction = useCallback(() => setHeaderActionOpen(true), []);

@@ -19,7 +19,7 @@ import {
   time,
 } from '@pdfme/schemas';
 
-import type { ThemeMode } from '../../../theme/mantisTheme';
+import type { ThemeMode } from '../../../theme/appTheme';
 import { loadPdfmeFonts } from './pdfmeFonts';
 import { createPdfmeTheme } from './pdfmeTheme';
 

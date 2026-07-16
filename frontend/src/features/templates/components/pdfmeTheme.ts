@@ -1,4 +1,4 @@
-import type { ThemeMode } from '../../../theme/mantisTheme';
+import type { ThemeMode } from '../../../theme/appTheme';
 
 export function createPdfmeTheme(mode: ThemeMode) {
   const isDark = mode === 'dark';
