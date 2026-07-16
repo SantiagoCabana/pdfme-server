@@ -73,6 +73,72 @@ const templateInclude = {
   tags: { include: { tag: true } },
 };
 
+const templateCatalogInclude = {
+  versions: {
+    orderBy: { versionNumber: 'asc' as const },
+    select: {
+      id: true,
+      versionNumber: true,
+      isCurrent: true,
+      isPublished: true,
+      createdAt: true,
+      updatedAt: true,
+      pages: {
+        orderBy: { pageNumber: 'asc' as const },
+        select: {
+          pageFormat: true,
+          pageOrientation: true,
+          pageWidthMm: true,
+          pageHeightMm: true,
+          paddingVerticalMm: true,
+          paddingHorizontalMm: true,
+        },
+        take: 1,
+      },
+      _count: { select: { pages: true } },
+    },
+  },
+  tags: { include: { tag: true } },
+};
+
+function mapTemplateCatalogItem(template: Prisma.TemplateGetPayload<{
+  include: typeof templateCatalogInclude;
+}>) {
+  const currentVersion = template.versions.find((version) => version.isCurrent) ?? template.versions[0];
+  const firstPage = currentVersion?.pages[0];
+
+  return {
+    id: template.id,
+    name: template.name,
+    code: template.code,
+    thumbnailUrl: template.thumbnailUrl,
+    status: template.status,
+    lastPublishedAt: template.lastPublishedAt?.toISOString() ?? null,
+    versionNumber: currentVersion?.versionNumber ?? 0,
+    versionId: currentVersion?.id ?? null,
+    versions: template.versions.map((version) => ({
+      id: version.id,
+      versionNumber: version.versionNumber,
+      isCurrent: version.isCurrent,
+      isPublished: version.isPublished,
+      pageCount: version._count.pages,
+      createdAt: version.createdAt.toISOString(),
+      updatedAt: version.updatedAt.toISOString(),
+    })),
+    isPublished: currentVersion?.isPublished ?? false,
+    pageCount: currentVersion?._count.pages ?? 0,
+    pageFormat: firstPage?.pageFormat ?? 'A4',
+    pageOrientation: firstPage?.pageOrientation ?? 'PORTRAIT',
+    pageWidthMm: firstPage?.pageWidthMm ?? 210,
+    pageHeightMm: firstPage?.pageHeightMm ?? 297,
+    paddingVerticalMm: firstPage?.paddingVerticalMm ?? 12,
+    paddingHorizontalMm: firstPage?.paddingHorizontalMm ?? 12,
+    tags: template.tags.map((entry) => entry.tag.name),
+    createdAt: template.createdAt.toISOString(),
+    updatedAt: template.updatedAt.toISOString(),
+  };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -112,10 +178,10 @@ export async function listTemplateCatalog() {
   const templates = await prisma.template.findMany({
     where: { status: { not: 'ARCHIVED' } },
     orderBy: { updatedAt: 'desc' },
-    include: templateInclude,
+    include: templateCatalogInclude,
   });
 
-  return templates.map(mapTemplate);
+  return templates.map(mapTemplateCatalogItem);
 }
 
 export async function getTemplateByCode(code: string) {

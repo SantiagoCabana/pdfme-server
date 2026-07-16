@@ -32,7 +32,7 @@ export type TemplateItem = {
   pageHeightMm: number;
   paddingVerticalMm: number;
   paddingHorizontalMm: number;
-  designerJson: Partial<PdfmeTemplate>;
+  designerJson?: Partial<PdfmeTemplate>;
   tags: string[];
   updatedAt: string;
 };
