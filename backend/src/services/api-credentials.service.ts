@@ -7,15 +7,20 @@ function hashApiKey(rawKey: string) {
   return crypto.createHmac('sha256', env.API_KEY_SECRET).update(rawKey).digest('hex');
 }
 
+function createApiCode(length = 48) {
+  const alphabet = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const bytes = crypto.randomBytes(length);
+
+  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('');
+}
+
 export function createRawApiKey() {
-  const code = crypto.randomUUID();
-  const secret = crypto.randomBytes(32).toString('base64url');
-  const rawKey = `${code}.${secret}`;
+  const rawKey = createApiCode();
 
   return {
     rawKey,
-    prefix: code,
-    secretPreview: `${secret.slice(0, 4)}...${secret.slice(-4)}`,
+    prefix: rawKey,
+    secretPreview: `${rawKey.slice(0, 6)}...${rawKey.slice(-6)}`,
     keyHash: hashApiKey(rawKey),
   };
 }
@@ -100,7 +105,7 @@ export async function deleteApiCredential(id: string) {
 }
 
 export async function authenticateApiKey(rawKey: string, requestMeta?: { origin?: string | null; ip?: string | null }) {
-  const prefix = rawKey.split('.')[0];
+  const prefix = rawKey.includes('.') ? rawKey.split('.')[0] : rawKey;
 
   if (!prefix) {
     return null;

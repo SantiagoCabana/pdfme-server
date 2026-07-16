@@ -39,6 +39,10 @@ export function ApiKeysPage() {
     await toast.fire({ icon: 'success', title: message });
   }
 
+  function shortCode(value: string) {
+    return value.length > 20 ? `${value.slice(0, 8)}...${value.slice(-6)}` : value;
+  }
+
   async function load() {
     setLoading(true);
     try {
@@ -160,7 +164,7 @@ export function ApiKeysPage() {
                 <Stack key="code" spacing={0.25}>
                   <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
                     <Box component="code" sx={{ bgcolor: 'action.hover', borderRadius: 1, display: 'inline-flex', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.03em', px: 1, py: 0.5, width: 'fit-content' }}>
-                      {credential.prefix}
+                      {shortCode(credential.prefix)}
                     </Box>
                     <Tooltip title="Copiar codigo">
                       <IconButton onClick={() => void copyText(credential.prefix, 'Codigo copiado')} size="small">
