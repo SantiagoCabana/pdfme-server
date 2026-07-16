@@ -243,7 +243,7 @@ export function ApiKeysPage() {
                     />
                   </span>
                 </Tooltip>,
-                <Typography key="expires" noWrap sx={{ display: 'block', minWidth: 132 }} title={formatDate(credential.expiresAt)}>
+                <Typography key="expires" noWrap sx={{ display: 'block', fontSize: '0.85rem', lineHeight: 1.57, minWidth: 132 }} title={formatDate(credential.expiresAt)}>
                   {formatDate(credential.expiresAt)}
                 </Typography>,
                 <Stack key="used" spacing={0.25}>
