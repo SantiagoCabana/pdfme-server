@@ -243,7 +243,9 @@ export function ApiKeysPage() {
                     />
                   </span>
                 </Tooltip>,
-                formatDate(credential.expiresAt),
+                <Typography key="expires" noWrap sx={{ display: 'block', minWidth: 132 }} title={formatDate(credential.expiresAt)}>
+                  {formatDate(credential.expiresAt)}
+                </Typography>,
                 <Stack key="used" spacing={0.25}>
                   <Typography sx={{ fontSize: '0.82rem' }}>{formatDate(credential.lastUsedAt)}</Typography>
                   {credential.lastUsedIp ? <Typography color="text.secondary" variant="caption">IP: {credential.lastUsedIp}</Typography> : null}
