@@ -199,7 +199,15 @@ export function ApiKeysPage() {
         ) : (
           <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <DataTable
-              columns={['Nombre', 'Codigo', 'Estado', { name: 'Activo', sort: false }, 'Expira', 'Ultimo uso', { name: 'Acciones', sort: false }]}
+              columns={[
+                { name: 'Nombre', minWidth: 190, width: '23%' },
+                { name: 'Codigo', minWidth: 150, width: '20%' },
+                { name: 'Estado', minWidth: 104, width: 112 },
+                { name: 'Activo', align: 'center', minWidth: 82, sort: false, width: 90 },
+                { name: 'Expira', minWidth: 150, width: 170 },
+                { name: 'Ultimo uso', minWidth: 150, width: 170 },
+                { name: 'Acciones', align: 'right', minWidth: 86, sort: false, width: 96 },
+              ]}
               data={credentials.slice(page * rowsPerPage, (page + 1) * rowsPerPage).map((credential) => [
                 <Stack key="name" spacing={0.25}>
                   <Typography sx={{ fontWeight: 700, fontSize: '0.85rem' }}>{credential.name}</Typography>
@@ -217,7 +225,7 @@ export function ApiKeysPage() {
                     </Tooltip>
                   </Stack>
                 </Stack>,
-                <Chip key="s" label={statusLabel(credential.status)} size="small" />,
+                <Chip key="s" label={statusLabel(credential.status)} size="small" sx={{ minWidth: 78 }} />,
                 <Tooltip key="enabled" title={credential.status === 'EXPIRED' ? 'Expirada' : credential.status === 'ACTIVE' ? 'Deshabilitar' : 'Activar'}>
                   <span>
                     <Switch
