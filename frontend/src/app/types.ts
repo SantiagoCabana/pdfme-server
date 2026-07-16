@@ -41,10 +41,13 @@ export type ApiCredential = {
   id: string;
   name: string;
   prefix: string;
+  secretPreview: string;
   status: string;
   expiresAt: string | null;
   lastUsedAt: string | null;
+  lastUsedIp: string | null;
   revokedAt: string | null;
+  createdAt: string;
 };
 
 export type InternalUser = {

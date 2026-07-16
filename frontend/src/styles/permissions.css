@@ -17,6 +17,16 @@
   transform: scale(1.03);
 }
 
+.custom-toggle-switch.disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.custom-toggle-switch.disabled:hover {
+  box-shadow: none;
+  transform: none;
+}
+
 .custom-toggle-switch.checked {
   background-color: rgba(22, 119, 255, 0.12);
   border-color: rgba(22, 119, 255, 0.3);

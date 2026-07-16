@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import {
   createApiCredential,
+  deleteApiCredential,
   listApiCredentials,
   revokeApiCredential,
 } from '../services/api-credentials.service.js';
@@ -69,6 +70,33 @@ apiCredentialsRouter.patch('/api-credentials/:id/revoke', requirePermission('api
     await logAuditEvent({
       actorId: actor?.id ?? null,
       action: 'Revocar clave API',
+      entityType: 'API_KEY',
+      entityId: credential.id,
+      metadata: {
+        detail,
+        actorName: actor?.displayName || 'Desconocido',
+        actorRole,
+        credentialName: credential.name,
+        credentialPrefix: credential.prefix,
+      }
+    });
+
+    response.json({ ok: true, credential });
+  } catch {
+    response.status(404).json({ message: 'No se encontro la clave API.' });
+  }
+});
+
+apiCredentialsRouter.delete('/api-credentials/:id', requirePermission('api_keys.manage'), async (request, response) => {
+  try {
+    const credential = await deleteApiCredential(request.params.id);
+
+    const actor = response.locals.user;
+    const actorRole = getSpanishRole(actor?.roles, actor?.isSuperAdmin);
+    const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha eliminado la clave API "${credential.name}"`;
+    await logAuditEvent({
+      actorId: actor?.id ?? null,
+      action: 'Eliminar clave API',
       entityType: 'API_KEY',
       entityId: credential.id,
       metadata: {

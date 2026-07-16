@@ -15,6 +15,8 @@ export async function listPermissionMatrix() {
     orderBy: [{ category: 'asc' }, { code: 'asc' }],
   });
 
+  const activePermissionCodes = permissions.map((permission) => permission.code);
+
   return {
     roles: roles.map((role) => ({
       id: role.id,
@@ -22,7 +24,9 @@ export async function listPermissionMatrix() {
       name: role.name,
       description: role.description,
       isSystem: role.isSystem,
-      permissions: role.permissions.map((entry) => entry.accessPermission.code),
+      permissions: role.code === 'ADMIN'
+        ? activePermissionCodes
+        : role.permissions.map((entry) => entry.accessPermission.code),
     })),
     permissions: permissions.map((permission) => ({
       id: permission.id,
@@ -35,6 +39,15 @@ export async function listPermissionMatrix() {
 }
 
 export async function updateRolePermissions(roleId: string, permissionCodes: string[]) {
+  const role = await prisma.accessRole.findUniqueOrThrow({
+    where: { id: roleId },
+    select: { code: true },
+  });
+
+  if (role.code === 'ADMIN') {
+    throw new Error('ADMIN_ROLE_LOCKED');
+  }
+
   const permissions = await prisma.accessPermission.findMany({
     where: { code: { in: permissionCodes }, status: true },
     select: { id: true },

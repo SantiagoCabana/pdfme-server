@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { SettingOutlined, EditOutlined, EyeOutlined, UserOutlined } from '@ant-design/icons';
-import { Alert, Box, Card, Dialog, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { Alert, Box, Card, Chip, Dialog, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 
 import type { AccessPermissionItem, AccessRoleItem } from '../../app/types';
 import { apiRequest } from '../../shared/api/client';
@@ -39,13 +39,15 @@ const getRoleIcon = (code: string) => {
 interface CustomToggleSwitchProps {
   checked: boolean;
   onChange: () => void;
+  disabled?: boolean;
 }
 
-export function CustomToggleSwitch({ checked, onChange }: CustomToggleSwitchProps) {
+export function CustomToggleSwitch({ checked, disabled = false, onChange }: CustomToggleSwitchProps) {
   return (
     <div
-      onClick={onChange}
-      className={`custom-toggle-switch ${checked ? 'checked' : 'unchecked'}`}
+      aria-disabled={disabled}
+      onClick={disabled ? undefined : onChange}
+      className={`custom-toggle-switch ${checked ? 'checked' : 'unchecked'} ${disabled ? 'disabled' : ''}`}
     >
       <span className={`custom-toggle-switch-text ${checked ? 'checked' : 'unchecked'}`}>
         {checked ? 'SÍ' : 'NO'}
@@ -75,6 +77,10 @@ export function PermissionsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [activeModalRoleId, setActiveModalRoleId] = useState<string | null>(null);
+
+  function isAdminRole(role: AccessRoleItem) {
+    return role.code === 'ADMIN';
+  }
 
   async function load() {
     setLoading(true);
@@ -117,6 +123,9 @@ export function PermissionsPage() {
   }, [groupedPermissions]);
 
   function togglePermission(roleId: string, permissionCode: string) {
+    const role = roles.find((entry) => entry.id === roleId);
+    if (role && isAdminRole(role)) return;
+
     setDraft((current) => {
       const values = new Set(current[roleId] ?? []);
       if (values.has(permissionCode)) {
@@ -131,6 +140,8 @@ export function PermissionsPage() {
 
   const hasChanges = useMemo(() => {
     return roles.some((role) => {
+      if (isAdminRole(role)) return false;
+
       const original = role.permissions;
       const current = draft[role.id] ?? [];
       if (original.length !== current.length) return true;
@@ -144,6 +155,8 @@ export function PermissionsPage() {
     setSaving(true);
     try {
       const changedRoles = roles.filter((role) => {
+        if (isAdminRole(role)) return false;
+
         const original = role.permissions;
         const current = draft[role.id] ?? [];
         if (original.length !== current.length) return true;
@@ -196,9 +209,12 @@ export function PermissionsPage() {
                   <TableCell key={role.id} sx={{ pb: 2.5, pt: 3, minWidth: 320 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       {getRoleIcon(role.code)}
-                      <Typography sx={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>
-                        {role.name}
-                      </Typography>
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                        <Typography sx={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>
+                          {role.name}
+                        </Typography>
+                        {isAdminRole(role) ? <Chip color="primary" label="Fijo" size="small" variant="outlined" /> : null}
+                      </Stack>
                     </Box>
                   </TableCell>
                 ))}
@@ -239,33 +255,36 @@ export function PermissionsPage() {
                       {sortedRoles.map((role) => {
                         if (category.key === 'access') {
                           const permissionCode = 'users.manage';
-                          const checked = draft[role.id]?.includes(permissionCode) ?? false;
+                          const checked = isAdminRole(role) || (draft[role.id]?.includes(permissionCode) ?? false);
                           return (
                             <TableCell key={role.id} sx={{ py: 4.5, verticalAlign: 'middle' }}>
                               <CustomToggleSwitch
                                 checked={checked}
+                                disabled={isAdminRole(role)}
                                 onChange={() => togglePermission(role.id, permissionCode)}
                               />
                             </TableCell>
                           );
                         } else if (category.key === 'api') {
                           const permissionCode = 'api_keys.manage';
-                          const checked = draft[role.id]?.includes(permissionCode) ?? false;
+                          const checked = isAdminRole(role) || (draft[role.id]?.includes(permissionCode) ?? false);
                           return (
                             <TableCell key={role.id} sx={{ py: 4.5, verticalAlign: 'middle' }}>
                               <CustomToggleSwitch
                                 checked={checked}
+                                disabled={isAdminRole(role)}
                                 onChange={() => togglePermission(role.id, permissionCode)}
                               />
                             </TableCell>
                           );
                         } else if (category.key === 'audit') {
                           const permissionCode = 'audit.view';
-                          const checked = draft[role.id]?.includes(permissionCode) ?? false;
+                          const checked = isAdminRole(role) || (draft[role.id]?.includes(permissionCode) ?? false);
                           return (
                             <TableCell key={role.id} sx={{ py: 4.5, verticalAlign: 'middle' }}>
                               <CustomToggleSwitch
                                 checked={checked}
+                                disabled={isAdminRole(role)}
                                 onChange={() => togglePermission(role.id, permissionCode)}
                               />
                             </TableCell>
@@ -313,7 +332,8 @@ export function PermissionsPage() {
                 { label: 'ELIMINAR', code: 'templates.delete' },
                 { label: 'VER', code: 'templates.view' },
               ].map((item) => {
-                const checked = draft[activeModalRole.id]?.includes(item.code) ?? false;
+                const locked = isAdminRole(activeModalRole);
+                const checked = locked || (draft[activeModalRole.id]?.includes(item.code) ?? false);
                 return (
                   <Box
                     key={item.code}
@@ -338,6 +358,7 @@ export function PermissionsPage() {
                     </Typography>
                     <CustomToggleSwitch
                       checked={checked}
+                      disabled={locked}
                       onChange={() => togglePermission(activeModalRole.id, item.code)}
                     />
                   </Box>

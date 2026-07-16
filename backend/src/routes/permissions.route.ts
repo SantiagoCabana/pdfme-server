@@ -29,7 +29,12 @@ permissionsRouter.patch('/roles/:id/permissions', requirePermission('users.manag
 
   try {
     response.json(await updateRolePermissions(request.params.id, parsed.data.permissionCodes));
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'ADMIN_ROLE_LOCKED') {
+      response.status(400).json({ message: 'El rol ADMIN siempre conserva todos los permisos.' });
+      return;
+    }
+
     response.status(404).json({ message: 'No se encontro el rol.' });
   }
 });

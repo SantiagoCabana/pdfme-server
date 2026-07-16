@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { KeyOutlined, StopOutlined } from '@ant-design/icons';
-import { Alert, Box, Button, Card, Chip, Stack, TextField, MenuItem, Typography } from '@mui/material';
+import { CheckOutlined, CopyOutlined, DeleteOutlined, KeyOutlined, StopOutlined } from '@ant-design/icons';
+import { Alert, Box, Button, Card, Chip, IconButton, Stack, TextField, MenuItem, Tooltip, Typography } from '@mui/material';
 import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 import { LoadingState } from '../../shared/components/LoadingState';
 
@@ -19,6 +19,8 @@ export function ApiKeysPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [revokingId, setRevokingId] = useState('');
+  const [deletingId, setDeletingId] = useState('');
+  const [copied, setCopied] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(0);
 
@@ -41,6 +43,7 @@ export function ApiKeysPage() {
     try {
       const payload = await apiRequest<{ rawKey: string }>('/api/api-credentials', { method: 'POST', body: JSON.stringify({ name, expiresAt: buildExpiryDate(expiryMode) }) });
       setRawKey(payload.rawKey);
+      setCopied(false);
       await load();
       closeHeaderAction();
     } catch (err) {
@@ -87,12 +90,50 @@ export function ApiKeysPage() {
     }
   }
 
+  async function remove(id: string, name: string) {
+    if (!window.confirm(`Eliminar la clave API "${name}"? Esta accion no se puede deshacer.`)) return;
+
+    setError('');
+    setDeletingId(id);
+    try {
+      await apiRequest(`/api/api-credentials/${id}`, { method: 'DELETE' });
+      setCredentials((current) => current.filter((credential) => credential.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo eliminar la clave.');
+    } finally {
+      setDeletingId('');
+    }
+  }
+
+  async function copyRawKey() {
+    if (!rawKey) return;
+
+    await navigator.clipboard.writeText(rawKey);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
+  }
+
 
 
   return (
     <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
       {error ? <Alert severity="error">{error}</Alert> : null}
-      {rawKey ? <Alert severity="info"><strong>Clave generada:</strong> <code>{rawKey}</code>. Guardala ahora; no se volvera a mostrar completa.</Alert> : null}
+      {rawKey ? (
+        <Alert
+          action={(
+            <Button color="inherit" onClick={() => void copyRawKey()} size="small" startIcon={copied ? <CheckOutlined /> : <CopyOutlined />}>
+              {copied ? 'Copiada' : 'Copiar'}
+            </Button>
+          )}
+          severity="info"
+        >
+          <Stack spacing={0.5}>
+            <Typography component="strong" sx={{ fontWeight: 700 }}>Clave generada</Typography>
+            <Box component="code" sx={{ display: 'block', fontSize: '0.8rem', overflowWrap: 'anywhere' }}>{rawKey}</Box>
+            <Typography variant="caption">Guardala ahora; no se volvera a mostrar completa.</Typography>
+          </Stack>
+        </Alert>
+      ) : null}
       <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0 }}>
         {loading ? (
           <LoadingState label="Cargando claves API..." minHeight="100%" />
@@ -103,19 +144,37 @@ export function ApiKeysPage() {
         ) : (
           <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <DataTable
-              columns={['Nombre', 'Identificador', 'Estado', 'Expira', 'Último uso', { name: 'Acciones', sort: false }]}
+              columns={['Nombre', 'Codigo', 'Estado', 'Expira', 'Ultimo uso', { name: 'Acciones', sort: false }]}
               data={credentials.slice(page * rowsPerPage, (page + 1) * rowsPerPage).map((credential) => [
-                credential.name,
-                credential.prefix,
+                <Stack key="name" spacing={0.25}>
+                  <Typography sx={{ fontWeight: 700, fontSize: '0.85rem' }}>{credential.name}</Typography>
+                  <Typography color="text.secondary" variant="caption">Creada: {formatDate(credential.createdAt)}</Typography>
+                </Stack>,
+                <Stack key="code" spacing={0.25}>
+                  <Box component="code" sx={{ bgcolor: 'action.hover', borderRadius: 1, display: 'inline-flex', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.03em', px: 1, py: 0.5, width: 'fit-content' }}>
+                    {credential.prefix}
+                  </Box>
+                  <Typography color="text.secondary" variant="caption">Secreto: {credential.secretPreview}</Typography>
+                </Stack>,
                 <Chip key="s" label={statusLabel(credential.status)} size="small" />,
                 formatDate(credential.expiresAt),
-                formatDate(credential.lastUsedAt),
-                <Box key="a" sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Stack key="used" spacing={0.25}>
+                  <Typography sx={{ fontSize: '0.82rem' }}>{formatDate(credential.lastUsedAt)}</Typography>
+                  {credential.lastUsedIp ? <Typography color="text.secondary" variant="caption">IP: {credential.lastUsedIp}</Typography> : null}
+                </Stack>,
+                <Box key="a" sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
                   {credential.status === 'ACTIVE' ? (
                     <Button color="error" disabled={revokingId === credential.id} onClick={() => void revoke(credential.id)} size="small" startIcon={<StopOutlined />}>
                       {revokingId === credential.id ? 'Revocando...' : 'Revocar'}
                     </Button>
                   ) : null}
+                  <Tooltip title="Eliminar clave">
+                    <span>
+                      <IconButton color="error" disabled={deletingId === credential.id} onClick={() => void remove(credential.id, credential.name)} size="small">
+                        <DeleteOutlined />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
                 </Box>,
               ])}
             />

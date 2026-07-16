@@ -8,7 +8,7 @@ function hashApiKey(rawKey: string) {
 }
 
 export function createRawApiKey() {
-  const prefix = `pms_${crypto.randomBytes(4).toString('hex')}`;
+  const prefix = crypto.randomBytes(6).toString('hex');
   const secret = crypto.randomBytes(28).toString('hex');
   const rawKey = `${prefix}.${secret}`;
 
@@ -91,6 +91,11 @@ export async function revokeApiCredential(id: string, revokedById?: string | nul
     },
   });
 
+  return toApiCredentialResponse(credential);
+}
+
+export async function deleteApiCredential(id: string) {
+  const credential = await prisma.apiCredential.delete({ where: { id } });
   return toApiCredentialResponse(credential);
 }
 
