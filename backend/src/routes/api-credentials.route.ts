@@ -2,10 +2,11 @@ import { Router } from 'express';
 import { z } from 'zod';
 
 import {
+  activateApiCredential,
   createApiCredential,
   deleteApiCredential,
   listApiCredentials,
-  revokeApiCredential,
+  disableApiCredential,
 } from '../services/api-credentials.service.js';
 import { requirePermission } from '../middleware/session-auth.js';
 import { prisma } from '../prisma.js';
@@ -60,16 +61,16 @@ apiCredentialsRouter.post('/api-credentials', requirePermission('api_keys.manage
   response.status(201).json({ ok: true, credential: result.credential, rawKey: result.rawKey });
 });
 
-apiCredentialsRouter.patch('/api-credentials/:id/revoke', requirePermission('api_keys.manage'), async (request, response) => {
+apiCredentialsRouter.patch('/api-credentials/:id/disable', requirePermission('api_keys.manage'), async (request, response) => {
   try {
-    const credential = await revokeApiCredential(request.params.id, response.locals.user?.id ?? null);
+    const credential = await disableApiCredential(request.params.id, response.locals.user?.id ?? null);
 
     const actor = response.locals.user;
     const actorRole = getSpanishRole(actor?.roles, actor?.isSuperAdmin);
-    const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha revocado la clave API "${credential.name}"`;
+    const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha deshabilitado la clave API "${credential.name}"`;
     await logAuditEvent({
       actorId: actor?.id ?? null,
-      action: 'Revocar clave API',
+      action: 'Deshabilitar clave API',
       entityType: 'API_KEY',
       entityId: credential.id,
       metadata: {
@@ -81,6 +82,42 @@ apiCredentialsRouter.patch('/api-credentials/:id/revoke', requirePermission('api
       }
     });
 
+    response.json({ ok: true, credential });
+  } catch {
+    response.status(404).json({ message: 'No se encontro la clave API.' });
+  }
+});
+
+apiCredentialsRouter.patch('/api-credentials/:id/activate', requirePermission('api_keys.manage'), async (request, response) => {
+  try {
+    const credential = await activateApiCredential(request.params.id);
+
+    const actor = response.locals.user;
+    const actorRole = getSpanishRole(actor?.roles, actor?.isSuperAdmin);
+    const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha activado la clave API "${credential.name}"`;
+    await logAuditEvent({
+      actorId: actor?.id ?? null,
+      action: 'Activar clave API',
+      entityType: 'API_KEY',
+      entityId: credential.id,
+      metadata: {
+        detail,
+        actorName: actor?.displayName || 'Desconocido',
+        actorRole,
+        credentialName: credential.name,
+        credentialPrefix: credential.prefix,
+      }
+    });
+
+    response.json({ ok: true, credential });
+  } catch {
+    response.status(404).json({ message: 'No se encontro la clave API.' });
+  }
+});
+
+apiCredentialsRouter.patch('/api-credentials/:id/revoke', requirePermission('api_keys.manage'), async (request, response) => {
+  try {
+    const credential = await disableApiCredential(request.params.id, response.locals.user?.id ?? null);
     response.json({ ok: true, credential });
   } catch {
     response.status(404).json({ message: 'No se encontro la clave API.' });

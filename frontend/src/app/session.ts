@@ -12,7 +12,8 @@ export function formatDate(value: string | null) {
 export function statusLabel(value: string) {
   if (value === 'ACTIVE') return 'Activa';
   if (value === 'DRAFT') return 'Borrador';
-  if (value === 'REVOKED') return 'Revocada';
+  if (value === 'REVOKED') return 'Deshabilitada';
+  if (value === 'EXPIRED') return 'Expirada';
   if (value === 'SUSPENDED') return 'Suspendido';
   if (value === 'INVITED') return 'Invitado';
   return value;

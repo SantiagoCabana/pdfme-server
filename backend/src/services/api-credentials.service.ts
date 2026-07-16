@@ -86,13 +86,26 @@ export async function createApiCredential(input: {
   return { rawKey: key.rawKey, credential: toApiCredentialResponse(credential) };
 }
 
-export async function revokeApiCredential(id: string, revokedById?: string | null) {
+export async function disableApiCredential(id: string, revokedById?: string | null) {
   const credential = await prisma.apiCredential.update({
     where: { id },
     data: {
       status: 'REVOKED',
       revokedAt: new Date(),
       revokedById: revokedById === 'bootstrap-admin' ? null : revokedById ?? null,
+    },
+  });
+
+  return toApiCredentialResponse(credential);
+}
+
+export async function activateApiCredential(id: string) {
+  const credential = await prisma.apiCredential.update({
+    where: { id },
+    data: {
+      status: 'ACTIVE',
+      revokedAt: null,
+      revokedById: null,
     },
   });
 

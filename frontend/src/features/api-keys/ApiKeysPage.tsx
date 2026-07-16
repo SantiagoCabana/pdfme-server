@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { CopyOutlined, DeleteOutlined, KeyOutlined, StopOutlined } from '@ant-design/icons';
-import { Box, Button, Card, Chip, IconButton, Stack, TextField, MenuItem, Tooltip, Typography } from '@mui/material';
+import { CopyOutlined, DeleteOutlined, KeyOutlined } from '@ant-design/icons';
+import { Box, Button, Card, Chip, IconButton, Stack, Switch, TextField, MenuItem, Tooltip, Typography } from '@mui/material';
 import Swal from 'sweetalert2';
 import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 import { LoadingState } from '../../shared/components/LoadingState';
@@ -17,7 +17,7 @@ export function ApiKeysPage() {
   const [expiryMode, setExpiryMode] = useState('never');
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [revokingId, setRevokingId] = useState('');
+  const [togglingId, setTogglingId] = useState('');
   const [deletingId, setDeletingId] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(0);
@@ -108,16 +108,32 @@ export function ApiKeysPage() {
     return () => setHeaderAction(null);
   }, [closeHeaderAction, creating, expiryMode, name, setHeaderAction]);
 
-  async function revoke(id: string) {
-    setRevokingId(id);
+  async function toggleStatus(credential: ApiCredential) {
+    if (credential.status === 'EXPIRED') return;
+
+    const isActive = credential.status === 'ACTIVE';
+    const nextAction = isActive ? 'disable' : 'activate';
+    const result = await Swal.fire({
+      icon: isActive ? 'warning' : 'question',
+      title: isActive ? 'Deshabilitar clave' : 'Activar clave',
+      text: credential.name,
+      confirmButtonText: isActive ? 'Deshabilitar' : 'Activar',
+      cancelButtonText: 'Cancelar',
+      showCancelButton: true,
+      confirmButtonColor: isActive ? '#d32f2f' : '#1677ff',
+    });
+
+    if (!result.isConfirmed) return;
+
+    setTogglingId(credential.id);
     try {
-      await apiRequest(`/api/api-credentials/${id}/revoke`, { method: 'PATCH' });
+      await apiRequest(`/api/api-credentials/${credential.id}/${nextAction}`, { method: 'PATCH' });
       await load();
-      await toast.fire({ icon: 'success', title: 'Clave revocada' });
+      await toast.fire({ icon: 'success', title: isActive ? 'Clave deshabilitada' : 'Clave activada' });
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'No se pudo revocar.');
+      showError(err instanceof Error ? err.message : 'No se pudo actualizar.');
     } finally {
-      setRevokingId('');
+      setTogglingId('');
     }
   }
 
@@ -176,18 +192,21 @@ export function ApiKeysPage() {
                     </Tooltip>
                   </Stack>
                 </Stack>,
-                <Chip key="s" label={statusLabel(credential.status)} size="small" />,
+                <Stack key="s" direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                  <Switch
+                    checked={credential.status === 'ACTIVE'}
+                    disabled={credential.status === 'EXPIRED' || togglingId === credential.id}
+                    onChange={() => void toggleStatus(credential)}
+                    size="small"
+                  />
+                  <Chip label={statusLabel(credential.status)} size="small" />
+                </Stack>,
                 formatDate(credential.expiresAt),
                 <Stack key="used" spacing={0.25}>
                   <Typography sx={{ fontSize: '0.82rem' }}>{formatDate(credential.lastUsedAt)}</Typography>
                   {credential.lastUsedIp ? <Typography color="text.secondary" variant="caption">IP: {credential.lastUsedIp}</Typography> : null}
                 </Stack>,
                 <Box key="a" sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-                  {credential.status === 'ACTIVE' ? (
-                    <Button color="error" disabled={revokingId === credential.id} onClick={() => void revoke(credential.id)} size="small" startIcon={<StopOutlined />}>
-                      {revokingId === credential.id ? 'Revocando...' : 'Revocar'}
-                    </Button>
-                  ) : null}
                   <Tooltip title="Eliminar clave">
                     <span>
                       <IconButton color="error" disabled={deletingId === credential.id} onClick={() => void remove(credential.id, credential.name)} size="small">
