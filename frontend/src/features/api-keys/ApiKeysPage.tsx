@@ -209,8 +209,14 @@ export function ApiKeysPage() {
                 { name: 'Acciones', sort: false },
               ]}
               data={credentials.slice(page * rowsPerPage, (page + 1) * rowsPerPage).map((credential) => [
-                <Stack key="name" spacing={0.25}>
-                  <Typography sx={{ fontWeight: 700, fontSize: '0.85rem' }}>{credential.name}</Typography>
+                <Stack key="name" spacing={0.25} sx={{ minWidth: 0 }}>
+                  <Typography
+                    noWrap
+                    title={credential.name}
+                    sx={{ fontWeight: 700, fontSize: '0.85rem', maxWidth: { xs: 150, sm: 220, md: 320 } }}
+                  >
+                    {credential.name}
+                  </Typography>
                   <Typography color="text.secondary" variant="caption">Creada: {formatDate(credential.createdAt)}</Typography>
                 </Stack>,
                 <Stack key="code" spacing={0.25}>
