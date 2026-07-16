@@ -11,7 +11,12 @@ const updatePermissionsSchema = z.object({
 });
 
 permissionsRouter.get('/permissions', requirePermission('users.manage'), async (_request, response) => {
-  response.json(await listPermissionMatrix());
+  try {
+    response.json(await listPermissionMatrix());
+  } catch (error) {
+    console.error('No se pudo cargar la matriz de permisos.', error);
+    response.status(503).json({ message: 'No se pudo cargar permisos. Revisa la conexion de base de datos.' });
+  }
 });
 
 permissionsRouter.patch('/roles/:id/permissions', requirePermission('users.manage'), async (request, response) => {
