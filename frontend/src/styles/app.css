@@ -70,12 +70,12 @@ code {
 }
 
 [data-theme='dark'] .swal2-popup {
-  background: #222222 !important;
+  background: #1b1b1b !important;
   color: #f8fafc !important;
 }
 
 [data-theme='dark'] .swal2-html-container code {
-  background: #181818 !important;
+  background: #141414 !important;
   color: #e2e8f0 !important;
 }
 
@@ -211,12 +211,12 @@ small {
 }
 
 [data-theme='dark'] .pdfme-workspace {
-  --pdfme-bg: #181818;
-  --pdfme-panel: #222222;
-  --pdfme-panel-soft: #282828;
-  --pdfme-panel-strong: #303030;
-  --pdfme-border: #363636;
-  --pdfme-border-strong: #444444;
+  --pdfme-bg: #141414;
+  --pdfme-panel: #1b1b1b;
+  --pdfme-panel-soft: #222222;
+  --pdfme-panel-strong: #282828;
+  --pdfme-border: #303030;
+  --pdfme-border-strong: #3a3a3a;
   --pdfme-text: #f5f5f5;
   --pdfme-text-muted: #a3a3a3;
   --pdfme-icon: #ffffff;
@@ -269,8 +269,8 @@ small {
 [data-theme='dark'] .ant-dropdown-menu,
 [data-theme='dark'] .ant-select-dropdown,
 [data-theme='dark'] .ant-picker-dropdown .ant-picker-panel-container {
-  background: #282828 !important;
-  border-color: #363636 !important;
+  background: #222222 !important;
+  border-color: #303030 !important;
   color: #f5f5f5 !important;
 }
 
@@ -286,7 +286,7 @@ small {
 [data-theme='dark'] .ant-select-item-option-active,
 [data-theme='dark'] .ant-select-item-option-selected,
 [data-theme='dark'] .ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner {
-  background: #303030 !important;
+  background: #282828 !important;
 }
 
 .pdfme-workspace .pdfme-designer-ruler,
@@ -529,7 +529,7 @@ div.selectable-locked {
 }
 
 [data-theme='dark'] .gridjs-thead {
-  background-color: #282828 !important;
+  background-color: #222222 !important;
 }
 
 .gridjs-th {
@@ -543,9 +543,9 @@ div.selectable-locked {
 }
 
 [data-theme='dark'] .gridjs-th {
-  background-color: #282828 !important;
+  background-color: #222222 !important;
   color: #d4d4d4 !important;
-  border-bottom-color: #363636 !important;
+  border-bottom-color: #303030 !important;
 }
 
 .gridjs-td {
@@ -557,7 +557,7 @@ div.selectable-locked {
 }
 
 [data-theme='dark'] .gridjs-td {
-  border-bottom-color: #303030 !important;
+  border-bottom-color: #282828 !important;
 }
 
 .gridjs-tr:hover .gridjs-td {
@@ -576,7 +576,7 @@ div.selectable-locked {
 }
 
 [data-theme='dark'] .gridjs-footer {
-  border-top-color: #363636 !important;
+  border-top-color: #303030 !important;
 }
 
 .gridjs-pagination .gridjs-summary {
@@ -600,7 +600,7 @@ div.selectable-locked {
 }
 
 [data-theme='dark'] .gridjs-pagination .gridjs-pages button {
-  border-color: #444444 !important;
+  border-color: #3a3a3a !important;
 }
 
 .gridjs-pagination .gridjs-pages button:hover {
@@ -637,8 +637,8 @@ div.selectable-locked {
 }
 
 [data-theme='dark'] .gridjs-search-input {
-  background-color: #222222 !important;
-  border-color: #363636 !important;
+  background-color: #1b1b1b !important;
+  border-color: #303030 !important;
   color: #f5f5f5 !important;
 }
 
