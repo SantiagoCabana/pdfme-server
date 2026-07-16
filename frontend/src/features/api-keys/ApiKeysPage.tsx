@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { CheckOutlined, CopyOutlined, DeleteOutlined, KeyOutlined, StopOutlined } from '@ant-design/icons';
-import { Alert, Box, Button, Card, Chip, IconButton, Stack, TextField, MenuItem, Tooltip, Typography } from '@mui/material';
+import { CopyOutlined, DeleteOutlined, KeyOutlined, StopOutlined } from '@ant-design/icons';
+import { Box, Button, Card, Chip, IconButton, Stack, TextField, MenuItem, Tooltip, Typography } from '@mui/material';
+import Swal from 'sweetalert2';
 import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 import { LoadingState } from '../../shared/components/LoadingState';
 
@@ -14,15 +15,29 @@ export function ApiKeysPage() {
   const [credentials, setCredentials] = useState<ApiCredential[]>([]);
   const [name, setName] = useState('Servicio de documentos');
   const [expiryMode, setExpiryMode] = useState('never');
-  const [rawKey, setRawKey] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [revokingId, setRevokingId] = useState('');
   const [deletingId, setDeletingId] = useState('');
-  const [copied, setCopied] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(0);
+
+  const toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 1800,
+    timerProgressBar: true,
+  });
+
+  function showError(message: string) {
+    void Swal.fire({ icon: 'error', title: message, confirmButtonText: 'Cerrar' });
+  }
+
+  async function copyText(value: string, message = 'Copiado') {
+    await navigator.clipboard.writeText(value);
+    await toast.fire({ icon: 'success', title: message });
+  }
 
   async function load() {
     setLoading(true);
@@ -34,20 +49,29 @@ export function ApiKeysPage() {
     }
   }
 
-  useEffect(() => { void load().catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar.')); }, []);
+  useEffect(() => { void load().catch((err) => showError(err instanceof Error ? err.message : 'No se pudo cargar.')); }, []);
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setRawKey('');
     setCreating(true);
     try {
       const payload = await apiRequest<{ rawKey: string }>('/api/api-credentials', { method: 'POST', body: JSON.stringify({ name, expiresAt: buildExpiryDate(expiryMode) }) });
-      setRawKey(payload.rawKey);
-      setCopied(false);
       await load();
       closeHeaderAction();
+      const result = await Swal.fire({
+        icon: 'success',
+        title: 'Clave creada',
+        html: `<code style="display:block;word-break:break-all;padding:10px;border-radius:6px;background:#f5f5f5">${payload.rawKey}</code>`,
+        confirmButtonText: 'Copiar',
+        showCancelButton: true,
+        cancelButtonText: 'Cerrar',
+      });
+
+      if (result.isConfirmed) {
+        await copyText(payload.rawKey, 'Clave copiada');
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear la clave.');
+      showError(err instanceof Error ? err.message : 'No se pudo crear.');
     } finally {
       setCreating(false);
     }
@@ -78,62 +102,45 @@ export function ApiKeysPage() {
   }, [closeHeaderAction, creating, expiryMode, name, setHeaderAction]);
 
   async function revoke(id: string) {
-    setError('');
     setRevokingId(id);
     try {
       await apiRequest(`/api/api-credentials/${id}/revoke`, { method: 'PATCH' });
       await load();
+      await toast.fire({ icon: 'success', title: 'Clave revocada' });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo revocar la clave.');
+      showError(err instanceof Error ? err.message : 'No se pudo revocar.');
     } finally {
       setRevokingId('');
     }
   }
 
   async function remove(id: string, name: string) {
-    if (!window.confirm(`Eliminar la clave API "${name}"? Esta accion no se puede deshacer.`)) return;
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: 'Eliminar clave',
+      text: name,
+      confirmButtonText: 'Eliminar',
+      cancelButtonText: 'Cancelar',
+      showCancelButton: true,
+      confirmButtonColor: '#d32f2f',
+    });
 
-    setError('');
+    if (!result.isConfirmed) return;
+
     setDeletingId(id);
     try {
       await apiRequest(`/api/api-credentials/${id}`, { method: 'DELETE' });
       setCredentials((current) => current.filter((credential) => credential.id !== id));
+      await toast.fire({ icon: 'success', title: 'Clave eliminada' });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo eliminar la clave.');
+      showError(err instanceof Error ? err.message : 'No se pudo eliminar.');
     } finally {
       setDeletingId('');
     }
   }
 
-  async function copyRawKey() {
-    if (!rawKey) return;
-
-    await navigator.clipboard.writeText(rawKey);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
-  }
-
-
-
   return (
     <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {error ? <Alert severity="error">{error}</Alert> : null}
-      {rawKey ? (
-        <Alert
-          action={(
-            <Button color="inherit" onClick={() => void copyRawKey()} size="small" startIcon={copied ? <CheckOutlined /> : <CopyOutlined />}>
-              {copied ? 'Copiada' : 'Copiar'}
-            </Button>
-          )}
-          severity="info"
-        >
-          <Stack spacing={0.5}>
-            <Typography component="strong" sx={{ fontWeight: 700 }}>Clave generada</Typography>
-            <Box component="code" sx={{ display: 'block', fontSize: '0.8rem', overflowWrap: 'anywhere' }}>{rawKey}</Box>
-            <Typography variant="caption">Guardala ahora; no se volvera a mostrar completa.</Typography>
-          </Stack>
-        </Alert>
-      ) : null}
       <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0 }}>
         {loading ? (
           <LoadingState label="Cargando claves API..." minHeight="100%" />
@@ -151,10 +158,16 @@ export function ApiKeysPage() {
                   <Typography color="text.secondary" variant="caption">Creada: {formatDate(credential.createdAt)}</Typography>
                 </Stack>,
                 <Stack key="code" spacing={0.25}>
-                  <Box component="code" sx={{ bgcolor: 'action.hover', borderRadius: 1, display: 'inline-flex', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.03em', px: 1, py: 0.5, width: 'fit-content' }}>
-                    {credential.prefix}
-                  </Box>
-                  <Typography color="text.secondary" variant="caption">Secreto: {credential.secretPreview}</Typography>
+                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                    <Box component="code" sx={{ bgcolor: 'action.hover', borderRadius: 1, display: 'inline-flex', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.03em', px: 1, py: 0.5, width: 'fit-content' }}>
+                      {credential.prefix}
+                    </Box>
+                    <Tooltip title="Copiar codigo">
+                      <IconButton onClick={() => void copyText(credential.prefix, 'Codigo copiado')} size="small">
+                        <CopyOutlined />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
                 </Stack>,
                 <Chip key="s" label={statusLabel(credential.status)} size="small" />,
                 formatDate(credential.expiresAt),

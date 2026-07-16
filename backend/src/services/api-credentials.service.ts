@@ -8,13 +8,13 @@ function hashApiKey(rawKey: string) {
 }
 
 export function createRawApiKey() {
-  const prefix = crypto.randomBytes(6).toString('hex');
-  const secret = crypto.randomBytes(28).toString('hex');
-  const rawKey = `${prefix}.${secret}`;
+  const code = crypto.randomUUID();
+  const secret = crypto.randomBytes(32).toString('base64url');
+  const rawKey = `${code}.${secret}`;
 
   return {
     rawKey,
-    prefix,
+    prefix: code,
     secretPreview: `${secret.slice(0, 4)}...${secret.slice(-4)}`,
     keyHash: hashApiKey(rawKey),
   };
