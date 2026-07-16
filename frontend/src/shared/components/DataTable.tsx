@@ -4,9 +4,6 @@ import { Box, Typography, Button } from '@mui/material';
 export interface DataTableColumn {
   name: string;
   sort?: boolean;
-  align?: 'left' | 'center' | 'right';
-  minWidth?: number | string;
-  width?: number | string;
 }
 
 interface DataTableProps {
@@ -48,7 +45,7 @@ export function DataTable({ columns, data, height = '100%' }: DataTableProps) {
         minHeight: 0,
         overflow: 'auto',
         height,
-        '& table': { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' },
+        '& table': { width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' },
         '& thead th': {
           position: 'sticky',
           top: 0,
@@ -84,7 +81,6 @@ export function DataTable({ columns, data, height = '100%' }: DataTableProps) {
                 key={i}
                 className={col.sort ? 'sortable' : ''}
                 onClick={() => handleSort(i)}
-                style={{ minWidth: col.minWidth, textAlign: col.align, width: col.width }}
               >
                 {col.name}
                 {col.sort && sortCol === i ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
@@ -105,7 +101,7 @@ export function DataTable({ columns, data, height = '100%' }: DataTableProps) {
             sorted.map((row, ri) => (
               <tr key={ri}>
                 {row.map((cell, ci) => (
-                  <td key={ci} style={{ minWidth: cols[ci]?.minWidth, textAlign: cols[ci]?.align, width: cols[ci]?.width }}>{cell}</td>
+                  <td key={ci}>{cell}</td>
                 ))}
               </tr>
             ))
