@@ -113,17 +113,6 @@ export function ApiKeysPage() {
 
     const isActive = credential.status === 'ACTIVE';
     const nextAction = isActive ? 'disable' : 'activate';
-    const result = await Swal.fire({
-      icon: isActive ? 'warning' : 'question',
-      title: isActive ? 'Deshabilitar clave' : 'Activar clave',
-      text: credential.name,
-      confirmButtonText: isActive ? 'Deshabilitar' : 'Activar',
-      cancelButtonText: 'Cancelar',
-      showCancelButton: true,
-      confirmButtonColor: isActive ? '#d32f2f' : '#1677ff',
-    });
-
-    if (!result.isConfirmed) return;
 
     setTogglingId(credential.id);
     try {
@@ -192,21 +181,23 @@ export function ApiKeysPage() {
                     </Tooltip>
                   </Stack>
                 </Stack>,
-                <Stack key="s" direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                  <Switch
-                    checked={credential.status === 'ACTIVE'}
-                    disabled={credential.status === 'EXPIRED' || togglingId === credential.id}
-                    onChange={() => void toggleStatus(credential)}
-                    size="small"
-                  />
-                  <Chip label={statusLabel(credential.status)} size="small" />
-                </Stack>,
+                <Chip key="s" label={statusLabel(credential.status)} size="small" />,
                 formatDate(credential.expiresAt),
                 <Stack key="used" spacing={0.25}>
                   <Typography sx={{ fontSize: '0.82rem' }}>{formatDate(credential.lastUsedAt)}</Typography>
                   {credential.lastUsedIp ? <Typography color="text.secondary" variant="caption">IP: {credential.lastUsedIp}</Typography> : null}
                 </Stack>,
-                <Box key="a" sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
+                <Box key="a" sx={{ display: 'flex', gap: 0.75, alignItems: 'center', justifyContent: 'flex-end' }}>
+                  <Tooltip title={credential.status === 'ACTIVE' ? 'Deshabilitar' : 'Activar'}>
+                    <span>
+                      <Switch
+                        checked={credential.status === 'ACTIVE'}
+                        disabled={credential.status === 'EXPIRED' || togglingId === credential.id}
+                        onChange={() => void toggleStatus(credential)}
+                        size="small"
+                      />
+                    </span>
+                  </Tooltip>
                   <Tooltip title="Eliminar clave">
                     <span>
                       <IconButton color="error" disabled={deletingId === credential.id} onClick={() => void remove(credential.id, credential.name)} size="small">
