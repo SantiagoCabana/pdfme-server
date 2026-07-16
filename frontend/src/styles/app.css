@@ -38,6 +38,14 @@ body {
   height: 10px;
 }
 
+.table-scrollbar .simplebar-track.simplebar-vertical {
+  top: 42px;
+}
+
+.table-scrollbar-permissions .simplebar-track.simplebar-vertical {
+  top: 72px;
+}
+
 .app-scrollbar .simplebar-track.simplebar-horizontal .simplebar-scrollbar::before,
 .app-scrollbar .simplebar-track.simplebar-vertical .simplebar-scrollbar::before {
   background: rgba(100, 116, 139, 0.42);
@@ -100,6 +108,49 @@ small {
   --pdfme-ruler-text: #f8fafc;
   --pdfme-canvas-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
   background: var(--pdfme-bg);
+}
+
+.pdfme-workspace * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+}
+
+.pdfme-workspace *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.pdfme-workspace *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pdfme-workspace *::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.42);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+.pdfme-workspace *::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.62);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+[data-theme='dark'] .pdfme-workspace * {
+  scrollbar-color: rgba(148, 163, 184, 0.48) transparent;
+}
+
+[data-theme='dark'] .pdfme-workspace *::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.46);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+[data-theme='dark'] .pdfme-workspace *::-webkit-scrollbar-thumb:hover {
+  background: rgba(203, 213, 225, 0.68);
+  border: 3px solid transparent;
+  background-clip: content-box;
 }
 
 .pdfme-workspace,

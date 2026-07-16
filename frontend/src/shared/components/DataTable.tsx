@@ -41,6 +41,7 @@ export function DataTable({ columns, data, height = '100%' }: DataTableProps) {
 
   return (
     <AppScrollbar
+      className="table-scrollbar"
       sx={{
         flexGrow: 1,
         minHeight: 0,

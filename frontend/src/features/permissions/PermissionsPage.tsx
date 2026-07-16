@@ -201,9 +201,9 @@ export function PermissionsPage() {
         {loading ? (
           <LoadingState label="Cargando permisos..." minHeight="100%" />
         ) : (
-        <AppScrollbar sx={{ flexGrow: 1 }}>
-        <TableContainer sx={{ overflow: 'visible' }}>
-          <Table stickyHeader>
+        <AppScrollbar className="table-scrollbar table-scrollbar-permissions" sx={{ flexGrow: 1 }}>
+          <TableContainer sx={{ overflow: 'visible' }}>
+            <Table stickyHeader>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ pb: 2.5, pt: 3, minWidth: 230 }}>PERMISO</TableCell>
@@ -303,7 +303,7 @@ export function PermissionsPage() {
                   ))}
             </TableBody>
           </Table>
-        </TableContainer>
+          </TableContainer>
         </AppScrollbar>
         )}
       </Card>
