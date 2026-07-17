@@ -6,6 +6,7 @@ import type { ThemeMode } from '../../../theme/appTheme';
 import { notifyError } from '../../../shared/notifications';
 import { pdfmePlugins } from './PdfmeDesigner';
 import { loadPdfmeFonts } from './pdfmeFonts';
+import { normalizePdfmeTemplateFonts } from './pdfmeTemplateFonts';
 import { createPdfmeTheme } from './pdfmeTheme';
 
 type PdfmeViewerProps = {
@@ -17,14 +18,17 @@ export function PdfmeViewer({ mode, template }: PdfmeViewerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const formRef = useRef<Form | null>(null);
   const modeRef = useRef(mode);
-  const previewTemplate = useMemo<PdfmeTemplate>(() => ({
-    ...template,
-    schemas: (template.schemas ?? []).map((page) => page.map((schema) => ({ ...schema, readOnly: true }) as Schema)),
-  }), [template]);
+  const previewTemplate = useMemo<PdfmeTemplate>(() => {
+    const normalizedTemplate = normalizePdfmeTemplateFonts(template);
+    return {
+      ...normalizedTemplate,
+      schemas: (normalizedTemplate.schemas ?? []).map((page) => page.map((schema) => ({ ...schema, readOnly: true }) as Schema)),
+    };
+  }, [template]);
   const previewInputs = useMemo(() => {
     const input: Record<string, string> = {};
 
-    for (const page of template.schemas ?? []) {
+    for (const page of previewTemplate.schemas ?? []) {
       for (const schema of page ?? []) {
         if (schema.name) input[schema.name] = schema.content ?? '';
       }

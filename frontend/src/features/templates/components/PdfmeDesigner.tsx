@@ -21,6 +21,7 @@ import {
 
 import type { ThemeMode } from '../../../theme/appTheme';
 import { loadPdfmeFonts } from './pdfmeFonts';
+import { normalizePdfmeTemplateFonts } from './pdfmeTemplateFonts';
 import { createPdfmeTheme } from './pdfmeTheme';
 
 export const pdfmePlugins = {
@@ -77,7 +78,7 @@ export const PdfmeDesigner = forwardRef<PdfmeDesignerHandle, PdfmeDesignerProps>
 
       const designer = new Designer({
         domContainer: containerRef.current,
-        template,
+        template: normalizePdfmeTemplateFonts(template),
         plugins: pdfmePlugins,
         options: {
           font,
@@ -122,7 +123,7 @@ export const PdfmeDesigner = forwardRef<PdfmeDesignerHandle, PdfmeDesignerProps>
       return;
     }
 
-    designerRef.current?.updateTemplate(template);
+    designerRef.current?.updateTemplate(normalizePdfmeTemplateFonts(template));
     skipNextTemplateSyncRef.current = false;
   }, [template]);
 

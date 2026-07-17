@@ -54,6 +54,7 @@ import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
 import { confirmDanger, notifyError } from '../../shared/notifications';
 import type { PdfmeDesignerHandle } from './components/PdfmeDesigner';
+import { normalizePdfmeTemplateFonts } from './components/pdfmeTemplateFonts';
 
 const PdfmeDesigner = lazy(() => import('./components/PdfmeDesigner').then((module) => ({ default: module.PdfmeDesigner })));
 const PdfmeViewer = lazy(() => import('./components/PdfmeViewer').then((module) => ({ default: module.PdfmeViewer })));
@@ -222,7 +223,7 @@ function buildPdfmeTemplate(template: TemplateItem, options?: { pageWidthMm?: nu
   const width = options?.pageWidthMm ?? template.pageWidthMm;
   const height = options?.pageHeightMm ?? template.pageHeightMm;
 
-  return {
+  return normalizePdfmeTemplateFonts({
     ...storedTemplate,
     schemas: Array.isArray(storedTemplate.schemas) ? storedTemplate.schemas : [[]],
     basePdf: {
@@ -231,7 +232,7 @@ function buildPdfmeTemplate(template: TemplateItem, options?: { pageWidthMm?: nu
       height,
       padding: [0, 0, 0, 0],
     },
-  } as PdfmeTemplate;
+  } as PdfmeTemplate);
 }
 
 function updatePdfmeBasePdf(current: PdfmeTemplate | null, patch: { width?: number; height?: number }) {
@@ -495,6 +496,7 @@ export function TemplatesPage() {
     let currentDesignerTemplate = designerTemplate && designerCurrentTemplate
       ? { ...designerCurrentTemplate, basePdf: designerTemplate.basePdf }
       : designerCurrentTemplate ?? designerTemplate;
+    currentDesignerTemplate = currentDesignerTemplate ? normalizePdfmeTemplateFonts(currentDesignerTemplate) : currentDesignerTemplate;
 
     if (currentDesignerTemplate && currentDesignerTemplate.schemas) {
       currentDesignerTemplate = {

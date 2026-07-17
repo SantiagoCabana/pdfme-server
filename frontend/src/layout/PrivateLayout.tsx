@@ -353,8 +353,9 @@ export function PrivateLayout() {
         sx={{
           flexGrow: 1,
           minWidth: 0,
-          p: isTemplateWorkspace ? 0 : { xs: 2, md: 3 },
-          pt: isTemplateWorkspace ? '58px' : { xs: 9, md: 10 },
+          px: isTemplateWorkspace ? 0 : { xs: 1.25, sm: 1.5, md: 2 },
+          pb: isTemplateWorkspace ? 0 : { xs: 1.25, sm: 1.5, md: 2 },
+          pt: isTemplateWorkspace ? '58px' : { xs: '70px', md: '74px' },
           height: '100vh',
           display: 'flex',
           flexDirection: 'column',

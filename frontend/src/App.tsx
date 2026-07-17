@@ -90,7 +90,12 @@ export default function App() {
       return 'system';
     });
   }, []);
-  const openHeaderAction = useCallback(() => setHeaderActionOpen(true), []);
+  const openHeaderAction = useCallback(() => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    setHeaderActionOpen(true);
+  }, []);
   const closeHeaderAction = useCallback(() => setHeaderActionOpen(false), []);
   const setOperationLabel = useCallback((label: string) => setOperationLabelState(label), []);
   const clearOperationLabel = useCallback(() => setOperationLabelState(''), []);
