@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
-import { Alert, Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import Swal from 'sweetalert2';
 import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 import { LoadingState } from '../../shared/components/LoadingState';
 
@@ -8,12 +9,13 @@ import { formatDate, statusLabel } from '../../app/session';
 import type { InternalUser } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
+import { notifyError } from '../../shared/notifications';
 
 const roleOptions = ['VIEWER', 'EDITOR', 'MANAGER', 'ADMIN'];
 const statusOptions = ['ACTIVE', 'INVITED', 'SUSPENDED'];
 
 export function UsersPage() {
-  const { setHeaderAction, closeHeaderAction } = useAppContext();
+  const { setHeaderAction, closeHeaderAction, setOperationLabel, clearOperationLabel } = useAppContext();
   const [users, setUsers] = useState<InternalUser[]>([]);
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -24,16 +26,12 @@ export function UsersPage() {
   const [editPassword, setEditPassword] = useState('');
   const [editRoleCode, setEditRoleCode] = useState('VIEWER');
   const [editStatus, setEditStatus] = useState('ACTIVE');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(0);
-  const [userToDelete, setUserToDelete] = useState<InternalUser | null>(null);
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [deletingError, setDeletingError] = useState('');
 
   async function load() {
     setLoading(true);
@@ -45,21 +43,22 @@ export function UsersPage() {
     }
   }
 
-  useEffect(() => { void load().catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar.')); }, []);
+  useEffect(() => { void load().catch((err) => notifyError(err, 'No se pudo cargar.')); }, []);
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError('');
     setCreating(true);
+    setOperationLabel('Creando usuario...');
     try {
       await apiRequest('/api/users', { method: 'POST', body: JSON.stringify({ displayName, email, password, roleCode }) });
       setDisplayName(''); setEmail(''); setPassword(''); setRoleCode('VIEWER');
       await load();
       closeHeaderAction();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear el usuario.');
+      notifyError(err, 'No se pudo crear el usuario.');
     } finally {
       setCreating(false);
+      clearOperationLabel();
     }
   }
 
@@ -75,7 +74,7 @@ export function UsersPage() {
     event.preventDefault();
     if (!editingUser) return;
     setSaving(true);
-    setError('');
+    setOperationLabel('Guardando usuario...');
     try {
       await apiRequest('/api/users/' + editingUser.id, {
         method: 'PATCH',
@@ -89,29 +88,49 @@ export function UsersPage() {
       setEditingUser(null);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo actualizar el usuario.');
+      notifyError(err, 'No se pudo actualizar el usuario.');
     } finally {
       setSaving(false);
+      clearOperationLabel();
     }
   }
 
   async function remove(id: string, passwordVal: string) {
-    setError('');
-    setDeletingError('');
     setDeletingId(id);
+    setOperationLabel('Eliminando usuario...');
     try {
       await apiRequest('/api/users/' + id, {
         method: 'DELETE',
         body: JSON.stringify({ password: passwordVal }),
       });
-      await load();
-      setUserToDelete(null);
-      setConfirmPassword('');
+      setUsers((current) => current.filter((user) => user.id !== id));
     } catch (err) {
-      setDeletingError(err instanceof Error ? err.message : 'No se pudo eliminar el usuario.');
+      notifyError(err, 'No se pudo eliminar el usuario.');
     } finally {
       setDeletingId('');
+      clearOperationLabel();
     }
+  }
+
+  async function confirmRemove(user: InternalUser) {
+    const result = await Swal.fire({
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#d33',
+      confirmButtonText: 'Eliminar',
+      icon: 'warning',
+      input: 'password',
+      inputAttributes: {
+        autocapitalize: 'off',
+        autocomplete: 'current-password',
+      },
+      inputPlaceholder: 'Contraseña',
+      inputValidator: (value) => (value ? null : 'Ingresa tu contraseña.'),
+      showCancelButton: true,
+      text: `Para eliminar el usuario "${user.displayName}", valida tu identidad.`,
+      title: 'Confirmar eliminación',
+    });
+
+    if (result.isConfirmed && result.value) await remove(user.id, result.value);
   }
 
   useEffect(() => {
@@ -127,17 +146,16 @@ export function UsersPage() {
           <TextField fullWidth label="Rol" onChange={(event) => setRoleCode(event.target.value)} select value={roleCode}>
             {roleOptions.map((role) => <MenuItem key={role} value={role}>{role}</MenuItem>)}
           </TextField>
-          <Button disabled={creating} startIcon={<PlusOutlined />} type="submit" variant="contained">{creating ? 'Creando...' : 'Crear usuario'}</Button>
+          <Button disabled={creating} startIcon={<PlusOutlined />} type="submit" variant="contained">Crear usuario</Button>
         </Stack>
       ),
     });
 
     return () => setHeaderAction(null);
-  }, [closeHeaderAction, creating, displayName, email, password, roleCode, setHeaderAction]);
+  }, [clearOperationLabel, closeHeaderAction, creating, displayName, email, password, roleCode, setHeaderAction, setOperationLabel]);
 
   return (
     <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {error ? <Alert severity="error">{error}</Alert> : null}
       <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0 }}>
         {loading ? (
           <LoadingState label="Cargando usuarios..." minHeight="100%" />
@@ -156,7 +174,7 @@ export function UsersPage() {
                 formatDate(item.lastLoginAt),
                 <Stack key="a" direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
                   <Button onClick={() => openEdit(item)} size="small" startIcon={<EditOutlined />}>Editar</Button>
-                  <Button color="error" disabled={deletingId === item.id} onClick={() => { setUserToDelete(item); setConfirmPassword(''); setDeletingError(''); }} size="small" startIcon={<DeleteOutlined />}>{deletingId === item.id ? 'Eliminando...' : 'Eliminar'}</Button>
+                  <Button color="error" disabled={deletingId === item.id} onClick={() => void confirmRemove(item)} size="small" startIcon={<DeleteOutlined />}>Eliminar</Button>
                 </Stack>,
               ])}
             />
@@ -177,55 +195,9 @@ export function UsersPage() {
             <TextField fullWidth label="Estado" onChange={(event) => setEditStatus(event.target.value)} select value={editStatus}>
               {statusOptions.map((status) => <MenuItem key={status} value={status}>{statusLabel(status)}</MenuItem>)}
             </TextField>
-            <Button disabled={saving} startIcon={<EditOutlined />} type="submit" variant="contained">{saving ? 'Guardando...' : 'Guardar cambios'}</Button>
+            <Button disabled={saving} startIcon={<EditOutlined />} type="submit" variant="contained">Guardar cambios</Button>
           </Stack>
         </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={Boolean(userToDelete)}
-        onClose={() => setUserToDelete(null)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>Confirmar eliminación</DialogTitle>
-        <DialogContent dividers sx={{ py: 2 }}>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            {deletingError ? <Alert severity="error">{deletingError}</Alert> : null}
-            <span>Para eliminar el usuario "{userToDelete?.displayName}", ingrese su contraseña para validar su identidad:</span>
-            <TextField
-              autoFocus
-              fullWidth
-              label="Contraseña"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              onKeyDown={async (e) => {
-                if (e.key === 'Enter' && confirmPassword && deletingId !== userToDelete?.id) {
-                  e.preventDefault();
-                  if (userToDelete) {
-                    await remove(userToDelete.id, confirmPassword);
-                  }
-                }
-              }}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setUserToDelete(null)}>Cancelar</Button>
-          <Button
-            color="error"
-            disabled={!confirmPassword || deletingId === userToDelete?.id}
-            onClick={async () => {
-              if (userToDelete) {
-                await remove(userToDelete.id, confirmPassword);
-              }
-            }}
-            variant="contained"
-          >
-            {deletingId === userToDelete?.id ? 'Eliminando...' : 'Aceptar'}
-          </Button>
-        </DialogActions>
       </Dialog>
     </Stack>
   );

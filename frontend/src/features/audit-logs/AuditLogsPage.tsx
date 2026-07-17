@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { EyeOutlined } from '@ant-design/icons';
 import {
-  Alert,
   Box,
   Card,
   Dialog,
@@ -13,6 +12,7 @@ import { LoadingState } from '../../shared/components/LoadingState';
 
 import { apiRequest } from '../../shared/api/client';
 import { useAppContext } from '../../app/AppContext';
+import { notifyError } from '../../shared/notifications';
 import '../../styles/audit-logs.css';
 
 interface AuditEventItem {
@@ -96,19 +96,17 @@ export function AuditLogsPage() {
   const { mode } = useAppContext();
   const [events, setEvents] = useState<AuditEventItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<AuditEventItem | null>(null);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(0);
 
   async function loadLogs() {
     setLoading(true);
-    setError('');
     try {
       const payload = await apiRequest<{ data: AuditEventItem[] }>('/api/audit-logs');
       setEvents(payload.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudieron cargar los registros de auditoría.');
+      notifyError(err, 'No se pudieron cargar los registros de auditoría.');
     } finally {
       setLoading(false);
     }
@@ -211,7 +209,6 @@ export function AuditLogsPage() {
 
   return (
     <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {error ? <Alert severity="error">{error}</Alert> : null}
       <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0 }}>
         {loading ? (
           <LoadingState label="Cargando auditoria..." minHeight="100%" />

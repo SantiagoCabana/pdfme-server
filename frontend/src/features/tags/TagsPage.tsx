@@ -1,27 +1,26 @@
 import { useEffect, useState } from 'react';
 import { DeleteOutlined, EditOutlined, TagsOutlined } from '@ant-design/icons';
-import { Alert, Box, Button, Card, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
+import { Box, Button, Card, Dialog, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
 import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 import { LoadingState } from '../../shared/components/LoadingState';
 
 import type { TagItem } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
+import { confirmDanger, notifyError } from '../../shared/notifications';
 
 export function TagsPage() {
-  const { setHeaderAction, closeHeaderAction } = useAppContext();
+  const { setHeaderAction, closeHeaderAction, setOperationLabel, clearOperationLabel } = useAppContext();
   const [tags, setTags] = useState<TagItem[]>([]);
   const [name, setName] = useState('');
   const [editingTag, setEditingTag] = useState<TagItem | null>(null);
   const [editName, setEditName] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(0);
-  const [tagToDelete, setTagToDelete] = useState<TagItem | null>(null);
 
   async function load() {
     setLoading(true);
@@ -33,21 +32,22 @@ export function TagsPage() {
     }
   }
 
-  useEffect(() => { void load().catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar.')); }, []);
+  useEffect(() => { void load().catch((err) => notifyError(err, 'No se pudo cargar.')); }, []);
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError('');
     setCreating(true);
+    setOperationLabel('Creando tag...');
     try {
       await apiRequest('/api/tags', { method: 'POST', body: JSON.stringify({ name }) });
       setName('');
       await load();
       closeHeaderAction();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear el tag.');
+      notifyError(err, 'No se pudo crear el tag.');
     } finally {
       setCreating(false);
+      clearOperationLabel();
     }
   }
 
@@ -60,29 +60,36 @@ export function TagsPage() {
     event.preventDefault();
     if (!editingTag) return;
     setSaving(true);
-    setError('');
+    setOperationLabel('Guardando tag...');
     try {
       await apiRequest('/api/tags/' + editingTag.id, { method: 'PATCH', body: JSON.stringify({ name: editName }) });
       setEditingTag(null);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo actualizar el tag.');
+      notifyError(err, 'No se pudo actualizar el tag.');
     } finally {
       setSaving(false);
+      clearOperationLabel();
     }
   }
 
   async function remove(id: string) {
-    setError('');
     setDeletingId(id);
+    setOperationLabel('Eliminando tag...');
     try {
       await apiRequest('/api/tags/' + id, { method: 'DELETE' });
-      await load();
+      setTags((current) => current.filter((tag) => tag.id !== id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo eliminar el tag.');
+      notifyError(err, 'No se pudo eliminar el tag.');
     } finally {
       setDeletingId('');
+      clearOperationLabel();
     }
+  }
+
+  async function confirmRemove(tag: TagItem) {
+    const confirmed = await confirmDanger({ text: `¿Estás seguro que quieres eliminar el tag "${tag.name}"?` });
+    if (confirmed) await remove(tag.id);
   }
 
   useEffect(() => {
@@ -93,17 +100,16 @@ export function TagsPage() {
       content: (
         <Stack component="form" spacing={2} onSubmit={create}>
           <TextField autoFocus fullWidth label="Nombre" onChange={(event) => setName(event.target.value)} value={name} />
-          <Button disabled={creating} startIcon={<TagsOutlined />} type="submit" variant="contained">{creating ? 'Creando...' : 'Crear tag'}</Button>
+          <Button disabled={creating} startIcon={<TagsOutlined />} type="submit" variant="contained">Crear tag</Button>
         </Stack>
       ),
     });
 
     return () => setHeaderAction(null);
-  }, [closeHeaderAction, creating, name, setHeaderAction]);
+  }, [clearOperationLabel, closeHeaderAction, creating, name, setHeaderAction, setOperationLabel]);
 
   return (
     <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {error ? <Alert severity="error">{error}</Alert> : null}
       <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0 }}>
         {loading ? (
           <LoadingState label="Cargando tags..." minHeight="100%" />
@@ -120,7 +126,7 @@ export function TagsPage() {
                 tag.templateCount,
                 <Stack key="a" direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
                   <Button onClick={() => openEdit(tag)} size="small" startIcon={<EditOutlined />}>Editar</Button>
-                  <Button color="error" disabled={deletingId === tag.id} onClick={() => setTagToDelete(tag)} size="small" startIcon={<DeleteOutlined />}>{deletingId === tag.id ? 'Eliminando...' : 'Eliminar'}</Button>
+                  <Button color="error" disabled={deletingId === tag.id} onClick={() => void confirmRemove(tag)} size="small" startIcon={<DeleteOutlined />}>Eliminar</Button>
                 </Stack>,
               ])}
             />
@@ -134,36 +140,9 @@ export function TagsPage() {
         <DialogContent dividers>
           <Stack component="form" spacing={2} onSubmit={update}>
             <TextField autoFocus fullWidth label="Nombre" onChange={(event) => setEditName(event.target.value)} value={editName} />
-            <Button disabled={saving} startIcon={<EditOutlined />} type="submit" variant="contained">{saving ? 'Guardando...' : 'Guardar cambios'}</Button>
+            <Button disabled={saving} startIcon={<EditOutlined />} type="submit" variant="contained">Guardar cambios</Button>
           </Stack>
         </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={Boolean(tagToDelete)}
-        onClose={() => setTagToDelete(null)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>Confirmar eliminación</DialogTitle>
-        <DialogContent dividers sx={{ py: 2 }}>
-          <span>¿Estás seguro que quieres eliminar el tag "{tagToDelete?.name}"?</span>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setTagToDelete(null)}>No</Button>
-          <Button
-            color="error"
-            onClick={async () => {
-              if (tagToDelete) {
-                await remove(tagToDelete.id);
-                setTagToDelete(null);
-              }
-            }}
-            variant="contained"
-          >
-            Sí
-          </Button>
-        </DialogActions>
       </Dialog>
     </Stack>
   );

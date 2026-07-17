@@ -18,7 +18,6 @@ import {
   ColumnWidthOutlined,
 } from '@ant-design/icons';
 import {
-  Alert,
   Autocomplete,
   Backdrop,
   Box,
@@ -47,20 +46,16 @@ import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 import { LoadingState } from '../../shared/components/LoadingState';
 import type { Schema, Template as PdfmeTemplate } from '@pdfme/common';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import Swal from 'sweetalert2';
 
 import { can } from '../../app/session';
 import type { TagItem, TemplateItem } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
+import { confirmDanger, notifyError } from '../../shared/notifications';
 import type { PdfmeDesignerHandle } from './components/PdfmeDesigner';
 
 const PdfmeDesigner = lazy(() => import('./components/PdfmeDesigner').then((module) => ({ default: module.PdfmeDesigner })));
 const PdfmeViewer = lazy(() => import('./components/PdfmeViewer').then((module) => ({ default: module.PdfmeViewer })));
-
-function showError(message: string) {
-  void Swal.fire({ icon: 'error', title: message, confirmButtonText: 'Cerrar' });
-}
 
 const pageFormats = [
   { value: 'A4', label: 'A4', width: 210, height: 297 },
@@ -259,7 +254,7 @@ function updatePdfmeBasePdf(current: PdfmeTemplate | null, patch: { width?: numb
 }
 
 export function TemplatesPage() {
-  const { user, mode, setHeaderAction, closeHeaderAction, openHeaderAction, setHeaderControls } = useAppContext();
+  const { user, mode, setHeaderAction, closeHeaderAction, openHeaderAction, setHeaderControls, setOperationLabel, clearOperationLabel } = useAppContext();
   const navigate = useNavigate();
   const location = useLocation();
   const { code: routeCode } = useParams();
@@ -296,7 +291,6 @@ export function TemplatesPage() {
   const [detailsCode, setDetailsCode] = useState('');
   const [detailsTags, setDetailsTags] = useState<string[]>([]);
   const [savingDetails, setSavingDetails] = useState(false);
-  const [templateToDelete, setTemplateToDelete] = useState<TemplateItem | null>(null);
   const designerRef = useRef<PdfmeDesignerHandle | null>(null);
   const editorBusy = saving || savingVersion || savingDetails || switchingVersion;
   const editorBusyLabel = switchingVersion
@@ -323,7 +317,7 @@ export function TemplatesPage() {
 
   useEffect(() => {
     if (routeCode) return;
-    void load().catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar.'));
+    void load().catch((err) => notifyError(err, 'No se pudo cargar.'));
   }, [routeCode]);
 
   useEffect(() => {
@@ -345,7 +339,8 @@ export function TemplatesPage() {
       })
       .catch((err) => {
         if (!active) return;
-        setError(err instanceof Error ? err.message : 'No se encontro la plantilla solicitada.');
+        setError('No se encontro la plantilla solicitada.');
+        notifyError(err, 'No se encontro la plantilla solicitada.');
         setEditingTemplate(null);
         setDesignerTemplate(null);
       })
@@ -405,12 +400,13 @@ export function TemplatesPage() {
 
   async function create() {
     if (name.trim().length < 2) {
-      showError('Ingresa un nombre para la plantilla.');
+      notifyError('Ingresa un nombre para la plantilla.');
       return;
     }
 
     setError('');
     setCreating(true);
+    setOperationLabel('Creando plantilla...');
     try {
       const payload = await apiRequest<{ template: TemplateItem }>('/api/templates', {
         method: 'POST',
@@ -420,9 +416,10 @@ export function TemplatesPage() {
       closeHeaderAction();
       navigate(`/templates/edit/${payload.template.code}`);
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'No se pudo crear la plantilla.');
+      notifyError(err, 'No se pudo crear la plantilla.');
     } finally {
       setCreating(false);
+      clearOperationLabel();
     }
   }
 
@@ -483,7 +480,7 @@ export function TemplatesPage() {
     });
 
     return () => setHeaderAction(null);
-  }, [availableTags, closeHeaderAction, code, codeSuffix, codeTouched, creating, editingTemplate, name, navigate, selectedTags, setHeaderAction, user]);
+  }, [availableTags, clearOperationLabel, closeHeaderAction, code, codeSuffix, codeTouched, creating, editingTemplate, name, navigate, selectedTags, setHeaderAction, setOperationLabel, user]);
 
   async function saveSettings() {
     if (!editingTemplate) return null;
@@ -520,7 +517,7 @@ export function TemplatesPage() {
       if (!routeCode) await load();
       return payload.template;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar la plantilla.');
+      notifyError(err, 'No se pudo guardar la plantilla.');
       return null;
     } finally {
       setSaving(false);
@@ -538,7 +535,7 @@ export function TemplatesPage() {
       setDesignerTemplate(buildPdfmeTemplate(payload.template));
       if (!routeCode) await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar una nueva version.');
+      notifyError(err, 'No se pudo guardar una nueva version.');
     } finally {
       setSavingVersion(false);
     }
@@ -561,7 +558,7 @@ export function TemplatesPage() {
       setVersionsDialogOpen(false);
       if (!routeCode) await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo cambiar de version.');
+      notifyError(err, 'No se pudo cambiar de version.');
     } finally {
       setSwitchingVersion(false);
     }
@@ -596,7 +593,7 @@ export function TemplatesPage() {
       }
       if (!routeCode) await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo actualizar la plantilla.');
+      notifyError(err, 'No se pudo actualizar la plantilla.');
     } finally {
       setSavingDetails(false);
     }
@@ -605,14 +602,21 @@ export function TemplatesPage() {
   async function remove(id: string) {
     setError('');
     setDeletingId(id);
+    setOperationLabel('Eliminando plantilla...');
     try {
       await apiRequest(`/api/templates/${id}`, { method: 'DELETE' });
-      await load();
+      setTemplates((current) => current.filter((template) => template.id !== id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo eliminar la plantilla.');
+      notifyError(err, 'No se pudo eliminar la plantilla.');
     } finally {
       setDeletingId('');
+      clearOperationLabel();
     }
+  }
+
+  async function confirmRemove(template: TemplateItem) {
+    const confirmed = await confirmDanger({ text: `¿Estás seguro que quieres eliminar la plantilla "${template.name}"?` });
+    if (confirmed) await remove(template.id);
   }
 
   function setFormat(format: string) {
@@ -946,7 +950,7 @@ export function TemplatesPage() {
   if (routeCode && (loadingTemplate || !editingTemplate)) {
     return (
       <Box sx={{ display: 'grid', height: '100%', minHeight: 0, placeItems: 'center', width: '100%' }}>
-        {error ? <Alert severity="error">{error}</Alert> : <LoadingState label="Cargando plantilla..." minHeight="100%" />}
+        {error ? <Typography color="text.secondary">{error}</Typography> : <LoadingState label="Cargando plantilla..." minHeight="100%" />}
       </Box>
     );
   }
@@ -954,7 +958,6 @@ export function TemplatesPage() {
   if (editingTemplate) {
     return (
       <Box sx={{ height: '100%', minHeight: 0, position: 'relative', width: '100%' }}>
-        {error ? <Alert severity="error" sx={{ left: 16, position: 'absolute', right: 16, top: 16, zIndex: 2 }}>{error}</Alert> : null}
         <Dialog fullWidth maxWidth="sm" onClose={() => setVersionsDialogOpen(false)} open={versionsDialogOpen}>
           <DialogTitle>Cambiar version</DialogTitle>
           <DialogContent dividers sx={{ maxHeight: '70vh', p: 0 }}>
@@ -1031,7 +1034,6 @@ export function TemplatesPage() {
 
   return (
     <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {error ? <Alert severity="error">{error}</Alert> : null}
       <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, p: 0 }}>
         {loading ? (
           <LoadingState label="Cargando plantillas..." minHeight="100%" />
@@ -1052,8 +1054,8 @@ export function TemplatesPage() {
                   <Button onClick={() => navigate(`/templates/preview/${template.code}`)} size="small" startIcon={<EyeOutlined />}>Preview</Button>
                   <Button onClick={() => navigate(`/templates/edit/${template.code}`)} size="small" startIcon={<EditOutlined />}>Editar</Button>
                   {can(user, 'templates.delete') ? (
-                    <Button color="error" disabled={deletingId === template.id} onClick={() => setTemplateToDelete(template)} size="small" startIcon={<DeleteOutlined />}>
-                      {deletingId === template.id ? 'Eliminando...' : 'Eliminar'}
+                    <Button color="error" disabled={deletingId === template.id} onClick={() => void confirmRemove(template)} size="small" startIcon={<DeleteOutlined />}>
+                      Eliminar
                     </Button>
                   ) : null}
                 </Stack>,
@@ -1063,33 +1065,6 @@ export function TemplatesPage() {
           </Box>
         )}
       </Card>
-
-      <Dialog
-        open={Boolean(templateToDelete)}
-        onClose={() => setTemplateToDelete(null)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>Confirmar eliminación</DialogTitle>
-        <DialogContent dividers sx={{ py: 2 }}>
-          <span>¿Estás seguro que quieres eliminar la plantilla "{templateToDelete?.name}"?</span>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setTemplateToDelete(null)}>No</Button>
-          <Button
-            color="error"
-            onClick={async () => {
-              if (templateToDelete) {
-                await remove(templateToDelete.id);
-                setTemplateToDelete(null);
-              }
-            }}
-            variant="contained"
-          >
-            Sí
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Stack>
   );
 }

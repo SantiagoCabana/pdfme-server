@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { Schema, Template as PdfmeTemplate } from '@pdfme/common';
 import { Form } from '@pdfme/ui';
-import { Alert } from '@mui/material';
 
 import type { ThemeMode } from '../../../theme/appTheme';
+import { notifyError } from '../../../shared/notifications';
 import { pdfmePlugins } from './PdfmeDesigner';
 import { loadPdfmeFonts } from './pdfmeFonts';
 import { createPdfmeTheme } from './pdfmeTheme';
@@ -17,7 +17,6 @@ export function PdfmeViewer({ mode, template }: PdfmeViewerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const formRef = useRef<Form | null>(null);
   const modeRef = useRef(mode);
-  const [error, setError] = useState('');
   const previewTemplate = useMemo<PdfmeTemplate>(() => ({
     ...template,
     schemas: (template.schemas ?? []).map((page) => page.map((schema) => ({ ...schema, readOnly: true }) as Schema)),
@@ -59,9 +58,8 @@ export function PdfmeViewer({ mode, template }: PdfmeViewerProps) {
       });
 
       formRef.current = form;
-      setError('');
     }).catch(() => {
-      if (isMounted) setError('No se pudo cargar la vista previa.');
+      if (isMounted) notifyError('No se pudo cargar la vista previa.');
     });
 
     return () => {
@@ -86,7 +84,6 @@ export function PdfmeViewer({ mode, template }: PdfmeViewerProps) {
 
   return (
     <>
-      {error ? <Alert severity="error">{error}</Alert> : null}
       <div ref={containerRef} className="pdfme-container" />
     </>
   );

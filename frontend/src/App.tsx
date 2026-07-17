@@ -39,6 +39,7 @@ export default function App() {
   const [headerAction, setHeaderAction] = useState<HeaderAction>(null);
   const [headerActionOpen, setHeaderActionOpen] = useState(false);
   const [headerControls, setHeaderControls] = useState<ReactNode>(null);
+  const [operationLabel, setOperationLabelState] = useState('');
   const [mode, setMode] = useState<ThemeMode>(() => localStorage.getItem('pdfme-theme') === 'dark' ? 'dark' : 'light');
 
   useLayoutEffect(() => {
@@ -58,6 +59,8 @@ export default function App() {
   const toggleMode = useCallback(() => setMode((value) => value === 'dark' ? 'light' : 'dark'), []);
   const openHeaderAction = useCallback(() => setHeaderActionOpen(true), []);
   const closeHeaderAction = useCallback(() => setHeaderActionOpen(false), []);
+  const setOperationLabel = useCallback((label: string) => setOperationLabelState(label), []);
+  const clearOperationLabel = useCallback(() => setOperationLabelState(''), []);
 
   const contextValue = useMemo(() => ({
     user,
@@ -73,7 +76,10 @@ export default function App() {
     closeHeaderAction,
     headerControls,
     setHeaderControls,
-  }), [bumpReloadDataToken, closeHeaderAction, headerAction, headerActionOpen, headerControls, mode, openHeaderAction, reloadDataToken, toggleMode, user]);
+    operationLabel,
+    setOperationLabel,
+    clearOperationLabel,
+  }), [bumpReloadDataToken, clearOperationLabel, closeHeaderAction, headerAction, headerActionOpen, headerControls, mode, openHeaderAction, operationLabel, reloadDataToken, setOperationLabel, toggleMode, user]);
 
   const router = useMemo(() => createBrowserRouter([
     { path: '/login', element: withRouteLoader(<LoginPage />) },

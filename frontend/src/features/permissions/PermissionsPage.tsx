@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { SettingOutlined, EditOutlined, EyeOutlined, UserOutlined } from '@ant-design/icons';
-import { Alert, Box, Card, Chip, Dialog, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { Box, Card, Chip, Dialog, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 
 import type { AccessPermissionItem, AccessRoleItem } from '../../app/types';
 import { apiRequest } from '../../shared/api/client';
 import { useAppContext } from '../../app/AppContext';
 import { AppScrollbar } from '../../shared/components/AppScrollbar';
 import { LoadingState } from '../../shared/components/LoadingState';
+import { notifyError } from '../../shared/notifications';
 import '../../styles/permissions.css';
 
 type PermissionMatrix = {
@@ -70,13 +71,12 @@ export function CustomActionsButton({ onClick }: { onClick: () => void }) {
 }
 
 export function PermissionsPage() {
-  const { setHeaderAction, mode } = useAppContext();
+  const { setHeaderAction, mode, setOperationLabel, clearOperationLabel } = useAppContext();
   const [roles, setRoles] = useState<AccessRoleItem[]>([]);
   const [permissions, setPermissions] = useState<AccessPermissionItem[]>([]);
   const [draft, setDraft] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
   const [activeModalRoleId, setActiveModalRoleId] = useState<string | null>(null);
 
   function isAdminRole(role: AccessRoleItem) {
@@ -95,7 +95,7 @@ export function PermissionsPage() {
     }
   }
 
-  useEffect(() => { void load().catch((err) => setError(err instanceof Error ? err.message : 'No se pudo cargar.')); }, []);
+  useEffect(() => { void load().catch((err) => notifyError(err, 'No se pudo cargar.')); }, []);
 
   const sortedRoles = useMemo(() => {
     return [...roles].sort((a, b) => {
@@ -152,8 +152,8 @@ export function PermissionsPage() {
   }, [roles, draft]);
 
   async function saveAll() {
-    setError('');
     setSaving(true);
+    setOperationLabel('Guardando permisos...');
     try {
       const changedRoles = roles.filter((role) => {
         if (isAdminRole(role)) return false;
@@ -179,24 +179,24 @@ export function PermissionsPage() {
         setDraft(Object.fromEntries(lastPayload.roles.map((entry) => [entry.id, entry.permissions])));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudieron actualizar los permisos.');
+      notifyError(err, 'No se pudieron actualizar los permisos.');
     } finally {
       setSaving(false);
+      clearOperationLabel();
     }
   }
 
   useEffect(() => {
     setHeaderAction({
-      label: saving ? 'Guardando...' : 'Guardar',
+      label: 'Guardar',
       onClick: () => { void saveAll(); },
       disabled: saving || !hasChanges,
     });
     return () => setHeaderAction(null);
-  }, [setHeaderAction, saving, hasChanges]);
+  }, [clearOperationLabel, setHeaderAction, saving, hasChanges, setOperationLabel]);
 
   return (
     <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {error ? <Alert severity="error">{error}</Alert> : null}
       <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {loading ? (
           <LoadingState label="Cargando permisos..." minHeight="100%" />

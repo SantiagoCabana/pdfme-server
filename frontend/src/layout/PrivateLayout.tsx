@@ -3,8 +3,10 @@ import { Link as RouterLink, Navigate, Outlet, useLocation, useNavigate } from '
 import {
   AppBar,
   Avatar,
+  Backdrop,
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -46,7 +48,7 @@ const drawerWidth = 260;
 const miniDrawerWidth = 72;
 
 export function PrivateLayout() {
-  const { user, setUser, mode, toggleMode, headerAction, headerActionOpen, openHeaderAction, closeHeaderAction, headerControls, setHeaderControls } = useAppContext();
+  const { user, setUser, mode, toggleMode, headerAction, headerActionOpen, openHeaderAction, closeHeaderAction, headerControls, setHeaderControls, operationLabel } = useAppContext();
   const theme = useTheme();
   const downLg = useMediaQuery(theme.breakpoints.down('lg'));
   const location = useLocation();
@@ -317,6 +319,19 @@ export function PrivateLayout() {
         <DialogContent dividers>{headerAction?.content}</DialogContent>
         {headerAction?.contentActions ? <DialogActions>{headerAction.contentActions}</DialogActions> : null}
       </Dialog>
+      <Backdrop
+        open={Boolean(operationLabel)}
+        sx={{
+          bgcolor: 'rgba(0, 0, 0, 0.68)',
+          color: '#fff',
+          zIndex: (theme) => theme.zIndex.modal + 20,
+        }}
+      >
+        <Box sx={{ alignItems: 'center', display: 'grid', gap: 1.5, justifyItems: 'center' }}>
+          <CircularProgress color="inherit" size={34} thickness={4} />
+          <Typography sx={{ fontSize: '0.875rem', fontWeight: 700 }}>{operationLabel}</Typography>
+        </Box>
+      </Backdrop>
       <Box component="nav" sx={{ width: { lg: currentDrawerWidth }, flexShrink: { lg: 0 }, transition: sidebarTransition }}>
         <Drawer
           ModalProps={{ keepMounted: true }}

@@ -9,9 +9,10 @@ import { buildExpiryDate, formatDate, statusLabel } from '../../app/session';
 import type { ApiCredential } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
+import { notifyError } from '../../shared/notifications';
 
 export function ApiKeysPage() {
-  const { setHeaderAction, closeHeaderAction } = useAppContext();
+  const { setHeaderAction, closeHeaderAction, setOperationLabel, clearOperationLabel } = useAppContext();
   const [credentials, setCredentials] = useState<ApiCredential[]>([]);
   const [name, setName] = useState('Servicio de documentos');
   const [expiryMode, setExpiryMode] = useState('never');
@@ -32,7 +33,7 @@ export function ApiKeysPage() {
   });
 
   function showError(message: string) {
-    void Swal.fire({ icon: 'error', title: message, confirmButtonText: 'Cerrar' });
+    notifyError(message);
   }
 
   async function copyText(value: string, message = 'Copiado') {
@@ -74,10 +75,12 @@ export function ApiKeysPage() {
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCreating(true);
+    setOperationLabel('Creando clave API...');
     try {
       const payload = await apiRequest<{ rawKey: string }>('/api/api-credentials', { method: 'POST', body: JSON.stringify({ name, expiresAt: resolveExpiresAt() }) });
       await load();
       closeHeaderAction();
+      clearOperationLabel();
       const result = await Swal.fire({
         icon: 'success',
         title: 'Clave creada',
@@ -94,6 +97,7 @@ export function ApiKeysPage() {
       showError(err instanceof Error ? err.message : 'No se pudo crear.');
     } finally {
       setCreating(false);
+      clearOperationLabel();
     }
   }
 
@@ -124,13 +128,13 @@ export function ApiKeysPage() {
               value={customExpiresAt}
             />
           ) : null}
-          <Button disabled={creating || (expiryMode === 'custom' && !customExpiresAt)} startIcon={<KeyOutlined />} type="submit" variant="contained">{creating ? 'Creando...' : 'Crear clave'}</Button>
+          <Button disabled={creating || (expiryMode === 'custom' && !customExpiresAt)} startIcon={<KeyOutlined />} type="submit" variant="contained">Crear clave</Button>
         </Stack>
       ),
     });
 
     return () => setHeaderAction(null);
-  }, [closeHeaderAction, creating, customExpiresAt, expiryMode, name, setHeaderAction]);
+  }, [clearOperationLabel, closeHeaderAction, creating, customExpiresAt, expiryMode, name, setHeaderAction, setOperationLabel]);
 
   async function toggleStatus(credential: ApiCredential) {
     if (credential.status === 'EXPIRED') return;
@@ -151,6 +155,7 @@ export function ApiKeysPage() {
     if (!result.isConfirmed) return;
 
     setTogglingId(credential.id);
+    setOperationLabel(isActive ? 'Deshabilitando clave...' : 'Activando clave...');
     try {
       const payload = await apiRequest<{ credential: ApiCredential }>(`/api/api-credentials/${credential.id}/${nextAction}`, { method: 'PATCH' });
       setCredentials((current) => current.map((entry) => entry.id === credential.id ? payload.credential : entry));
@@ -159,6 +164,7 @@ export function ApiKeysPage() {
       showError(err instanceof Error ? err.message : 'No se pudo actualizar.');
     } finally {
       setTogglingId('');
+      clearOperationLabel();
     }
   }
 
@@ -176,6 +182,7 @@ export function ApiKeysPage() {
     if (!result.isConfirmed) return;
 
     setDeletingId(id);
+    setOperationLabel('Eliminando clave API...');
     try {
       await apiRequest(`/api/api-credentials/${id}`, { method: 'DELETE' });
       setCredentials((current) => current.filter((credential) => credential.id !== id));
@@ -184,6 +191,7 @@ export function ApiKeysPage() {
       showError(err instanceof Error ? err.message : 'No se pudo eliminar.');
     } finally {
       setDeletingId('');
+      clearOperationLabel();
     }
   }
 
