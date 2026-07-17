@@ -1,69 +1,67 @@
-# Plantillas
+# Plantillas y variables
 
-Una plantilla es el diseno pdfme guardado con un `code` estable. Ese `code` es el identificador que debe usar un sistema externo.
+Una plantilla contiene la configuración de página y el `designerJson` de pdfme. Su `code` identifica el diseño ante otros sistemas.
 
-## Crear una plantilla
+## Crear y guardar
 
-1. Entra a **Plantillas**.
-2. Crea una plantilla con nombre claro.
-3. Usa tags si necesitas organizar por categoria.
-4. Abre el editor y ubica los campos variables.
-5. Guarda los cambios.
+1. En **Plantillas**, selecciona **Nueva plantilla**.
+2. Define un nombre, un `code` y los tags necesarios.
+3. Abre el editor, configura el formato y agrega los elementos.
+4. Guarda antes de abrir la vista previa.
+5. Crea una versión nueva cuando necesites conservar el estado anterior.
 
-## Campos variables
+## Texto con variables
 
-Los campos de texto pueden tener contenido fijo y variables entre llaves:
+Un elemento `multiVariableText` separa dos conceptos:
 
-```txt
-{nombre_completo}
-{tipo_documento} : {nro_documento}
-```
-
-Tambien pueden mezclar texto fijo y variables:
-
-```txt
-En merito por culminar el curso con una duracion de {horas} horas.
-```
-
-## Markdown en textos
-
-Si el campo usa `textFormat: "inline-markdown"`, puedes usar negritas como:
-
-```txt
-Diplomado Internacional en **Nutricion**
-```
-
-Para preview y render, el sistema debe conservar:
-
-| Propiedad | Uso |
+| Propiedad | Función |
 | --- | --- |
-| `text` | Texto base con placeholders |
-| `content` | Valores de ejemplo o valores inyectados |
-| `variables` | Lista de variables detectadas |
-| `textFormat` | `plain` o `inline-markdown` |
-| `fontVariants` | Fuentes para bold, italic y code |
+| `text` | Texto completo que se debe renderizar. Puede combinar contenido fijo, Markdown y `{variables}`. |
+| `content` | Objeto JSON con el valor de cada variable para vista previa o render. |
+| `variables` | Lista de nombres detectados en `text`. |
+| `textFormat` | `plain` o `inline-markdown`. |
+| `fontVariants` | Fuentes usadas para negrita, cursiva y código. |
 
-## Ejemplo de campo esperado
+Ejemplo:
 
 ```json
 {
-  "name": "nombre_completo_alumno",
+  "name": "datos_curso",
   "type": "multiVariableText",
-  "text": "{nombre_completo}",
-  "content": "{\"nombre_completo\":\"NOMBRES Y APELLIDOS\"}",
-  "variables": ["nombre_completo"],
-  "textFormat": "plain"
+  "text": "Culminó el **Diplomado en Nutrición** con {horas} horas.",
+  "content": "{\"horas\":\"64\"}",
+  "variables": ["horas"],
+  "textFormat": "inline-markdown"
 }
 ```
 
-## Recomendaciones para plantillas
+La vista previa debe tomar **todo el valor de `text`** y reemplazar solamente `{horas}`. El resultado esperado es:
 
-- Usa nombres de variables en `snake_case`.
-- Evita variables con espacios o tildes.
-- Mantén un ejemplo realista en `content` para que el preview sea util.
-- Verifica QR, imagenes y textos antes de entregar el `code`.
-- No cambies el `code` si ya existe una integracion externa usando esa plantilla.
+```txt
+Culminó el Diplomado en Nutrición con 64 horas.
+```
 
-## Version activa
+No debe mostrar solo `horas`, `{}` ni el nombre de la variable. Esos resultados indican que se envió el objeto equivocado al renderer.
 
-La API siempre trabaja sobre la version marcada como actual. Si creas nuevas versiones, confirma cual queda activa antes de entregar la plantilla a un sistema externo.
+## Markdown en línea
+
+Con `textFormat: "inline-markdown"` puedes usar:
+
+```txt
+**negrita**
+*cursiva*
+`código`
+```
+
+Para que la negrita use la fuente correcta, configura `fontVariants.bold`. Si no existe una variante, el sistema puede usar el fallback sintético.
+
+## Nombres recomendados
+
+- Usa `snake_case`: `nombre_completo`, `fecha_emision`.
+- Evita espacios, tildes y caracteres especiales.
+- No repitas un nombre para datos con significados diferentes.
+- Mantén valores de prueba en `content` para validar la vista previa.
+
+## Versión actual
+
+Cada plantilla puede tener varias versiones, pero solo una se marca como actual. El catálogo y las futuras operaciones de render deben trabajar con esa versión. Confirma la versión activa antes de cambiar el diseño que usa una integración.

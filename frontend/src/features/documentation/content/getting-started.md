@@ -1,47 +1,46 @@
-# Guia rapida
+# Primeros pasos
 
-Esta documentacion explica como usar la aplicacion y como consumirla desde sistemas externos por API.
+Esta guía explica el flujo diario de PDFme Server. La documentación usa la misma sesión y el mismo dominio que la aplicación.
 
 ## Flujo recomendado
 
-1. Inicia sesion en el frontend.
-2. Crea o edita una plantilla en **Plantillas**.
-3. Revisa la vista previa para confirmar que textos, imagenes, QR y variables se muestran como esperas.
-4. Crea una clave en **Claves API** si un sistema externo va a consultar plantillas o solicitar render.
-5. Entrega al desarrollador el `code` de la plantilla y la `rawKey` de la clave API.
+1. Inicia sesión con tu usuario.
+2. Abre **Plantillas** y crea una plantilla o selecciona una existente.
+3. Configura la hoja, agrega los elementos y guarda los cambios.
+4. Abre **Vista previa** y confirma textos, variables, imágenes y códigos QR.
+5. Si otro sistema consumirá la API, crea una credencial en **Claves API**.
+6. Entrega al integrador la URL del dominio, la clave y el `code` estable de la plantilla.
 
-## URLs de desarrollo
+> La clave completa (`rawKey`) se muestra una sola vez. Guárdala en un gestor de secretos; si se pierde, crea otra y elimina la anterior.
 
-| Servicio | URL |
+## Secciones de la aplicación
+
+| Sección | Uso |
 | --- | --- |
-| Frontend | `http://localhost:5173` |
-| Backend API | `http://localhost:4000` |
-| Documentacion | `http://localhost:5173/documentation/getting-started` |
+| Plantillas | Crear, editar, previsualizar y versionar diseños. |
+| Claves API | Crear, activar, desactivar o eliminar credenciales externas. |
+| Tags | Clasificar plantillas. |
+| Usuarios | Administrar cuentas y roles. |
+| Permisos | Consultar o asignar capacidades. |
+| Auditoría | Revisar operaciones realizadas en el sistema. |
 
-## Roles dentro de la app
+Las secciones visibles dependen de los permisos de la sesión.
 
-| Accion | Permiso necesario |
-| --- | --- |
-| Ver plantillas | `templates.view` |
-| Crear plantillas | `templates.create` |
-| Editar plantillas | `templates.edit` |
-| Eliminar plantillas | `templates.delete` |
-| Gestionar claves API | `api_keys.manage` |
-| Ver auditoria | `audit.view` |
+## Datos para una integración
 
-## Datos que necesita un desarrollador
-
-Para integrar un sistema externo, entrega estos datos:
-
-| Dato | Ejemplo | Donde se obtiene |
+| Dato | Ejemplo | Origen |
 | --- | --- | --- |
-| Base URL | `https://dominio.com/api` | Configuracion del despliegue |
-| API key | `pk_live_xxxxx` | Se muestra una sola vez al crear la clave |
-| Template code | `c1_docencia_en_salud_a9d8a3d7` | Listado o detalle de plantilla |
-| Variables esperadas | `nombre_completo`, `nro_documento` | Campos de texto en el editor |
+| URL base | `https://dominio.com/api` | Dominio de la aplicación. |
+| API key | `pk_live_xxxxx` | Claves API. |
+| Template code | `c1_docencia_en_salud_a9d8a3d7` | Ficha de la plantilla. |
+| Variables | `nombre_completo`, `nro_documento` | Elementos variables del editor. |
 
-> La `rawKey` no se puede recuperar despues. Si se pierde, crea una clave nueva y revoca la anterior.
+## Antes de entregar una plantilla
 
-## Estado actual
+- Mantén estable el `code` si ya existe una integración.
+- Revisa cuál versión está marcada como actual.
+- Usa valores de ejemplo realistas en los campos variables.
+- Confirma el resultado desde **Vista previa**, no solo desde el editor.
+- Entrega al integrador únicamente las variables que la plantilla necesita.
 
-La API externa ya autentica por `x-api-key` y lista plantillas. El endpoint de render existe, valida la API key y responde `501` porque el generador pdfme final aun no esta conectado.
+Continúa con [Plantillas y variables](/documentation/templates).
