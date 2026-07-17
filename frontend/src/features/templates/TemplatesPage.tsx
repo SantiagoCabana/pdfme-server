@@ -19,10 +19,12 @@ import {
 } from '@ant-design/icons';
 import {
   Alert,
+  Backdrop,
   Box,
   Button,
   Card,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -168,14 +170,14 @@ function EditorHeaderControls({
             </Tooltip>
           </Box>
           <Button disabled={saving || switchingVersion} onClick={onSave} size="small" startIcon={<SaveOutlined />} variant="contained">
-            {saving ? 'Guardando...' : 'Guardar'}
+            Guardar
           </Button>
           <IconButton disabled={saving || savingVersion || switchingVersion || savingDetails} onClick={(event) => setMenuAnchor(event.currentTarget)} size="small">
             <EllipsisOutlined />
           </IconButton>
           <Menu anchorEl={menuAnchor} onClose={closeMenu} open={Boolean(menuAnchor)} transitionDuration={120}>
             <MenuItem disabled={savingVersion} onClick={() => { closeMenu(); onSaveVersion(); }}>
-              {savingVersion ? 'Creando version...' : 'Guardar version'}
+              Guardar version
             </MenuItem>
             <MenuItem disabled={!hasMultipleVersions} onClick={() => { closeMenu(); onOpenVersions(); }}>
               Cambiar version
@@ -288,6 +290,14 @@ export function TemplatesPage() {
   const [savingDetails, setSavingDetails] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<TemplateItem | null>(null);
   const designerRef = useRef<PdfmeDesignerHandle | null>(null);
+  const editorBusy = saving || savingVersion || savingDetails || switchingVersion;
+  const editorBusyLabel = switchingVersion
+    ? 'Cambiando version...'
+    : savingVersion
+      ? 'Creando version...'
+      : savingDetails
+        ? 'Guardando datos...'
+        : 'Guardando plantilla...';
 
   async function load() {
     setLoading(true);
@@ -942,10 +952,25 @@ export function TemplatesPage() {
           <DialogActions>
             <Button onClick={() => setDetailsDialogOpen(false)}>Cancelar</Button>
             <Button disabled={savingDetails} onClick={() => void saveDetails()} variant="contained">
-              {savingDetails ? 'Guardando...' : 'Guardar'}
+              Guardar
             </Button>
           </DialogActions>
         </Dialog>
+        <Backdrop
+          open={editorBusy}
+          sx={{
+            bgcolor: 'rgba(0, 0, 0, 0.72)',
+            color: '#ffffff',
+            display: 'grid',
+            placeItems: 'center',
+            zIndex: (theme) => theme.zIndex.modal + 10,
+          }}
+        >
+          <Stack spacing={1.5} sx={{ alignItems: 'center' }}>
+            <CircularProgress color="inherit" size={34} thickness={4} />
+            <Typography sx={{ fontSize: '0.875rem', fontWeight: 600 }}>{editorBusyLabel}</Typography>
+          </Stack>
+        </Backdrop>
         <Box className="pdfme-workspace" sx={{ height: '100%', minHeight: 0, width: '100%' }}>
           <Card sx={{ bgcolor: 'background.default', borderRadius: 0, boxShadow: 'none', height: '100%', minWidth: 0, overflow: 'hidden' }}>
             {designerTemplate ? (
