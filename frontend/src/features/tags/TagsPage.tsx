@@ -37,10 +37,16 @@ export function TagsPage() {
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const nextName = name.trim();
+    if (!nextName) {
+      notifyError('Ingresa el nombre del tag.');
+      return;
+    }
+
     setCreating(true);
     setOperationLabel('Creando tag...');
     try {
-      await apiRequest('/api/tags', { method: 'POST', body: JSON.stringify({ name }) });
+      await apiRequest('/api/tags', { method: 'POST', body: JSON.stringify({ name: nextName }) });
       setName('');
       await load();
       closeHeaderAction();
@@ -60,10 +66,16 @@ export function TagsPage() {
   async function update(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editingTag) return;
+    const nextName = editName.trim();
+    if (!nextName) {
+      notifyError('Ingresa el nombre del tag.');
+      return;
+    }
+
     setSaving(true);
     setOperationLabel('Guardando tag...');
     try {
-      await apiRequest('/api/tags/' + editingTag.id, { method: 'PATCH', body: JSON.stringify({ name: editName }) });
+      await apiRequest('/api/tags/' + editingTag.id, { method: 'PATCH', body: JSON.stringify({ name: nextName }) });
       setEditingTag(null);
       await load();
     } catch (err) {
@@ -97,7 +109,6 @@ export function TagsPage() {
     setHeaderAction({
       label: 'Agregar',
       title: 'Nuevo tag',
-      description: 'Crea una etiqueta para clasificar plantillas.',
       maxWidth: 'xs',
       content: (
         <FormFieldStack id="create-tag-form" onSubmit={create}>
@@ -107,7 +118,7 @@ export function TagsPage() {
       contentActions: (
         <>
           <Button onClick={closeHeaderAction}>Cancelar</Button>
-          <Button disabled={creating} form="create-tag-form" startIcon={<TagsOutlined />} type="submit" variant="contained">Crear</Button>
+          <Button disabled={creating || !name.trim()} form="create-tag-form" startIcon={<TagsOutlined />} type="submit" variant="contained">Crear</Button>
         </>
       ),
     });
@@ -146,10 +157,9 @@ export function TagsPage() {
         actions={(
           <>
             <Button onClick={() => setEditingTag(null)}>Cancelar</Button>
-            <Button disabled={saving} form="edit-tag-form" startIcon={<EditOutlined />} type="submit" variant="contained">Guardar</Button>
+            <Button disabled={saving || !editName.trim()} form="edit-tag-form" startIcon={<EditOutlined />} type="submit" variant="contained">Guardar</Button>
           </>
         )}
-        description="Actualiza el nombre visible de la etiqueta."
         maxWidth="xs"
         onClose={() => setEditingTag(null)}
         open={Boolean(editingTag)}

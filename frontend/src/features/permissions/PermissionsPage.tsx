@@ -249,7 +249,6 @@ export function PermissionsPage() {
 
       <AppFormDialog
         actions={<Button onClick={() => setActiveRoleId(null)}>Cerrar</Button>}
-        description="Activa o desactiva acciones especificas del modulo."
         maxWidth="sm"
         onClose={() => setActiveRoleId(null)}
         open={Boolean(activeRole)}

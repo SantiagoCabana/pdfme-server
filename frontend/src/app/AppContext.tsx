@@ -5,7 +5,6 @@ import type { ThemeMode } from '../theme/appTheme';
 export type HeaderAction = {
   label: string;
   title?: string;
-  description?: string;
   content?: ReactNode;
   contentActions?: ReactNode;
   maxWidth?: 'xs' | 'sm' | 'md' | 'lg';

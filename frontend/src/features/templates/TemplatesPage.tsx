@@ -400,8 +400,16 @@ export function TemplatesPage() {
   }
 
   async function create() {
-    if (name.trim().length < 2) {
+    const nextName = name.trim();
+    const nextCode = code.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+
+    if (nextName.length < 2) {
       notifyError('Ingresa un nombre para la plantilla.');
+      return;
+    }
+
+    if (!nextCode) {
+      notifyError('Ingresa el codigo de la plantilla.');
       return;
     }
 
@@ -411,7 +419,7 @@ export function TemplatesPage() {
     try {
       const payload = await apiRequest<{ template: TemplateItem }>('/api/templates', {
         method: 'POST',
-        body: JSON.stringify({ name, code, tagNames: selectedTags }),
+        body: JSON.stringify({ name: nextName, code: nextCode, tagNames: selectedTags }),
       });
       resetCreateForm();
       closeHeaderAction();
@@ -433,7 +441,6 @@ export function TemplatesPage() {
     setHeaderAction({
       label: 'Agregar',
       title: 'Nueva plantilla',
-      description: 'Define el nombre, codigo y etiquetas iniciales.',
       maxWidth: 'sm',
       content: (
         <FormFieldStack
@@ -474,7 +481,7 @@ export function TemplatesPage() {
       contentActions: (
         <>
           <Button onClick={closeHeaderAction}>Cancelar</Button>
-          <Button disabled={creating || name.trim().length < 2} form="create-template-form" startIcon={<PlusOutlined />} type="submit" variant="contained">Crear</Button>
+          <Button disabled={creating || name.trim().length < 2 || !code.trim()} form="create-template-form" startIcon={<PlusOutlined />} type="submit" variant="contained">Crear</Button>
         </>
       ),
     });
@@ -574,6 +581,19 @@ export function TemplatesPage() {
 
   async function saveDetails() {
     if (!editingTemplate) return;
+    const nextName = detailsName.trim();
+    const nextCode = detailsCode.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+
+    if (nextName.length < 2) {
+      notifyError('Ingresa un nombre para la plantilla.');
+      return;
+    }
+
+    if (!nextCode) {
+      notifyError('Ingresa el codigo de la plantilla.');
+      return;
+    }
+
     setError('');
     setSavingDetails(true);
     try {
@@ -581,8 +601,8 @@ export function TemplatesPage() {
       const payload = await apiRequest<{ template: TemplateItem }>('/api/templates/' + editingTemplate.id, {
         method: 'PATCH',
         body: JSON.stringify({
-          name: detailsName,
-          code: detailsCode.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
+          name: nextName,
+          code: nextCode,
           tagNames,
         }),
       });
@@ -985,12 +1005,11 @@ export function TemplatesPage() {
           actions={(
             <>
               <Button onClick={() => setDetailsDialogOpen(false)}>Cancelar</Button>
-              <Button disabled={savingDetails} onClick={() => void saveDetails()} variant="contained">
+              <Button disabled={savingDetails || detailsName.trim().length < 2 || !detailsCode.trim()} onClick={() => void saveDetails()} variant="contained">
                 Guardar
               </Button>
             </>
           )}
-          description="Actualiza los datos usados por la app y la API."
           maxWidth="sm"
           onClose={() => setDetailsDialogOpen(false)}
           open={detailsDialogOpen}

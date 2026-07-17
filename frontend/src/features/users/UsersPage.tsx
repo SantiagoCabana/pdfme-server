@@ -15,6 +15,10 @@ import { notifyError } from '../../shared/notifications';
 const roleOptions = ['VIEWER', 'EDITOR', 'MANAGER', 'ADMIN'];
 const statusOptions = ['ACTIVE', 'INVITED', 'SUSPENDED'];
 
+function isEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 export function UsersPage() {
   const { setHeaderAction, closeHeaderAction, setOperationLabel, clearOperationLabel } = useAppContext();
   const [users, setUsers] = useState<InternalUser[]>([]);
@@ -48,10 +52,24 @@ export function UsersPage() {
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const nextDisplayName = displayName.trim();
+    const nextEmail = email.trim().toLowerCase();
+    const nextPassword = password.trim();
+
+    if (!nextDisplayName || !nextEmail || !nextPassword || !roleCode) {
+      notifyError('Completa los datos del usuario.');
+      return;
+    }
+
+    if (!isEmail(nextEmail)) {
+      notifyError('Ingresa un correo valido.');
+      return;
+    }
+
     setCreating(true);
     setOperationLabel('Creando usuario...');
     try {
-      await apiRequest('/api/users', { method: 'POST', body: JSON.stringify({ displayName, email, password, roleCode }) });
+      await apiRequest('/api/users', { method: 'POST', body: JSON.stringify({ displayName: nextDisplayName, email: nextEmail, password: nextPassword, roleCode }) });
       setDisplayName(''); setEmail(''); setPassword(''); setRoleCode('VIEWER');
       await load();
       closeHeaderAction();
@@ -74,16 +92,24 @@ export function UsersPage() {
   async function update(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editingUser) return;
+    const nextDisplayName = editDisplayName.trim();
+    const nextPassword = editPassword.trim();
+
+    if (!nextDisplayName || !editRoleCode || !editStatus) {
+      notifyError('Completa los datos del usuario.');
+      return;
+    }
+
     setSaving(true);
     setOperationLabel('Guardando usuario...');
     try {
       await apiRequest('/api/users/' + editingUser.id, {
         method: 'PATCH',
         body: JSON.stringify({
-          displayName: editDisplayName,
+          displayName: nextDisplayName,
           status: editStatus,
           roleCode: editRoleCode,
-          ...(editPassword ? { password: editPassword } : {}),
+          ...(nextPassword ? { password: nextPassword } : {}),
         }),
       });
       setEditingUser(null);
@@ -138,7 +164,6 @@ export function UsersPage() {
     setHeaderAction({
       label: 'Agregar',
       title: 'Nuevo usuario',
-      description: 'Crea una cuenta interna y asigna su rol inicial.',
       maxWidth: 'sm',
       content: (
         <FormFieldStack id="create-user-form" onSubmit={create}>
@@ -153,7 +178,7 @@ export function UsersPage() {
       contentActions: (
         <>
           <Button onClick={closeHeaderAction}>Cancelar</Button>
-          <Button disabled={creating} form="create-user-form" startIcon={<PlusOutlined />} type="submit" variant="contained">Crear</Button>
+          <Button disabled={creating || !displayName.trim() || !email.trim() || !password.trim() || !roleCode} form="create-user-form" startIcon={<PlusOutlined />} type="submit" variant="contained">Crear</Button>
         </>
       ),
     });
@@ -194,10 +219,9 @@ export function UsersPage() {
         actions={(
           <>
             <Button onClick={() => setEditingUser(null)}>Cancelar</Button>
-            <Button disabled={saving} form="edit-user-form" startIcon={<EditOutlined />} type="submit" variant="contained">Guardar</Button>
+            <Button disabled={saving || !editDisplayName.trim() || !editRoleCode || !editStatus} form="edit-user-form" startIcon={<EditOutlined />} type="submit" variant="contained">Guardar</Button>
           </>
         )}
-        description="Actualiza datos, rol y estado de acceso."
         maxWidth="sm"
         onClose={() => setEditingUser(null)}
         open={Boolean(editingUser)}

@@ -67,10 +67,22 @@ export function ApiKeysPage() {
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const nextName = name.trim();
+
+    if (!nextName) {
+      notifyError('Ingresa el nombre de la clave API.');
+      return;
+    }
+
+    if (expiryMode === 'custom' && !customExpiresAt) {
+      notifyError('Selecciona la fecha de expiracion.');
+      return;
+    }
+
     setCreating(true);
     setOperationLabel('Creando clave API...');
     try {
-      const payload = await apiRequest<{ rawKey: string }>('/api/api-credentials', { method: 'POST', body: JSON.stringify({ name, expiresAt: resolveExpiresAt() }) });
+      const payload = await apiRequest<{ rawKey: string }>('/api/api-credentials', { method: 'POST', body: JSON.stringify({ name: nextName, expiresAt: resolveExpiresAt() }) });
       await load();
       closeHeaderAction();
       clearOperationLabel();
@@ -99,7 +111,6 @@ export function ApiKeysPage() {
     setHeaderAction({
       label: 'Agregar',
       title: 'Nueva clave API',
-      description: 'Genera una clave para integrar aplicaciones externas.',
       maxWidth: 'sm',
       content: (
         <FormFieldStack id="create-api-key-form" onSubmit={create}>
@@ -127,7 +138,7 @@ export function ApiKeysPage() {
       contentActions: (
         <>
           <Button onClick={closeHeaderAction}>Cancelar</Button>
-          <Button disabled={creating || (expiryMode === 'custom' && !customExpiresAt)} form="create-api-key-form" startIcon={<KeyOutlined />} type="submit" variant="contained">Crear</Button>
+          <Button disabled={creating || !name.trim() || (expiryMode === 'custom' && !customExpiresAt)} form="create-api-key-form" startIcon={<KeyOutlined />} type="submit" variant="contained">Crear</Button>
         </>
       ),
     });

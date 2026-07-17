@@ -313,7 +313,6 @@ export function PrivateLayout() {
       </AppBar>
       <AppFormDialog
         actions={headerAction?.contentActions}
-        description={headerAction?.description}
         maxWidth={headerAction?.maxWidth ?? 'sm'}
         onClose={closeHeaderAction}
         open={Boolean(headerAction && headerActionOpen)}
