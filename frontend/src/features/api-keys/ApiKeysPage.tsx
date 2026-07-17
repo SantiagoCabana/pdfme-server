@@ -24,6 +24,7 @@ export function ApiKeysPage() {
   const [deletingId, setDeletingId] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
 
   function showError(message: string) {
     notifyError(message);
@@ -50,7 +51,15 @@ export function ApiKeysPage() {
   }
 
   function isVisuallyActive(credential: ApiCredential) {
-    return credential.status === 'ACTIVE' || credential.status === 'EXPIRED';
+    return credential.status === 'ACTIVE';
+  }
+
+  function isExpired(credential: ApiCredential) {
+    return Boolean(credential.expiresAt && new Date(credential.expiresAt).getTime() <= now);
+  }
+
+  function visibleStatus(credential: ApiCredential) {
+    return isExpired(credential) ? 'EXPIRED' : credential.status;
   }
 
   async function load() {
@@ -64,6 +73,11 @@ export function ApiKeysPage() {
   }
 
   useEffect(() => { void load().catch((err) => showError(err instanceof Error ? err.message : 'No se pudo cargar.')); }, []);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 15000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -147,7 +161,7 @@ export function ApiKeysPage() {
   }, [clearOperationLabel, closeHeaderAction, creating, customExpiresAt, expiryMode, name, setHeaderAction, setOperationLabel]);
 
   async function toggleStatus(credential: ApiCredential) {
-    if (credential.status === 'EXPIRED') return;
+    if (isExpired(credential) || credential.status === 'EXPIRED') return;
 
     const isActive = credential.status === 'ACTIVE';
     const nextAction = isActive ? 'disable' : 'activate';
@@ -226,7 +240,11 @@ export function ApiKeysPage() {
                 'Ultimo uso',
                 { name: 'Acciones', sort: false },
               ]}
-              data={credentials.slice(page * rowsPerPage, (page + 1) * rowsPerPage).map((credential) => [
+              data={credentials.slice(page * rowsPerPage, (page + 1) * rowsPerPage).map((credential) => {
+                const expired = isExpired(credential);
+                const status = visibleStatus(credential);
+
+                return [
                 <Stack key="name" spacing={0.25} sx={{ minWidth: 0 }}>
                   <Typography
                     noWrap
@@ -249,15 +267,15 @@ export function ApiKeysPage() {
                     </Tooltip>
                   </Stack>
                 </Stack>,
-                <Chip key="s" label={statusLabel(credential.status)} size="small" sx={{ minWidth: 78 }} />,
-                <Tooltip key="enabled" title={credential.status === 'EXPIRED' ? 'Expirada' : credential.status === 'ACTIVE' ? 'Deshabilitar' : 'Activar'}>
+                <Chip key="s" label={statusLabel(status)} size="small" sx={{ minWidth: 78 }} />,
+                <Tooltip key="enabled" title={expired || credential.status === 'EXPIRED' ? 'Expirada' : credential.status === 'ACTIVE' ? 'Deshabilitar' : 'Activar'}>
                   <span>
                     <Switch
                       checked={isVisuallyActive(credential)}
-                      disabled={credential.status === 'EXPIRED' || togglingId === credential.id}
+                      disabled={expired || credential.status === 'EXPIRED' || togglingId === credential.id}
                       onChange={() => void toggleStatus(credential)}
                       size="small"
-                      sx={credential.status === 'EXPIRED' ? { opacity: 0.45, pointerEvents: 'none' } : undefined}
+                      sx={expired || credential.status === 'EXPIRED' ? { opacity: 0.45, pointerEvents: 'none' } : undefined}
                     />
                   </span>
                 </Tooltip>,
@@ -277,7 +295,8 @@ export function ApiKeysPage() {
                     </span>
                   </Tooltip>
                 </Box>,
-              ])}
+                ];
+              })}
             />
             <PaginationBar page={page} setPage={setPage} rowsPerPage={rowsPerPage} setRowsPerPage={setRowsPerPage} total={credentials.length} />
           </Box>
