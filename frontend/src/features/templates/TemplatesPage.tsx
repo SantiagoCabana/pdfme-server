@@ -61,12 +61,10 @@ const pageFormats = [
   { value: 'CUSTOM', label: 'Personalizado', width: 210, height: 297 },
 ];
 
-const backgroundSchemaName = '__page_background';
 type BlankBasePdf = {
   width: number;
   height: number;
   padding: [number, number, number, number];
-  staticSchema?: Schema[];
 };
 
 type EditorHeaderControlsProps = {
@@ -228,26 +226,8 @@ function buildPdfmeTemplate(template: TemplateItem, options?: { pageWidthMm?: nu
       width,
       height,
       padding: [0, 0, 0, 0],
-      staticSchema: syncBackgroundSchemaSize(storedBasePdf.staticSchema, width, height),
     },
   } as PdfmeTemplate;
-}
-
-function syncBackgroundSchemaSize(staticSchema: unknown, width: number, height: number): Schema[] | undefined {
-  if (!Array.isArray(staticSchema)) return undefined;
-
-  return (staticSchema as any[]).map((schema) => {
-    if (schema?.name !== backgroundSchemaName) {
-      return schema;
-    }
-
-    return {
-      ...schema,
-      position: { x: 0, y: 0 },
-      width,
-      height,
-    };
-  });
 }
 
 function updatePdfmeBasePdf(current: PdfmeTemplate | null, patch: { width?: number; height?: number }) {
@@ -266,41 +246,8 @@ function updatePdfmeBasePdf(current: PdfmeTemplate | null, patch: { width?: numb
       width: nextWidth,
       height: nextHeight,
       padding: basePdf.padding ?? [0, 0, 0, 0],
-      staticSchema: syncBackgroundSchemaSize(basePdf.staticSchema, nextWidth, nextHeight),
     },
   } as PdfmeTemplate;
-}
-
-function updatePdfmeBackground(current: PdfmeTemplate | null, dataUrl: string, width: number, height: number) {
-  if (!current) return current;
-
-  const currentBasePdf = typeof current.basePdf === 'object' && current.basePdf && !Array.isArray(current.basePdf)
-    ? current.basePdf as Record<string, unknown>
-    : {};
-  const staticSchema = Array.isArray(currentBasePdf.staticSchema) ? currentBasePdf.staticSchema : [];
-  const backgroundSchema = {
-    name: backgroundSchemaName,
-    type: 'image',
-    content: dataUrl,
-    position: { x: 0, y: 0 },
-    width,
-    height,
-    readOnly: true,
-  };
-
-  return {
-    ...current,
-    basePdf: {
-      ...currentBasePdf,
-      width,
-      height,
-      padding: currentBasePdf.padding ?? [0, 0, 0, 0],
-      staticSchema: [
-        backgroundSchema,
-        ...staticSchema.filter((schema: any) => schema?.name !== backgroundSchemaName),
-      ],
-    },
-  } as unknown as PdfmeTemplate;
 }
 
 export function TemplatesPage() {
@@ -339,10 +286,8 @@ export function TemplatesPage() {
   const [detailsCode, setDetailsCode] = useState('');
   const [detailsTags, setDetailsTags] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
-  const [loadingBackground, setLoadingBackground] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<TemplateItem | null>(null);
   const designerRef = useRef<PdfmeDesignerHandle | null>(null);
-  const backgroundInputRef = useRef<HTMLInputElement | null>(null);
 
   async function load() {
     setLoading(true);
@@ -643,29 +588,6 @@ export function TemplatesPage() {
     setPageWidthMm(pageHeightMm);
     setPageHeightMm(pageWidthMm);
     setDesignerTemplate((current) => updatePdfmeBasePdf(current, { width: pageHeightMm, height: pageWidthMm }));
-  }
-
-  function uploadBackground(file: File) {
-    setError('');
-    setLoadingBackground(true);
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === 'string' ? reader.result : '';
-      if (!result.startsWith('data:image/')) {
-        setError('El fondo debe ser una imagen PNG, JPG o WebP.');
-        setLoadingBackground(false);
-        return;
-      }
-
-      setDesignerTemplate((current) => updatePdfmeBackground(current, result, pageWidthMm, pageHeightMm));
-      setLoadingBackground(false);
-    };
-    reader.onerror = () => {
-      setError('No se pudo leer la imagen de fondo.');
-      setLoadingBackground(false);
-    };
-    reader.readAsDataURL(file);
   }
 
   const prevSchemasRef = useRef<Record<string, string>>({});
@@ -984,17 +906,6 @@ export function TemplatesPage() {
   if (editingTemplate) {
     return (
       <Box sx={{ height: '100%', minHeight: 0, position: 'relative', width: '100%' }}>
-        <input
-          accept="image/png,image/jpeg,image/webp"
-          hidden
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            event.target.value = '';
-            if (file) uploadBackground(file);
-          }}
-          ref={backgroundInputRef}
-          type="file"
-        />
         {error ? <Alert severity="error" sx={{ left: 16, position: 'absolute', right: 16, top: 16, zIndex: 2 }}>{error}</Alert> : null}
         <Dialog fullWidth maxWidth="sm" onClose={() => setVersionsDialogOpen(false)} open={versionsDialogOpen}>
           <DialogTitle>Cambiar version</DialogTitle>
