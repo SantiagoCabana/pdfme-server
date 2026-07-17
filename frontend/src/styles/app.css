@@ -478,6 +478,16 @@ div.selectable-locked {
   transform: scale(1.15);
 }
 
+.sidebar-lock-btn[data-state="locked"],
+.sidebar-lock-btn[data-state="locked"] svg {
+  color: #ff4d4f !important;
+}
+
+.sidebar-lock-btn[data-state="unlocked"],
+.sidebar-lock-btn[data-state="unlocked"] svg {
+  color: #ffffff !important;
+}
+
 /* Iconos de tipos de esquema en la barra lateral */
 .schema-type-icon {
   font-size: 0.9rem;
