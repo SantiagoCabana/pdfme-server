@@ -485,6 +485,11 @@ div.selectable-locked {
 
 .sidebar-lock-btn[data-state="unlocked"],
 .sidebar-lock-btn[data-state="unlocked"] svg {
+  color: rgba(0, 0, 0, 0.72) !important;
+}
+
+[data-theme='dark'] .sidebar-lock-btn[data-state="unlocked"],
+[data-theme='dark'] .sidebar-lock-btn[data-state="unlocked"] svg {
   color: #ffffff !important;
 }
 
