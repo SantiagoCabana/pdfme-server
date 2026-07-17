@@ -168,7 +168,7 @@ export function PermissionsPage() {
       onClick: () => { void saveAll(); },
     });
     return () => setHeaderAction(null);
-  }, [clearOperationLabel, hasChanges, saving, setHeaderAction, setOperationLabel]);
+  }, [clearOperationLabel, draft, hasChanges, roles, saving, setHeaderAction, setOperationLabel]);
 
   const tableData = visibleRows.map((row) => [
     <Stack key="module" direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 210 }}>

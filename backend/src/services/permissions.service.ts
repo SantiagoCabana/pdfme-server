@@ -1,5 +1,7 @@
 import { prisma } from '../prisma.js';
 
+const fixedRoleCodes = new Set(['ADMIN', 'SUPERADMIN']);
+
 export async function listPermissionMatrix() {
   const roles = await prisma.accessRole.findMany({
     where: { status: true },
@@ -24,7 +26,7 @@ export async function listPermissionMatrix() {
       name: role.name,
       description: role.description,
       isSystem: role.isSystem,
-      permissions: role.code === 'ADMIN'
+      permissions: fixedRoleCodes.has(role.code)
         ? activePermissionCodes
         : role.permissions.map((entry) => entry.accessPermission.code),
     })),
@@ -44,7 +46,7 @@ export async function updateRolePermissions(roleId: string, permissionCodes: str
     select: { code: true },
   });
 
-  if (role.code === 'ADMIN') {
+  if (fixedRoleCodes.has(role.code)) {
     throw new Error('ADMIN_ROLE_LOCKED');
   }
 
