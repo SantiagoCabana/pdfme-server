@@ -28,6 +28,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MoonOutlined,
+  ReadOutlined,
   DesktopOutlined,
   SafetyCertificateOutlined,
   SunOutlined,
@@ -55,6 +56,7 @@ export function PrivateLayout() {
 
   const items = useMemo(() => [
     { path: '/templates', label: 'Plantillas', icon: <FileTextOutlined />, visible: can(user, 'templates.view') },
+    { path: '/documentation/getting-started', label: 'Documentación', icon: <ReadOutlined />, visible: Boolean(user) },
     { path: '/api-keys', label: 'Claves API', icon: <ApiOutlined />, visible: can(user, 'api_keys.manage') },
     { path: '/tags', label: 'Tags', icon: <TagsOutlined />, visible: can(user, 'templates.edit') },
     { path: '/users', label: 'Usuarios', icon: <UserOutlined />, visible: can(user, 'users.manage') },

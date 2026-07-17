@@ -22,6 +22,7 @@ const UsersPage = lazy(() => import('./features/users/UsersPage').then((module) 
 const TagsPage = lazy(() => import('./features/tags/TagsPage').then((module) => ({ default: module.TagsPage })));
 const PermissionsPage = lazy(() => import('./features/permissions/PermissionsPage').then((module) => ({ default: module.PermissionsPage })));
 const AuditLogsPage = lazy(() => import('./features/audit-logs/AuditLogsPage').then((module) => ({ default: module.AuditLogsPage })));
+const DocumentationPage = lazy(() => import('./features/documentation/DocumentationPage').then((module) => ({ default: module.DocumentationPage })));
 const PrivateLayout = lazy(() => import('./layout/PrivateLayout').then((module) => ({ default: module.PrivateLayout })));
 
 function readThemePreference(): ThemePreference {
@@ -122,6 +123,7 @@ export default function App() {
 
   const router = useMemo(() => createBrowserRouter([
     { path: '/login', element: withRouteLoader(<LoginPage />) },
+    { path: '/documentation/*', element: withRouteLoader(<DocumentationPage />) },
     {
       path: '/',
       element: withRouteLoader(<PrivateLayout />),

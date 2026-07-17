@@ -79,6 +79,23 @@ Health:      http://localhost:4000/api/health
 
 The browser-facing application is the frontend URL. The backend URL is for API calls and health checks.
 
+## Frontend Documentation Route
+
+The frontend now includes an authenticated documentation view outside the main sidebar layout.
+
+```txt
+/documentation/{routes}
+```
+
+Current routes:
+
+- `/documentation/getting-started`
+- `/documentation/templates`
+- `/documentation/api`
+- `/documentation/access-control`
+
+Implementation notes are documented in [docs/FRONTEND_DOCUMENTATION_ROUTE.md](./docs/FRONTEND_DOCUMENTATION_ROUTE.md).
+
 ---
 
 ## Backend Environment
