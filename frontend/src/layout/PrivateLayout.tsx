@@ -6,6 +6,7 @@ import {
   Box,
   Button,
   Dialog,
+  DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
@@ -314,6 +315,7 @@ export function PrivateLayout() {
       <Dialog fullWidth maxWidth={headerAction?.maxWidth ?? 'sm'} onClose={closeHeaderAction} open={Boolean(headerAction && headerActionOpen)}>
         {headerAction?.title ? <DialogTitle>{headerAction.title}</DialogTitle> : null}
         <DialogContent dividers>{headerAction?.content}</DialogContent>
+        {headerAction?.contentActions ? <DialogActions>{headerAction.contentActions}</DialogActions> : null}
       </Dialog>
       <Box component="nav" sx={{ width: { lg: currentDrawerWidth }, flexShrink: { lg: 0 }, transition: sidebarTransition }}>
         <Drawer

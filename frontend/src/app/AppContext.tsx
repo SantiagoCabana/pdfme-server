@@ -6,6 +6,7 @@ export type HeaderAction = {
   label: string;
   title?: string;
   content?: ReactNode;
+  contentActions?: ReactNode;
   maxWidth?: 'xs' | 'sm' | 'md' | 'lg';
   onClick?: () => void;
   disabled?: boolean;

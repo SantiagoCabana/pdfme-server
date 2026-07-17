@@ -19,6 +19,7 @@ import {
 } from '@ant-design/icons';
 import {
   Alert,
+  Autocomplete,
   Backdrop,
   Box,
   Button,
@@ -48,7 +49,7 @@ import type { Schema, Template as PdfmeTemplate } from '@pdfme/common';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { can } from '../../app/session';
-import type { TemplateItem } from '../../app/types';
+import type { TagItem, TemplateItem } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
 import type { PdfmeDesignerHandle } from './components/PdfmeDesigner';
@@ -260,11 +261,13 @@ export function TemplatesPage() {
   const isPreviewRoute = location.pathname.includes('/templates/preview/');
   const isEditRoute = location.pathname.includes('/templates/edit/');
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
+  const [availableTags, setAvailableTags] = useState<TagItem[]>([]);
   const [editingTemplate, setEditingTemplate] = useState<TemplateItem | null>(null);
   const [name, setName] = useState('');
   const [code, setCode] = useState(() => buildCode('', randomSuffix()));
   const [codeTouched, setCodeTouched] = useState(false);
   const [codeSuffix, setCodeSuffix] = useState(() => randomSuffix());
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -286,7 +289,7 @@ export function TemplatesPage() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [detailsName, setDetailsName] = useState('');
   const [detailsCode, setDetailsCode] = useState('');
-  const [detailsTags, setDetailsTags] = useState('');
+  const [detailsTags, setDetailsTags] = useState<string[]>([]);
   const [savingDetails, setSavingDetails] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<TemplateItem | null>(null);
   const designerRef = useRef<PdfmeDesignerHandle | null>(null);
@@ -302,8 +305,12 @@ export function TemplatesPage() {
   async function load() {
     setLoading(true);
     try {
-      const payload = await apiRequest<{ data: TemplateItem[] }>('/api/templates');
+      const [payload, tagsPayload] = await Promise.all([
+        apiRequest<{ data: TemplateItem[] }>('/api/templates'),
+        apiRequest<{ data: TagItem[] }>('/api/tags').catch(() => ({ data: [] })),
+      ]);
       setTemplates(payload.data);
+      setAvailableTags(tagsPayload.data);
     } finally {
       setLoading(false);
     }
@@ -375,13 +382,14 @@ export function TemplatesPage() {
     setCodeSuffix(suffix);
     setCode(buildCode('', suffix));
     setCodeTouched(false);
+    setSelectedTags([]);
   }
 
   function openEditor(template: TemplateItem) {
     setEditingTemplate(template);
     setDetailsName(template.name);
     setDetailsCode(template.code);
-    setDetailsTags(template.tags.join(', '));
+    setDetailsTags(template.tags);
     setPageFormat(template.pageFormat);
     setPageOrientation(template.pageOrientation === 'LANDSCAPE' ? 'LANDSCAPE' : 'PORTRAIT');
     setPageWidthMm(template.pageWidthMm);
@@ -390,14 +398,13 @@ export function TemplatesPage() {
     setError('');
   }
 
-  async function create(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function create() {
     setError('');
     setCreating(true);
     try {
       const payload = await apiRequest<{ template: TemplateItem }>('/api/templates', {
         method: 'POST',
-        body: JSON.stringify({ name, code }),
+        body: JSON.stringify({ name, code, tagNames: selectedTags }),
       });
       resetCreateForm();
       closeHeaderAction();
@@ -420,7 +427,15 @@ export function TemplatesPage() {
       title: 'Nueva plantilla',
       maxWidth: 'sm',
       content: (
-        <Stack component="form" spacing={2} onSubmit={create}>
+        <Stack
+          component="form"
+          id="create-template-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void create();
+          }}
+          spacing={2}
+        >
           <TextField
             autoFocus
             fullWidth
@@ -439,13 +454,26 @@ export function TemplatesPage() {
             onChange={(event) => { setCode(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_')); setCodeTouched(true); }}
             value={code}
           />
-          <Button disabled={creating} startIcon={<PlusOutlined />} type="submit" variant="contained">{creating ? 'Creando...' : 'Crear plantilla'}</Button>
+          <Autocomplete
+            freeSolo
+            multiple
+            onChange={(_event, value) => setSelectedTags(Array.from(new Set(value.map((tag) => tag.trim()).filter(Boolean))))}
+            options={availableTags.map((tag) => tag.name)}
+            renderInput={(params) => <TextField {...params} helperText="Selecciona o escribe tags." label="Tags" />}
+            value={selectedTags}
+          />
         </Stack>
+      ),
+      contentActions: (
+        <>
+          <Button onClick={closeHeaderAction}>Cancelar</Button>
+          <Button disabled={creating} form="create-template-form" startIcon={<PlusOutlined />} type="submit" variant="contained">Crear</Button>
+        </>
       ),
     });
 
     return () => setHeaderAction(null);
-  }, [closeHeaderAction, code, codeSuffix, codeTouched, creating, editingTemplate, name, navigate, setHeaderAction, user]);
+  }, [availableTags, closeHeaderAction, code, codeSuffix, codeTouched, creating, editingTemplate, name, navigate, selectedTags, setHeaderAction, user]);
 
   async function saveSettings() {
     if (!editingTemplate) return null;
@@ -533,7 +561,7 @@ export function TemplatesPage() {
     if (!editingTemplate) return;
     setDetailsName(editingTemplate.name);
     setDetailsCode(editingTemplate.code);
-    setDetailsTags(editingTemplate.tags.join(', '));
+    setDetailsTags(editingTemplate.tags);
     setDetailsDialogOpen(true);
   }
 
@@ -542,7 +570,7 @@ export function TemplatesPage() {
     setError('');
     setSavingDetails(true);
     try {
-      const tagNames = detailsTags.split(',').map((tag) => tag.trim()).filter(Boolean);
+      const tagNames = detailsTags.map((tag) => tag.trim()).filter(Boolean);
       const payload = await apiRequest<{ template: TemplateItem }>('/api/templates/' + editingTemplate.id, {
         method: 'PATCH',
         body: JSON.stringify({
@@ -946,7 +974,14 @@ export function TemplatesPage() {
             <Stack spacing={2} sx={{ pt: 1 }}>
               <TextField fullWidth label="Nombre" onChange={(event) => setDetailsName(event.target.value)} value={detailsName} />
               <TextField fullWidth helperText="Identificador usado por apps/API." label="Codigo" onChange={(event) => setDetailsCode(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))} value={detailsCode} />
-              <TextField fullWidth helperText="Separados por coma." label="Tags" onChange={(event) => setDetailsTags(event.target.value)} value={detailsTags} />
+              <Autocomplete
+                freeSolo
+                multiple
+                onChange={(_event, value) => setDetailsTags(Array.from(new Set(value.map((tag) => tag.trim()).filter(Boolean))))}
+                options={availableTags.map((tag) => tag.name)}
+                renderInput={(params) => <TextField {...params} helperText="Selecciona o escribe tags." label="Tags" />}
+                value={detailsTags}
+              />
             </Stack>
           </DialogContent>
           <DialogActions>
