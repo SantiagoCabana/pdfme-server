@@ -101,7 +101,7 @@ export function AuditLogsPage() {
   const [page, setPage] = useState(0);
 
   async function loadLogs() {
-    setLoading(true);
+    if (events.length === 0) setLoading(true);
     try {
       const payload = await apiRequest<{ data: AuditEventItem[] }>('/api/audit-logs');
       setEvents(payload.data);

@@ -84,7 +84,7 @@ export function PermissionsPage() {
   }
 
   async function load() {
-    setLoading(true);
+    if (roles.length === 0) setLoading(true);
     try {
       const payload = await apiRequest<PermissionMatrix>('/api/permissions');
       setRoles(payload.roles);

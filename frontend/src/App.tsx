@@ -10,7 +10,7 @@ import 'simplebar-react/dist/simplebar.min.css';
 import { AppContext, type HeaderAction } from './app/AppContext';
 import type { SessionUser } from './app/types';
 import { apiRequest } from './shared/api/client';
-import { AppBootLoader, LoadingState } from './shared/components/LoadingState';
+import { AppBootLoader } from './shared/components/LoadingState';
 import { createAppTheme, type ThemeMode } from './theme/appTheme';
 import 'gridjs/dist/theme/mermaid.css';
 import './styles/app.css';
@@ -26,7 +26,7 @@ const PrivateLayout = lazy(() => import('./layout/PrivateLayout').then((module) 
 
 function withRouteLoader(element: ReactNode) {
   return (
-    <Suspense fallback={<LoadingState label="Cargando modulo..." minHeight="100%" />}>
+    <Suspense fallback={null}>
       {element}
     </Suspense>
   );

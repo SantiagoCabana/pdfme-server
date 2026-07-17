@@ -61,7 +61,7 @@ export function ApiKeysPage() {
   }
 
   async function load() {
-    setLoading(true);
+    if (credentials.length === 0) setLoading(true);
     try {
       const payload = await apiRequest<{ data: ApiCredential[] }>('/api/api-credentials');
       setCredentials(payload.data);

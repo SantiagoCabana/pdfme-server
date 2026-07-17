@@ -302,7 +302,7 @@ export function TemplatesPage() {
         : 'Guardando plantilla...';
 
   async function load() {
-    setLoading(true);
+    if (templates.length === 0) setLoading(true);
     try {
       const [payload, tagsPayload] = await Promise.all([
         apiRequest<{ data: TemplateItem[] }>('/api/templates'),
@@ -1022,7 +1022,7 @@ export function TemplatesPage() {
         <Box className="pdfme-workspace" sx={{ height: '100%', minHeight: 0, width: '100%' }}>
           <Card sx={{ bgcolor: 'background.default', borderRadius: 0, boxShadow: 'none', height: '100%', minWidth: 0, overflow: 'hidden' }}>
             {designerTemplate ? (
-              <Suspense fallback={<LoadingState label="Cargando editor pdfme..." minHeight="100%" />}>
+              <Suspense fallback={null}>
                 {isPreviewRoute ? <PdfmeViewer key={designerWorkspaceKey} mode={mode} template={designerTemplate} /> : <PdfmeDesigner key={designerWorkspaceKey} mode={mode} onChange={setDesignerTemplate} ref={designerRef} template={designerTemplate} />}
               </Suspense>
             ) : <LoadingState label="Preparando plantilla..." minHeight="100%" />}

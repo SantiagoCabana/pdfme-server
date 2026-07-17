@@ -34,7 +34,7 @@ export function UsersPage() {
   const [page, setPage] = useState(0);
 
   async function load() {
-    setLoading(true);
+    if (users.length === 0) setLoading(true);
     try {
       const payload = await apiRequest<{ data: InternalUser[] }>('/api/users');
       setUsers(payload.data);

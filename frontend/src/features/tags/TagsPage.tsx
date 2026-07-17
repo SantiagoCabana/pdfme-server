@@ -23,7 +23,7 @@ export function TagsPage() {
   const [page, setPage] = useState(0);
 
   async function load() {
-    setLoading(true);
+    if (tags.length === 0) setLoading(true);
     try {
       const payload = await apiRequest<{ data: TagItem[] }>('/api/tags');
       setTags(payload.data);
