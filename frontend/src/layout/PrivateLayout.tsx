@@ -28,6 +28,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MoonOutlined,
+  DesktopOutlined,
   SafetyCertificateOutlined,
   SunOutlined,
   TagsOutlined,
@@ -45,7 +46,7 @@ const drawerWidth = 260;
 const miniDrawerWidth = 72;
 
 export function PrivateLayout() {
-  const { user, setUser, mode, toggleMode, headerAction, headerActionOpen, openHeaderAction, closeHeaderAction, headerControls, setHeaderControls, operationLabel } = useAppContext();
+  const { user, setUser, mode, themePreference, toggleMode, headerAction, headerActionOpen, openHeaderAction, closeHeaderAction, headerControls, setHeaderControls, operationLabel } = useAppContext();
   const theme = useTheme();
   const downLg = useMediaQuery(theme.breakpoints.down('lg'));
   const location = useLocation();
@@ -90,6 +91,9 @@ export function PrivateLayout() {
     setUser(null);
     navigate('/login', { replace: true });
   }
+
+  const themeModeLabel = themePreference === 'system' ? `Sistema (${mode === 'dark' ? 'oscuro' : 'claro'})` : themePreference === 'dark' ? 'Oscuro' : 'Claro';
+  const themeModeIcon = themePreference === 'system' ? <DesktopOutlined /> : themePreference === 'dark' ? <MoonOutlined /> : <SunOutlined />;
 
   const drawer = (
     <Box sx={{ height: '100%', width: currentDrawerWidth, bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', overflowX: 'hidden', transition: sidebarTransition }}>
@@ -210,9 +214,9 @@ export function PrivateLayout() {
       <Box sx={{ p: collapsed ? 1 : 1.5, transition: sidebarTransition }}>
         {collapsed ? (
           <Box sx={{ display: 'grid', gap: 1, justifyItems: 'center' }}>
-            <Tooltip placement="right" title={`Modo ${mode === 'dark' ? 'oscuro' : 'claro'}`}>
+            <Tooltip placement="right" title={`Modo ${themeModeLabel}`}>
               <IconButton color="secondary" onClick={toggleMode} sx={{ width: 40, height: 40 }}>
-                {mode === 'dark' ? <MoonOutlined /> : <SunOutlined />}
+                {themeModeIcon}
               </IconButton>
             </Tooltip>
             <Tooltip placement="right" title={user.email}>
@@ -238,9 +242,9 @@ export function PrivateLayout() {
               <Typography variant="subtitle2" noWrap>{user.displayName}</Typography>
               <Typography variant="caption" color="text.secondary" noWrap>{user.roles.join(', ') || user.email}</Typography>
             </Box>
-            <Tooltip title={`Modo ${mode === 'dark' ? 'oscuro' : 'claro'}`}>
+            <Tooltip title={`Modo ${themeModeLabel}`}>
               <IconButton color="secondary" onClick={toggleMode} size="small">
-                {mode === 'dark' ? <MoonOutlined /> : <SunOutlined />}
+                {themeModeIcon}
               </IconButton>
             </Tooltip>
             <Tooltip title="Cerrar sesion">

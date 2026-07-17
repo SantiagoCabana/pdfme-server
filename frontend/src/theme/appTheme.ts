@@ -1,6 +1,7 @@
 import { createTheme } from '@mui/material/styles';
 
 export type ThemeMode = 'light' | 'dark';
+export type ThemePreference = ThemeMode | 'system';
 
 export function createAppTheme(mode: ThemeMode) {
   const isDark = mode === 'dark';

@@ -11,7 +11,7 @@ import { AppContext, type HeaderAction } from './app/AppContext';
 import type { SessionUser } from './app/types';
 import { apiRequest } from './shared/api/client';
 import { AppBootLoader } from './shared/components/LoadingState';
-import { createAppTheme, type ThemeMode } from './theme/appTheme';
+import { createAppTheme, type ThemeMode, type ThemePreference } from './theme/appTheme';
 import 'gridjs/dist/theme/mermaid.css';
 import './styles/app.css';
 
@@ -23,6 +23,15 @@ const TagsPage = lazy(() => import('./features/tags/TagsPage').then((module) => 
 const PermissionsPage = lazy(() => import('./features/permissions/PermissionsPage').then((module) => ({ default: module.PermissionsPage })));
 const AuditLogsPage = lazy(() => import('./features/audit-logs/AuditLogsPage').then((module) => ({ default: module.AuditLogsPage })));
 const PrivateLayout = lazy(() => import('./layout/PrivateLayout').then((module) => ({ default: module.PrivateLayout })));
+
+function readThemePreference(): ThemePreference {
+  const saved = localStorage.getItem('pdfme-theme');
+  return saved === 'light' || saved === 'dark' ? saved : 'system';
+}
+
+function resolveSystemMode(): ThemeMode {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
 
 function withRouteLoader(element: ReactNode) {
   return (
@@ -40,12 +49,30 @@ export default function App() {
   const [headerActionOpen, setHeaderActionOpen] = useState(false);
   const [headerControls, setHeaderControls] = useState<ReactNode>(null);
   const [operationLabel, setOperationLabelState] = useState('');
-  const [mode, setMode] = useState<ThemeMode>(() => localStorage.getItem('pdfme-theme') === 'dark' ? 'dark' : 'light');
+  const [themePreference, setThemePreference] = useState<ThemePreference>(readThemePreference);
+  const [systemMode, setSystemMode] = useState<ThemeMode>(resolveSystemMode);
+  const mode = themePreference === 'system' ? systemMode : themePreference;
 
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = mode;
-    localStorage.setItem('pdfme-theme', mode);
   }, [mode]);
+
+  useEffect(() => {
+    if (themePreference === 'system') {
+      localStorage.removeItem('pdfme-theme');
+    } else {
+      localStorage.setItem('pdfme-theme', themePreference);
+    }
+  }, [themePreference]);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const update = () => setSystemMode(media.matches ? 'dark' : 'light');
+
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
 
   useEffect(() => {
     apiRequest<{ user: SessionUser }>('/api/auth/me')
@@ -56,7 +83,13 @@ export default function App() {
 
   const theme = useMemo(() => createAppTheme(mode), [mode]);
   const bumpReloadDataToken = useCallback(() => setReloadDataToken((value) => value + 1), []);
-  const toggleMode = useCallback(() => setMode((value) => value === 'dark' ? 'light' : 'dark'), []);
+  const toggleMode = useCallback(() => {
+    setThemePreference((value) => {
+      if (value === 'system') return 'light';
+      if (value === 'light') return 'dark';
+      return 'system';
+    });
+  }, []);
   const openHeaderAction = useCallback(() => setHeaderActionOpen(true), []);
   const closeHeaderAction = useCallback(() => setHeaderActionOpen(false), []);
   const setOperationLabel = useCallback((label: string) => setOperationLabelState(label), []);
@@ -68,6 +101,7 @@ export default function App() {
     reloadDataToken,
     bumpReloadDataToken,
     mode,
+    themePreference,
     toggleMode,
     headerAction,
     setHeaderAction,
@@ -79,7 +113,7 @@ export default function App() {
     operationLabel,
     setOperationLabel,
     clearOperationLabel,
-  }), [bumpReloadDataToken, clearOperationLabel, closeHeaderAction, headerAction, headerActionOpen, headerControls, mode, openHeaderAction, operationLabel, reloadDataToken, setOperationLabel, toggleMode, user]);
+  }), [bumpReloadDataToken, clearOperationLabel, closeHeaderAction, headerAction, headerActionOpen, headerControls, mode, openHeaderAction, operationLabel, reloadDataToken, setOperationLabel, themePreference, toggleMode, user]);
 
   const router = useMemo(() => createBrowserRouter([
     { path: '/login', element: withRouteLoader(<LoginPage />) },

@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import type { SessionUser } from './types';
-import type { ThemeMode } from '../theme/appTheme';
+import type { ThemeMode, ThemePreference } from '../theme/appTheme';
 
 export type HeaderAction = {
   label: string;
@@ -18,6 +18,7 @@ type AppContextValue = {
   reloadDataToken: number;
   bumpReloadDataToken: () => void;
   mode: ThemeMode;
+  themePreference: ThemePreference;
   toggleMode: () => void;
   headerAction: HeaderAction;
   setHeaderAction: (action: HeaderAction) => void;
