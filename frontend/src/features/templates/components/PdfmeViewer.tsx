@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
-import type { Schema, Template as PdfmeTemplate } from '@pdfme/common';
-import { Form } from '@pdfme/ui';
+import type { Template as PdfmeTemplate } from '@pdfme/common';
+import { Viewer } from '@pdfme/ui';
 
 import type { ThemeMode } from '../../../theme/appTheme';
 import { notifyError } from '../../../shared/notifications';
@@ -16,14 +16,10 @@ type PdfmeViewerProps = {
 
 export function PdfmeViewer({ mode, template }: PdfmeViewerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const formRef = useRef<Form | null>(null);
+  const viewerRef = useRef<Viewer | null>(null);
   const modeRef = useRef(mode);
   const previewTemplate = useMemo<PdfmeTemplate>(() => {
-    const normalizedTemplate = normalizePdfmeTemplateFonts(template);
-    return {
-      ...normalizedTemplate,
-      schemas: (normalizedTemplate.schemas ?? []).map((page) => page.map((schema) => ({ ...schema, readOnly: true }) as Schema)),
-    };
+    return normalizePdfmeTemplateFonts(template);
   }, [template]);
   const previewInputs = useMemo(() => {
     const input: Record<string, string> = {};
@@ -49,7 +45,7 @@ export function PdfmeViewer({ mode, template }: PdfmeViewerProps) {
     loadPdfmeFonts().then((font) => {
       if (!isMounted || !containerRef.current) return;
 
-      const form = new Form({
+      const viewer = new Viewer({
         domContainer: containerRef.current,
         template: previewTemplate,
         inputs: previewInputs,
@@ -61,29 +57,29 @@ export function PdfmeViewer({ mode, template }: PdfmeViewerProps) {
         },
       });
 
-      formRef.current = form;
+      viewerRef.current = viewer;
     }).catch(() => {
       if (isMounted) notifyError('No se pudo cargar la vista previa.');
     });
 
     return () => {
       isMounted = false;
-      formRef.current?.destroy();
-      formRef.current = null;
+      viewerRef.current?.destroy();
+      viewerRef.current = null;
     };
   }, []);
 
   useEffect(() => {
-    formRef.current?.updateOptions({
-      font: formRef.current.getOptions().font,
+    viewerRef.current?.updateOptions({
+      font: viewerRef.current.getOptions().font,
       lang: 'es',
       theme: createPdfmeTheme(mode),
     });
   }, [mode]);
 
   useEffect(() => {
-    formRef.current?.updateTemplate(previewTemplate);
-    formRef.current?.setInputs(previewInputs);
+    viewerRef.current?.updateTemplate(previewTemplate);
+    viewerRef.current?.setInputs(previewInputs);
   }, [previewInputs, previewTemplate]);
 
   return (
