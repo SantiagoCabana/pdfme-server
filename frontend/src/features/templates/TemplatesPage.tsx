@@ -47,6 +47,7 @@ import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 import { LoadingState } from '../../shared/components/LoadingState';
 import type { Schema, Template as PdfmeTemplate } from '@pdfme/common';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import Swal from 'sweetalert2';
 
 import { can } from '../../app/session';
 import type { TagItem, TemplateItem } from '../../app/types';
@@ -56,6 +57,10 @@ import type { PdfmeDesignerHandle } from './components/PdfmeDesigner';
 
 const PdfmeDesigner = lazy(() => import('./components/PdfmeDesigner').then((module) => ({ default: module.PdfmeDesigner })));
 const PdfmeViewer = lazy(() => import('./components/PdfmeViewer').then((module) => ({ default: module.PdfmeViewer })));
+
+function showError(message: string) {
+  void Swal.fire({ icon: 'error', title: message, confirmButtonText: 'Cerrar' });
+}
 
 const pageFormats = [
   { value: 'A4', label: 'A4', width: 210, height: 297 },
@@ -399,6 +404,11 @@ export function TemplatesPage() {
   }
 
   async function create() {
+    if (name.trim().length < 2) {
+      showError('Ingresa un nombre para la plantilla.');
+      return;
+    }
+
     setError('');
     setCreating(true);
     try {
@@ -410,7 +420,7 @@ export function TemplatesPage() {
       closeHeaderAction();
       navigate(`/templates/edit/${payload.template.code}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear la plantilla.');
+      showError(err instanceof Error ? err.message : 'No se pudo crear la plantilla.');
     } finally {
       setCreating(false);
     }
@@ -449,7 +459,7 @@ export function TemplatesPage() {
           />
           <TextField
             fullWidth
-            helperText="Identificador usado por las apps y APIs para referirse a esta plantilla."
+            helperText="Identificador usado por apps/API."
             label="Codigo"
             onChange={(event) => { setCode(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_')); setCodeTouched(true); }}
             value={code}
@@ -467,7 +477,7 @@ export function TemplatesPage() {
       contentActions: (
         <>
           <Button onClick={closeHeaderAction}>Cancelar</Button>
-          <Button disabled={creating} form="create-template-form" startIcon={<PlusOutlined />} type="submit" variant="contained">Crear</Button>
+          <Button disabled={creating || name.trim().length < 2} form="create-template-form" startIcon={<PlusOutlined />} type="submit" variant="contained">Crear</Button>
         </>
       ),
     });
