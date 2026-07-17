@@ -369,10 +369,6 @@ export function TemplatesPage() {
     ? [
       editingTemplate.id,
       editingTemplate.versionId,
-      pageFormat,
-      pageOrientation,
-      pageWidthMm,
-      pageHeightMm,
       isPreviewRoute ? 'preview' : 'edit',
     ].join(':')
     : 'empty';
@@ -522,7 +518,6 @@ export function TemplatesPage() {
         body: JSON.stringify({ pageFormat, pageOrientation, pageWidthMm, pageHeightMm, designerJson: currentDesignerTemplate }),
       });
       setEditingTemplate(payload.template);
-      setDesignerTemplate(buildPdfmeTemplate(payload.template));
       if (!routeCode) await load();
       return payload.template;
     } catch (err) {
@@ -951,7 +946,7 @@ export function TemplatesPage() {
     );
 
     return () => setHeaderControls(null);
-  }, [editingTemplate, hasMultipleVersions, isPreviewRoute, navigate, openHeaderAction, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, routeCode, saving, savingDetails, savingVersion, search, setHeaderAction, setHeaderControls, switchingVersion, user, designerTemplate, lockedSchemaNames]);
+  }, [editingTemplate, hasMultipleVersions, isPreviewRoute, navigate, pageFormat, pageHeightMm, pageOrientation, pageWidthMm, saving, savingDetails, savingVersion, setHeaderControls, switchingVersion, user]);
 
   useEffect(() => {
     const originalConfirm = window.confirm;
@@ -1049,7 +1044,7 @@ export function TemplatesPage() {
           <Card sx={{ bgcolor: 'background.default', borderRadius: 0, boxShadow: 'none', height: '100%', minWidth: 0, overflow: 'hidden' }}>
             {designerTemplate ? (
               <Suspense fallback={null}>
-                {isPreviewRoute ? <PdfmeViewer key={designerWorkspaceKey} mode={mode} template={designerTemplate} /> : <PdfmeDesigner key={designerWorkspaceKey} mode={mode} onChange={setDesignerTemplate} ref={designerRef} template={designerTemplate} />}
+                {isPreviewRoute ? <PdfmeViewer key={designerWorkspaceKey} mode={mode} template={designerTemplate} /> : <PdfmeDesigner key={designerWorkspaceKey} mode={mode} ref={designerRef} template={designerTemplate} />}
               </Suspense>
             ) : <LoadingState label="Preparando plantilla..." minHeight="100%" />}
           </Card>

@@ -46,14 +46,13 @@ export const pdfmePlugins = {
 type PdfmeDesignerProps = {
   mode: ThemeMode;
   template: PdfmeTemplate;
-  onChange: (template: PdfmeTemplate) => void;
 };
 
 export type PdfmeDesignerHandle = {
   getTemplate: () => PdfmeTemplate | null;
 };
 
-export const PdfmeDesigner = forwardRef<PdfmeDesignerHandle, PdfmeDesignerProps>(function PdfmeDesigner({ mode, template, onChange }, ref) {
+export const PdfmeDesigner = forwardRef<PdfmeDesignerHandle, PdfmeDesignerProps>(function PdfmeDesigner({ mode, template }, ref) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const designerRef = useRef<Designer | null>(null);
   const internalTemplateRef = useRef<PdfmeTemplate | null>(null);
@@ -89,8 +88,6 @@ export const PdfmeDesigner = forwardRef<PdfmeDesignerHandle, PdfmeDesignerProps>
 
       designer.onChangeTemplate((nextTemplate) => {
         internalTemplateRef.current = nextTemplate;
-        skipNextTemplateSyncRef.current = true;
-        onChange(nextTemplate);
       });
       designerRef.current = designer;
     });
