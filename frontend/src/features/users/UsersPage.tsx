@@ -4,6 +4,7 @@ import { Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTi
 import Swal from 'sweetalert2';
 import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 import { LoadingState } from '../../shared/components/LoadingState';
+import { AppFormDialog, FormFieldStack } from '../../shared/components/AppFormDialog';
 
 import { formatDate, statusLabel } from '../../app/session';
 import type { InternalUser } from '../../app/types';
@@ -137,17 +138,23 @@ export function UsersPage() {
     setHeaderAction({
       label: 'Agregar',
       title: 'Nuevo usuario',
+      description: 'Crea una cuenta interna y asigna su rol inicial.',
       maxWidth: 'sm',
       content: (
-        <Stack component="form" spacing={2} onSubmit={create}>
+        <FormFieldStack id="create-user-form" onSubmit={create}>
           <TextField autoFocus fullWidth label="Nombre" onChange={(event) => setDisplayName(event.target.value)} value={displayName} />
           <TextField fullWidth label="Correo" onChange={(event) => setEmail(event.target.value)} type="email" value={email} />
           <TextField fullWidth label="Contrasena inicial" onChange={(event) => setPassword(event.target.value)} type="password" value={password} />
           <TextField fullWidth label="Rol" onChange={(event) => setRoleCode(event.target.value)} select value={roleCode}>
             {roleOptions.map((role) => <MenuItem key={role} value={role}>{role}</MenuItem>)}
           </TextField>
-          <Button disabled={creating} startIcon={<PlusOutlined />} type="submit" variant="contained">Crear usuario</Button>
-        </Stack>
+        </FormFieldStack>
+      ),
+      contentActions: (
+        <>
+          <Button onClick={closeHeaderAction}>Cancelar</Button>
+          <Button disabled={creating} form="create-user-form" startIcon={<PlusOutlined />} type="submit" variant="contained">Crear</Button>
+        </>
       ),
     });
 
@@ -183,10 +190,20 @@ export function UsersPage() {
         )}
       </Card>
 
-      <Dialog fullWidth maxWidth="sm" onClose={() => setEditingUser(null)} open={Boolean(editingUser)}>
-        <DialogTitle>Editar usuario</DialogTitle>
-        <DialogContent dividers>
-          <Stack component="form" spacing={2} onSubmit={update}>
+      <AppFormDialog
+        actions={(
+          <>
+            <Button onClick={() => setEditingUser(null)}>Cancelar</Button>
+            <Button disabled={saving} form="edit-user-form" startIcon={<EditOutlined />} type="submit" variant="contained">Guardar</Button>
+          </>
+        )}
+        description="Actualiza datos, rol y estado de acceso."
+        maxWidth="sm"
+        onClose={() => setEditingUser(null)}
+        open={Boolean(editingUser)}
+        title="Editar usuario"
+      >
+          <FormFieldStack id="edit-user-form" onSubmit={update}>
             <TextField autoFocus fullWidth label="Nombre" onChange={(event) => setEditDisplayName(event.target.value)} value={editDisplayName} />
             <TextField fullWidth label="Nueva contrasena" helperText="Dejalo vacio si no quieres cambiarla." onChange={(event) => setEditPassword(event.target.value)} type="password" value={editPassword} />
             <TextField fullWidth label="Rol" onChange={(event) => setEditRoleCode(event.target.value)} select value={editRoleCode}>
@@ -195,10 +212,8 @@ export function UsersPage() {
             <TextField fullWidth label="Estado" onChange={(event) => setEditStatus(event.target.value)} select value={editStatus}>
               {statusOptions.map((status) => <MenuItem key={status} value={status}>{statusLabel(status)}</MenuItem>)}
             </TextField>
-            <Button disabled={saving} startIcon={<EditOutlined />} type="submit" variant="contained">Guardar cambios</Button>
-          </Stack>
-        </DialogContent>
-      </Dialog>
+          </FormFieldStack>
+      </AppFormDialog>
     </Stack>
   );
 }

@@ -7,10 +7,6 @@ import {
   Box,
   Button,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
   Drawer,
   IconButton,
@@ -42,6 +38,7 @@ import { useAppContext } from '../app/AppContext';
 import { can } from '../app/session';
 import { apiRequest } from '../shared/api/client';
 import { AppScrollbar } from '../shared/components/AppScrollbar';
+import { AppFormDialog } from '../shared/components/AppFormDialog';
 import { AppLogo } from './AppLogo';
 
 const drawerWidth = 260;
@@ -314,11 +311,16 @@ export function PrivateLayout() {
           )}
         </Toolbar>
       </AppBar>
-      <Dialog fullWidth maxWidth={headerAction?.maxWidth ?? 'sm'} onClose={closeHeaderAction} open={Boolean(headerAction && headerActionOpen)}>
-        {headerAction?.title ? <DialogTitle>{headerAction.title}</DialogTitle> : null}
-        <DialogContent dividers>{headerAction?.content}</DialogContent>
-        {headerAction?.contentActions ? <DialogActions>{headerAction.contentActions}</DialogActions> : null}
-      </Dialog>
+      <AppFormDialog
+        actions={headerAction?.contentActions}
+        description={headerAction?.description}
+        maxWidth={headerAction?.maxWidth ?? 'sm'}
+        onClose={closeHeaderAction}
+        open={Boolean(headerAction && headerActionOpen)}
+        title={headerAction?.title}
+      >
+        {headerAction?.content}
+      </AppFormDialog>
       <Backdrop
         open={Boolean(operationLabel)}
         sx={{

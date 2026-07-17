@@ -44,6 +44,7 @@ import {
 } from '@mui/material';
 import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 import { LoadingState } from '../../shared/components/LoadingState';
+import { AppFormDialog, FormFieldStack } from '../../shared/components/AppFormDialog';
 import type { Schema, Template as PdfmeTemplate } from '@pdfme/common';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
@@ -432,16 +433,15 @@ export function TemplatesPage() {
     setHeaderAction({
       label: 'Agregar',
       title: 'Nueva plantilla',
+      description: 'Define el nombre, codigo y etiquetas iniciales.',
       maxWidth: 'sm',
       content: (
-        <Stack
-          component="form"
+        <FormFieldStack
           id="create-template-form"
           onSubmit={(event) => {
             event.preventDefault();
             void create();
           }}
-          spacing={2}
         >
           <TextField
             autoFocus
@@ -469,7 +469,7 @@ export function TemplatesPage() {
             renderInput={(params) => <TextField {...params} helperText="Selecciona o escribe tags." label="Tags" />}
             value={selectedTags}
           />
-        </Stack>
+        </FormFieldStack>
       ),
       contentActions: (
         <>
@@ -981,10 +981,22 @@ export function TemplatesPage() {
             <Button onClick={() => setVersionsDialogOpen(false)}>Cerrar</Button>
           </DialogActions>
         </Dialog>
-        <Dialog fullWidth maxWidth="sm" onClose={() => setDetailsDialogOpen(false)} open={detailsDialogOpen}>
-          <DialogTitle>Datos de plantilla</DialogTitle>
-          <DialogContent dividers>
-            <Stack spacing={2} sx={{ pt: 1 }}>
+        <AppFormDialog
+          actions={(
+            <>
+              <Button onClick={() => setDetailsDialogOpen(false)}>Cancelar</Button>
+              <Button disabled={savingDetails} onClick={() => void saveDetails()} variant="contained">
+                Guardar
+              </Button>
+            </>
+          )}
+          description="Actualiza los datos usados por la app y la API."
+          maxWidth="sm"
+          onClose={() => setDetailsDialogOpen(false)}
+          open={detailsDialogOpen}
+          title="Datos de plantilla"
+        >
+            <Stack spacing={2}>
               <TextField fullWidth label="Nombre" onChange={(event) => setDetailsName(event.target.value)} value={detailsName} />
               <TextField fullWidth helperText="Identificador usado por apps/API." label="Codigo" onChange={(event) => setDetailsCode(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))} value={detailsCode} />
               <Autocomplete
@@ -996,14 +1008,7 @@ export function TemplatesPage() {
                 value={detailsTags}
               />
             </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDetailsDialogOpen(false)}>Cancelar</Button>
-            <Button disabled={savingDetails} onClick={() => void saveDetails()} variant="contained">
-              Guardar
-            </Button>
-          </DialogActions>
-        </Dialog>
+        </AppFormDialog>
         <Backdrop
           open={editorBusy}
           sx={{

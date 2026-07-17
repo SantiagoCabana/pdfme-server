@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ApiOutlined, AuditOutlined, EditOutlined, EyeOutlined, FileTextOutlined, SettingOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
+import { ApiOutlined, AuditOutlined, EditOutlined, EyeOutlined, FileTextOutlined, SettingOutlined, TeamOutlined, UnorderedListOutlined, UserOutlined } from '@ant-design/icons';
 import { Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Switch, Typography } from '@mui/material';
 import Swal from 'sweetalert2';
 
@@ -8,6 +8,7 @@ import { apiRequest } from '../../shared/api/client';
 import { useAppContext } from '../../app/AppContext';
 import { DataTable } from '../../shared/components/DataTable';
 import { LoadingState } from '../../shared/components/LoadingState';
+import { AppFormDialog } from '../../shared/components/AppFormDialog';
 import { notifyError, notifySuccess } from '../../shared/notifications';
 
 type PermissionMatrix = {
@@ -187,9 +188,31 @@ export function PermissionsPage() {
             key={role.id}
             onClick={() => setActiveRoleId(role.id)}
             size="small"
+            sx={{
+              alignItems: 'center',
+              display: 'inline-flex',
+              justifyContent: 'center',
+              minWidth: 74,
+              px: 1,
+              py: 0.45,
+            }}
             variant={enabledCount > 0 ? 'contained' : 'outlined'}
           >
-            {isFixedRole(role) ? 'Completo' : `${enabledCount}/${templateActions.length}`}
+            <Box
+              component="span"
+              sx={{
+                alignItems: 'center',
+                display: 'inline-flex',
+                gap: 0.75,
+                justifyContent: 'center',
+                lineHeight: 1,
+              }}
+            >
+              <UnorderedListOutlined style={{ fontSize: '0.95rem', lineHeight: 1 }} />
+              <Box component="span" sx={{ display: 'inline-block', fontSize: '0.78rem', fontWeight: 700, lineHeight: 1 }}>
+                {enabledCount}/{templateActions.length}
+              </Box>
+            </Box>
           </Button>
         );
       }
@@ -224,14 +247,22 @@ export function PermissionsPage() {
         )}
       </Card>
 
-      <Dialog fullWidth maxWidth="xs" onClose={() => setActiveRoleId(null)} open={Boolean(activeRole)}>
-        <DialogTitle>Permisos de plantillas</DialogTitle>
-        <DialogContent dividers>
+      <AppFormDialog
+        actions={<Button onClick={() => setActiveRoleId(null)}>Cerrar</Button>}
+        description="Activa o desactiva acciones especificas del modulo."
+        maxWidth="sm"
+        onClose={() => setActiveRoleId(null)}
+        open={Boolean(activeRole)}
+        title="Permisos de plantillas"
+      >
           {activeRole ? (
-            <Stack spacing={1.25}>
-              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', pb: 1 }}>
-                <Box sx={{ color: 'primary.main', display: 'grid', fontSize: '1rem', placeItems: 'center' }}>{roleIcon(activeRole.code)}</Box>
-                <Typography sx={{ fontWeight: 700 }}>{activeRole.name}</Typography>
+            <Stack spacing={2}>
+              <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+                <Box sx={{ color: 'primary.main', display: 'grid', fontSize: '1.05rem', placeItems: 'center' }}>{roleIcon(activeRole.code)}</Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography sx={{ fontSize: '0.92rem', fontWeight: 700 }}>{activeRole.name}</Typography>
+                  <Typography color="text.secondary" sx={{ fontSize: '0.75rem' }}>Acciones disponibles para plantillas.</Typography>
+                </Box>
                 {isFixedRole(activeRole) ? <Chip color="primary" label="Fijo" size="small" variant="outlined" /> : null}
               </Stack>
 
@@ -246,8 +277,8 @@ export function PermissionsPage() {
                     borderColor: 'divider',
                     borderRadius: 1,
                     justifyContent: 'space-between',
-                    px: 1.5,
-                    py: 1,
+                    px: 1.75,
+                    py: 1.1,
                   }}
                 >
                   <Typography sx={{ fontSize: '0.86rem', fontWeight: 600 }}>{action.label}</Typography>
@@ -261,11 +292,7 @@ export function PermissionsPage() {
               ))}
             </Stack>
           ) : null}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setActiveRoleId(null)}>Cerrar</Button>
-        </DialogActions>
-      </Dialog>
+      </AppFormDialog>
     </Stack>
   );
 }

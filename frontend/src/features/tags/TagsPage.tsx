@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { DeleteOutlined, EditOutlined, TagsOutlined } from '@ant-design/icons';
-import { Box, Button, Card, Dialog, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
+import { Box, Button, Card, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
 import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 import { LoadingState } from '../../shared/components/LoadingState';
+import { AppFormDialog, FormFieldStack } from '../../shared/components/AppFormDialog';
 
 import type { TagItem } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
@@ -96,12 +97,18 @@ export function TagsPage() {
     setHeaderAction({
       label: 'Agregar',
       title: 'Nuevo tag',
+      description: 'Crea una etiqueta para clasificar plantillas.',
       maxWidth: 'xs',
       content: (
-        <Stack component="form" spacing={2} onSubmit={create}>
+        <FormFieldStack id="create-tag-form" onSubmit={create}>
           <TextField autoFocus fullWidth label="Nombre" onChange={(event) => setName(event.target.value)} value={name} />
-          <Button disabled={creating} startIcon={<TagsOutlined />} type="submit" variant="contained">Crear tag</Button>
-        </Stack>
+        </FormFieldStack>
+      ),
+      contentActions: (
+        <>
+          <Button onClick={closeHeaderAction}>Cancelar</Button>
+          <Button disabled={creating} form="create-tag-form" startIcon={<TagsOutlined />} type="submit" variant="contained">Crear</Button>
+        </>
       ),
     });
 
@@ -135,15 +142,23 @@ export function TagsPage() {
         )}
       </Card>
 
-      <Dialog fullWidth maxWidth="xs" onClose={() => setEditingTag(null)} open={Boolean(editingTag)}>
-        <DialogTitle>Editar tag</DialogTitle>
-        <DialogContent dividers>
-          <Stack component="form" spacing={2} onSubmit={update}>
+      <AppFormDialog
+        actions={(
+          <>
+            <Button onClick={() => setEditingTag(null)}>Cancelar</Button>
+            <Button disabled={saving} form="edit-tag-form" startIcon={<EditOutlined />} type="submit" variant="contained">Guardar</Button>
+          </>
+        )}
+        description="Actualiza el nombre visible de la etiqueta."
+        maxWidth="xs"
+        onClose={() => setEditingTag(null)}
+        open={Boolean(editingTag)}
+        title="Editar tag"
+      >
+          <FormFieldStack id="edit-tag-form" onSubmit={update}>
             <TextField autoFocus fullWidth label="Nombre" onChange={(event) => setEditName(event.target.value)} value={editName} />
-            <Button disabled={saving} startIcon={<EditOutlined />} type="submit" variant="contained">Guardar cambios</Button>
-          </Stack>
-        </DialogContent>
-      </Dialog>
+          </FormFieldStack>
+      </AppFormDialog>
     </Stack>
   );
 }

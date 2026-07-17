@@ -4,6 +4,7 @@ import { Box, Button, Card, Chip, IconButton, Stack, Switch, TextField, MenuItem
 import Swal from 'sweetalert2';
 import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 import { LoadingState } from '../../shared/components/LoadingState';
+import { FormFieldStack } from '../../shared/components/AppFormDialog';
 
 import { buildExpiryDate, formatDate, statusLabel } from '../../app/session';
 import type { ApiCredential } from '../../app/types';
@@ -98,9 +99,10 @@ export function ApiKeysPage() {
     setHeaderAction({
       label: 'Agregar',
       title: 'Nueva clave API',
+      description: 'Genera una clave para integrar aplicaciones externas.',
       maxWidth: 'sm',
       content: (
-        <Stack component="form" spacing={2} onSubmit={create}>
+        <FormFieldStack id="create-api-key-form" onSubmit={create}>
           <TextField autoFocus fullWidth label="Nombre" onChange={(event) => setName(event.target.value)} value={name} />
           <TextField fullWidth label="Expiracion" onChange={(event) => setExpiryMode(event.target.value)} select value={expiryMode}>
             <MenuItem value="never">Nunca expira</MenuItem>
@@ -120,8 +122,13 @@ export function ApiKeysPage() {
               value={customExpiresAt}
             />
           ) : null}
-          <Button disabled={creating || (expiryMode === 'custom' && !customExpiresAt)} startIcon={<KeyOutlined />} type="submit" variant="contained">Crear clave</Button>
-        </Stack>
+        </FormFieldStack>
+      ),
+      contentActions: (
+        <>
+          <Button onClick={closeHeaderAction}>Cancelar</Button>
+          <Button disabled={creating || (expiryMode === 'custom' && !customExpiresAt)} form="create-api-key-form" startIcon={<KeyOutlined />} type="submit" variant="contained">Crear</Button>
+        </>
       ),
     });
 
