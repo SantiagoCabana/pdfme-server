@@ -1,6 +1,10 @@
 import Swal from 'sweetalert2';
 
 const toast = Swal.mixin({
+  didOpen: (popup) => {
+    popup.style.cursor = 'pointer';
+    popup.addEventListener('click', () => Swal.close());
+  },
   toast: true,
   position: 'top-start',
   showConfirmButton: false,

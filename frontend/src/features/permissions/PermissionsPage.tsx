@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { SettingOutlined, EditOutlined, EyeOutlined, UserOutlined } from '@ant-design/icons';
-import { Box, Card, Chip, Dialog, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { ApiOutlined, AuditOutlined, EditOutlined, EyeOutlined, FileTextOutlined, SettingOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
+import { Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Switch, Typography } from '@mui/material';
+import Swal from 'sweetalert2';
 
 import type { AccessPermissionItem, AccessRoleItem } from '../../app/types';
 import { apiRequest } from '../../shared/api/client';
 import { useAppContext } from '../../app/AppContext';
-import { AppScrollbar } from '../../shared/components/AppScrollbar';
+import { DataTable } from '../../shared/components/DataTable';
 import { LoadingState } from '../../shared/components/LoadingState';
-import { notifyError } from '../../shared/notifications';
-import '../../styles/permissions.css';
+import { notifyError, notifySuccess } from '../../shared/notifications';
 
 type PermissionMatrix = {
   roles: AccessRoleItem[];
@@ -20,67 +20,41 @@ const roleOrder: Record<string, number> = {
   ADMIN: 2,
   MANAGER: 3,
   EDITOR: 4,
-  VIEWER: 5
+  VIEWER: 5,
 };
 
-const getRoleIcon = (code: string) => {
-  switch (code) {
-    case 'SUPERADMIN':
-      return <SettingOutlined className="role-icon role-icon-superadmin" />;
-    case 'ADMIN':
-      return <SettingOutlined className="role-icon" />;
-    case 'EDITOR':
-      return <EditOutlined className="role-icon" />;
-    case 'VIEWER':
-      return <EyeOutlined className="role-icon" />;
-    default:
-      return <UserOutlined className="role-icon" />;
-  }
-};
+const templateActions = [
+  { label: 'Crear', code: 'templates.create' },
+  { label: 'Editar', code: 'templates.edit' },
+  { label: 'Eliminar', code: 'templates.delete' },
+  { label: 'Ver', code: 'templates.view' },
+];
 
-interface CustomToggleSwitchProps {
-  checked: boolean;
-  onChange: () => void;
-  disabled?: boolean;
-}
+const moduleRows = [
+  { key: 'access', label: 'Usuarios', description: 'Gestionar usuarios internos', permissionCode: 'users.manage', icon: <TeamOutlined /> },
+  { key: 'api', label: 'Claves API', description: 'Crear y administrar accesos API', permissionCode: 'api_keys.manage', icon: <ApiOutlined /> },
+  { key: 'audit', label: 'Auditoria', description: 'Consultar registros del sistema', permissionCode: 'audit.view', icon: <AuditOutlined /> },
+  { key: 'templates', label: 'Plantillas', description: 'Acciones sobre documentos pdfme', icon: <FileTextOutlined /> },
+];
 
-export function CustomToggleSwitch({ checked, disabled = false, onChange }: CustomToggleSwitchProps) {
-  return (
-    <div
-      aria-disabled={disabled}
-      onClick={disabled ? undefined : onChange}
-      className={`custom-toggle-switch ${checked ? 'checked' : 'unchecked'} ${disabled ? 'disabled' : ''}`}
-    >
-      <span className={`custom-toggle-switch-text ${checked ? 'checked' : 'unchecked'}`}>
-        {checked ? 'SÍ' : 'NO'}
-      </span>
-      <div className={`custom-toggle-switch-knob ${checked ? 'checked' : 'unchecked'}`} />
-    </div>
-  );
-}
-
-export function CustomActionsButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="custom-actions-button"
-    >
-      Ver acciones
-    </button>
-  );
+function roleIcon(code: string) {
+  if (code === 'SUPERADMIN' || code === 'ADMIN') return <SettingOutlined />;
+  if (code === 'EDITOR') return <EditOutlined />;
+  if (code === 'VIEWER') return <EyeOutlined />;
+  return <UserOutlined />;
 }
 
 export function PermissionsPage() {
-  const { setHeaderAction, mode, setOperationLabel, clearOperationLabel } = useAppContext();
+  const { setHeaderAction, setOperationLabel, clearOperationLabel } = useAppContext();
   const [roles, setRoles] = useState<AccessRoleItem[]>([]);
   const [permissions, setPermissions] = useState<AccessPermissionItem[]>([]);
   const [draft, setDraft] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeModalRoleId, setActiveModalRoleId] = useState<string | null>(null);
+  const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
 
-  function isAdminRole(role: AccessRoleItem) {
-    return role.code === 'ADMIN';
+  function isFixedRole(role: AccessRoleItem) {
+    return role.code === 'ADMIN' || role.code === 'SUPERADMIN';
   }
 
   async function load() {
@@ -97,66 +71,65 @@ export function PermissionsPage() {
 
   useEffect(() => { void load().catch((err) => notifyError(err, 'No se pudo cargar.')); }, []);
 
-  const sortedRoles = useMemo(() => {
-    return [...roles].sort((a, b) => {
-      return (roleOrder[a.code] ?? 99) - (roleOrder[b.code] ?? 99);
-    });
-  }, [roles]);
+  const sortedRoles = useMemo(() => (
+    [...roles].sort((a, b) => (roleOrder[a.code] ?? 99) - (roleOrder[b.code] ?? 99))
+  ), [roles]);
 
-  const activeModalRole = useMemo(() => {
-    return roles.find((r) => r.id === activeModalRoleId) ?? null;
-  }, [roles, activeModalRoleId]);
+  const activeRole = useMemo(() => (
+    roles.find((role) => role.id === activeRoleId) ?? null
+  ), [activeRoleId, roles]);
 
-  const groupedPermissions = useMemo(() => {
-    return permissions.reduce<Record<string, AccessPermissionItem[]>>((groups, permission) => {
-      groups[permission.category] = [...(groups[permission.category] ?? []), permission];
-      return groups;
-    }, {});
-  }, [permissions]);
+  const availableCodes = useMemo(() => new Set(permissions.map((permission) => permission.code)), [permissions]);
 
-  const categories = useMemo(() => {
-    return [
-      { key: 'access', label: 'GESTIONAR USUARIOS' },
-      { key: 'api', label: 'GESTIONAR CLAVES API' },
-      { key: 'audit', label: 'REGISTRO DE AUDITORÍA' },
-      { key: 'templates', label: 'TEMPLATES' },
-    ].filter((cat) => (groupedPermissions[cat.key]?.length ?? 0) > 0);
-  }, [groupedPermissions]);
+  const visibleRows = useMemo(() => moduleRows.filter((row) => {
+    if (row.key === 'templates') return templateActions.some((action) => availableCodes.has(action.code));
+    return row.permissionCode ? availableCodes.has(row.permissionCode) : true;
+  }), [availableCodes]);
+
+  function roleHasPermission(role: AccessRoleItem, permissionCode: string) {
+    return isFixedRole(role) || (draft[role.id]?.includes(permissionCode) ?? false);
+  }
 
   function togglePermission(roleId: string, permissionCode: string) {
     const role = roles.find((entry) => entry.id === roleId);
-    if (role && isAdminRole(role)) return;
+    if (!role || isFixedRole(role)) return;
 
     setDraft((current) => {
       const values = new Set(current[roleId] ?? []);
-      if (values.has(permissionCode)) {
-        values.delete(permissionCode);
-      } else {
-        values.add(permissionCode);
-      }
-
+      if (values.has(permissionCode)) values.delete(permissionCode);
+      else values.add(permissionCode);
       return { ...current, [roleId]: Array.from(values) };
     });
   }
 
-  const hasChanges = useMemo(() => {
-    return roles.some((role) => {
-      if (isAdminRole(role)) return false;
+  const hasChanges = useMemo(() => roles.some((role) => {
+    if (isFixedRole(role)) return false;
 
-      const original = role.permissions;
-      const current = draft[role.id] ?? [];
-      if (original.length !== current.length) return true;
-      const originalSet = new Set(original);
-      return current.some((code) => !originalSet.has(code));
-    });
-  }, [roles, draft]);
+    const original = role.permissions;
+    const current = draft[role.id] ?? [];
+    if (original.length !== current.length) return true;
+
+    const originalSet = new Set(original);
+    return current.some((code) => !originalSet.has(code));
+  }), [draft, roles]);
 
   async function saveAll() {
+    const confirmed = await Swal.fire({
+      cancelButtonText: 'Cancelar',
+      confirmButtonText: 'Guardar',
+      icon: 'question',
+      showCancelButton: true,
+      text: 'Se aplicaran los cambios de permisos a los roles modificados.',
+      title: 'Guardar permisos',
+    });
+
+    if (!confirmed.isConfirmed) return;
+
     setSaving(true);
     setOperationLabel('Guardando permisos...');
     try {
       const changedRoles = roles.filter((role) => {
-        if (isAdminRole(role)) return false;
+        if (isFixedRole(role)) return false;
 
         const original = role.permissions;
         const current = draft[role.id] ?? [];
@@ -178,6 +151,8 @@ export function PermissionsPage() {
         setPermissions(lastPayload.permissions);
         setDraft(Object.fromEntries(lastPayload.roles.map((entry) => [entry.id, entry.permissions])));
       }
+
+      await notifySuccess('Permisos guardados');
     } catch (err) {
       notifyError(err, 'No se pudieron actualizar los permisos.');
     } finally {
@@ -188,218 +163,108 @@ export function PermissionsPage() {
 
   useEffect(() => {
     setHeaderAction({
+      disabled: saving || !hasChanges,
       label: 'Guardar',
       onClick: () => { void saveAll(); },
-      disabled: saving || !hasChanges,
     });
     return () => setHeaderAction(null);
-  }, [clearOperationLabel, setHeaderAction, saving, hasChanges, setOperationLabel]);
+  }, [clearOperationLabel, hasChanges, saving, setHeaderAction, setOperationLabel]);
+
+  const tableData = visibleRows.map((row) => [
+    <Stack key="module" direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 210 }}>
+      <Box sx={{ color: 'primary.main', display: 'grid', fontSize: '1.1rem', placeItems: 'center' }}>{row.icon}</Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography sx={{ fontSize: '0.86rem', fontWeight: 700 }}>{row.label}</Typography>
+        <Typography color="text.secondary" noWrap sx={{ fontSize: '0.74rem', maxWidth: 230 }}>{row.description}</Typography>
+      </Box>
+    </Stack>,
+    ...sortedRoles.map((role) => {
+      if (row.key === 'templates') {
+        const enabledCount = templateActions.filter((action) => roleHasPermission(role, action.code)).length;
+        return (
+          <Button
+            disabled={isFixedRole(role)}
+            key={role.id}
+            onClick={() => setActiveRoleId(role.id)}
+            size="small"
+            variant={enabledCount > 0 ? 'contained' : 'outlined'}
+          >
+            {isFixedRole(role) ? 'Completo' : `${enabledCount}/${templateActions.length}`}
+          </Button>
+        );
+      }
+
+      const permissionCode = row.permissionCode ?? '';
+      const checked = roleHasPermission(role, permissionCode);
+      return (
+        <Switch
+          checked={checked}
+          disabled={isFixedRole(role)}
+          key={role.id}
+          onChange={() => togglePermission(role.id, permissionCode)}
+          size="small"
+        />
+      );
+    }),
+  ]);
 
   return (
-    <Stack spacing={2} sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+    <Stack spacing={2} sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, height: '100%', minHeight: 0 }}>
+      <Card sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 0, p: 0 }}>
         {loading ? (
           <LoadingState label="Cargando permisos..." minHeight="100%" />
         ) : (
-        <AppScrollbar className="table-scrollbar table-scrollbar-permissions" sx={{ flexGrow: 1 }}>
-          <TableContainer sx={{ overflow: 'visible' }}>
-            <Table stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ pb: 2.5, pt: 3, minWidth: 230 }}>PERMISO</TableCell>
-                {sortedRoles.map((role) => (
-                  <TableCell key={role.id} sx={{ pb: 2.5, pt: 3, minWidth: 320 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      {getRoleIcon(role.code)}
-                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                        <Typography sx={{ fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>
-                          {role.name}
-                        </Typography>
-                        {isAdminRole(role) ? <Chip color="primary" label="Fijo" size="small" variant="outlined" /> : null}
-                      </Stack>
-                    </Box>
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {roles.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5}>No hay roles.</TableCell>
-                </TableRow>
-              ) : null}
-              {categories.map((category) => (
-                    <TableRow key={category.key}>
-                      <TableCell sx={{ minWidth: 230, py: 4.5, verticalAlign: 'middle' }}>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            width: '190px',
-                            pr: 2,
-                            borderRight: '3px solid',
-                            borderColor: 'primary.light',
-                            color: 'text.primary',
-                          }}
-                        >
-                          <Typography
-                            sx={{
-                              fontWeight: 700,
-                              fontSize: '0.75rem',
-                              letterSpacing: '0.05em',
-                              textTransform: 'uppercase',
-                            }}
-                          >
-                            {category.label}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      {sortedRoles.map((role) => {
-                        if (category.key === 'access') {
-                          const permissionCode = 'users.manage';
-                          const checked = isAdminRole(role) || (draft[role.id]?.includes(permissionCode) ?? false);
-                          return (
-                            <TableCell key={role.id} sx={{ py: 4.5, verticalAlign: 'middle' }}>
-                              <CustomToggleSwitch
-                                checked={checked}
-                                disabled={isAdminRole(role)}
-                                onChange={() => togglePermission(role.id, permissionCode)}
-                              />
-                            </TableCell>
-                          );
-                        } else if (category.key === 'api') {
-                          const permissionCode = 'api_keys.manage';
-                          const checked = isAdminRole(role) || (draft[role.id]?.includes(permissionCode) ?? false);
-                          return (
-                            <TableCell key={role.id} sx={{ py: 4.5, verticalAlign: 'middle' }}>
-                              <CustomToggleSwitch
-                                checked={checked}
-                                disabled={isAdminRole(role)}
-                                onChange={() => togglePermission(role.id, permissionCode)}
-                              />
-                            </TableCell>
-                          );
-                        } else if (category.key === 'audit') {
-                          const permissionCode = 'audit.view';
-                          const checked = isAdminRole(role) || (draft[role.id]?.includes(permissionCode) ?? false);
-                          return (
-                            <TableCell key={role.id} sx={{ py: 4.5, verticalAlign: 'middle' }}>
-                              <CustomToggleSwitch
-                                checked={checked}
-                                disabled={isAdminRole(role)}
-                                onChange={() => togglePermission(role.id, permissionCode)}
-                              />
-                            </TableCell>
-                          );
-                        } else {
-                          return (
-                            <TableCell key={role.id} sx={{ py: 4.5, verticalAlign: 'middle' }}>
-                              <CustomActionsButton onClick={() => setActiveModalRoleId(role.id)} />
-                            </TableCell>
-                          );
-                        }
-                      })}
-                    </TableRow>
-                  ))}
-            </TableBody>
-          </Table>
-          </TableContainer>
-        </AppScrollbar>
+          <DataTable
+            columns={[
+              { name: 'Modulo', sort: false },
+              ...sortedRoles.map((role) => role.name),
+            ]}
+            data={tableData}
+          />
         )}
       </Card>
 
-      <Dialog
-        open={Boolean(activeModalRoleId)}
-        onClose={() => setActiveModalRoleId(null)}
-        sx={{
-          '& .MuiDialog-paper': {
-            width: '100%',
-            maxWidth: 480,
-            borderRadius: '12px',
-            p: 3.5,
-          }
-        }}
-      >
-        {activeModalRole && (
-          <Stack spacing={3.5}>
-            <Box sx={{ borderBottom: '2px solid', borderColor: 'primary.main', pb: 1.5 }}>
-              <Typography sx={{ fontWeight: 800, fontSize: '1rem', color: 'primary.main', letterSpacing: '0.05em' }}>
-                TEMPLATES - {activeModalRole.name}
-              </Typography>
-            </Box>
+      <Dialog fullWidth maxWidth="xs" onClose={() => setActiveRoleId(null)} open={Boolean(activeRole)}>
+        <DialogTitle>Permisos de plantillas</DialogTitle>
+        <DialogContent dividers>
+          {activeRole ? (
+            <Stack spacing={1.25}>
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', pb: 1 }}>
+                <Box sx={{ color: 'primary.main', display: 'grid', fontSize: '1rem', placeItems: 'center' }}>{roleIcon(activeRole.code)}</Box>
+                <Typography sx={{ fontWeight: 700 }}>{activeRole.name}</Typography>
+                {isFixedRole(activeRole) ? <Chip color="primary" label="Fijo" size="small" variant="outlined" /> : null}
+              </Stack>
 
-            <Stack spacing={2.5}>
-              {[
-                { label: 'CREAR', code: 'templates.create' },
-                { label: 'EDITAR', code: 'templates.edit' },
-                { label: 'ELIMINAR', code: 'templates.delete' },
-                { label: 'VER', code: 'templates.view' },
-              ].map((item) => {
-                const locked = isAdminRole(activeModalRole);
-                const checked = locked || (draft[activeModalRole.id]?.includes(item.code) ?? false);
-                return (
-                  <Box
-                    key={item.code}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 2,
-                      borderRadius: '8px',
-                      bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        borderColor: 'primary.main',
-                        bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(240,242,248,0.5)',
-                      }
-                    }}
-                  >
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.8125rem', letterSpacing: '0.02em', color: 'text.primary' }}>
-                      {item.label}
-                    </Typography>
-                    <CustomToggleSwitch
-                      checked={checked}
-                      disabled={locked}
-                      onChange={() => togglePermission(activeModalRole.id, item.code)}
-                    />
-                  </Box>
-                );
-              })}
+              {templateActions.map((action) => (
+                <Stack
+                  direction="row"
+                  key={action.code}
+                  spacing={2}
+                  sx={{
+                    alignItems: 'center',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    justifyContent: 'space-between',
+                    px: 1.5,
+                    py: 1,
+                  }}
+                >
+                  <Typography sx={{ fontSize: '0.86rem', fontWeight: 600 }}>{action.label}</Typography>
+                  <Switch
+                    checked={roleHasPermission(activeRole, action.code)}
+                    disabled={isFixedRole(activeRole)}
+                    onChange={() => togglePermission(activeRole.id, action.code)}
+                    size="small"
+                  />
+                </Stack>
+              ))}
             </Stack>
-
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 1.5 }}>
-              <Box
-                onClick={() => setActiveModalRoleId(null)}
-                sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  px: 4,
-                  py: 1.25,
-                  cursor: 'pointer',
-                  fontSize: '0.8125rem',
-                  fontWeight: 700,
-                  color: '#ffffff',
-                  bgcolor: '#1677ff',
-                  borderRadius: '6px',
-                  userSelect: 'none',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    bgcolor: '#0958d9',
-                    transform: 'translateY(-1px)',
-                  },
-                  '&:active': {
-                    transform: 'translateY(0)',
-                  }
-                }}
-              >
-                Aceptar
-              </Box>
-            </Box>
-          </Stack>
-        )}
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setActiveRoleId(null)}>Cerrar</Button>
+        </DialogActions>
       </Dialog>
     </Stack>
   );

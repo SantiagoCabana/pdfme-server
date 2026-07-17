@@ -9,7 +9,7 @@ import { buildExpiryDate, formatDate, statusLabel } from '../../app/session';
 import type { ApiCredential } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
-import { notifyError } from '../../shared/notifications';
+import { notifyError, notifySuccess } from '../../shared/notifications';
 
 export function ApiKeysPage() {
   const { setHeaderAction, closeHeaderAction, setOperationLabel, clearOperationLabel } = useAppContext();
@@ -24,21 +24,13 @@ export function ApiKeysPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(0);
 
-  const toast = Swal.mixin({
-    toast: true,
-    position: 'top-start',
-    showConfirmButton: false,
-    timer: 1800,
-    timerProgressBar: true,
-  });
-
   function showError(message: string) {
     notifyError(message);
   }
 
   async function copyText(value: string, message = 'Copiado') {
     await navigator.clipboard.writeText(value);
-    await toast.fire({ icon: 'success', title: message });
+    await notifySuccess(message);
   }
 
   function shortCode(value: string) {
@@ -159,7 +151,7 @@ export function ApiKeysPage() {
     try {
       const payload = await apiRequest<{ credential: ApiCredential }>(`/api/api-credentials/${credential.id}/${nextAction}`, { method: 'PATCH' });
       setCredentials((current) => current.map((entry) => entry.id === credential.id ? payload.credential : entry));
-      await toast.fire({ icon: 'success', title: isActive ? 'Clave deshabilitada' : 'Clave activada' });
+      await notifySuccess(isActive ? 'Clave deshabilitada' : 'Clave activada');
     } catch (err) {
       showError(err instanceof Error ? err.message : 'No se pudo actualizar.');
     } finally {
@@ -186,7 +178,7 @@ export function ApiKeysPage() {
     try {
       await apiRequest(`/api/api-credentials/${id}`, { method: 'DELETE' });
       setCredentials((current) => current.filter((credential) => credential.id !== id));
-      await toast.fire({ icon: 'success', title: 'Clave eliminada' });
+      await notifySuccess('Clave eliminada');
     } catch (err) {
       showError(err instanceof Error ? err.message : 'No se pudo eliminar.');
     } finally {
