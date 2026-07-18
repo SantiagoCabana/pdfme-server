@@ -264,3 +264,29 @@ Reglas principales:
 - La generación se solicita bajo demanda por API.
 
 ---
+
+## Librerías y referencias
+
+Principales librerías usadas o tomadas como referencia para construir la aplicación:
+
+| Área | Librería / referencia | Uso en el proyecto | Repositorio |
+| --- | --- | --- | --- |
+| PDF | pdfme | Diseño, esquemas y generación de PDFs. | [pdfme/pdfme](https://github.com/pdfme/pdfme) |
+| UI base | MUI | Componentes visuales, layout, drawers, tablas y formularios. | [mui/material-ui](https://github.com/mui/material-ui) |
+| Inspiración visual | Mantis UI | Referencia de estructura visual tipo dashboard MUI. | [codedthemes/mantis-free-react-admin-template](https://github.com/codedthemes/mantis-free-react-admin-template) |
+| Frontend | React | Render de la aplicación web. | [facebook/react](https://github.com/facebook/react) |
+| Build frontend | Vite | Servidor dev y build de producción. | [vitejs/vite](https://github.com/vitejs/vite) |
+| Rutas frontend | React Router | Navegación interna de la app. | [remix-run/react-router](https://github.com/remix-run/react-router) |
+| Data fetching | TanStack Query | Estado de requests y cache cliente. | [TanStack/query](https://github.com/TanStack/query) |
+| Tablas | TanStack Table | Tablas tipadas y controladas en frontend. | [TanStack/table](https://github.com/TanStack/table) |
+| Tablas | Grid.js | Tablas rápidas para vistas administrativas. | [grid-js/gridjs](https://github.com/grid-js/gridjs) |
+| Markdown | React Markdown | Render de documentación interna. | [remarkjs/react-markdown](https://github.com/remarkjs/react-markdown) |
+| Markdown GFM | Remark GFM | Tablas, listas y formato GitHub Flavored Markdown. | [remarkjs/remark-gfm](https://github.com/remarkjs/remark-gfm) |
+| Scroll | SimpleBar | Scrollbars personalizados y consistentes. | [Grsmto/simplebar](https://github.com/Grsmto/simplebar) |
+| Iconos | Ant Design Icons | Iconografía principal del sidebar y acciones. | [ant-design/ant-design-icons](https://github.com/ant-design/ant-design-icons) |
+| Iconos | Lucide | Iconos complementarios. | [lucide-icons/lucide](https://github.com/lucide-icons/lucide) |
+| Alertas | SweetAlert2 | Diálogos y confirmaciones. | [sweetalert2/sweetalert2](https://github.com/sweetalert2/sweetalert2) |
+| Backend | Express | Servidor HTTP y rutas API. | [expressjs/express](https://github.com/expressjs/express) |
+| ORM | Prisma | Modelo de datos y cliente PostgreSQL. | [prisma/prisma](https://github.com/prisma/prisma) |
+| Validación | Zod | Validación de payloads y DTOs. | [colinhacks/zod](https://github.com/colinhacks/zod) |
+| TypeScript runtime | tsx | Ejecución TypeScript en desarrollo. | [privatenumber/tsx](https://github.com/privatenumber/tsx) |
