@@ -1,67 +1,112 @@
-# Plantillas y variables
+# Catálogo y plantillas
 
-Una plantilla contiene la configuración de página y el `designerJson` de pdfme. Su `code` identifica el diseño ante otros sistemas.
+Una plantilla publicada es el contrato que usa una aplicación externa para generar un documento. El consumidor no debe depender del `id` interno; debe guardar el `code`, conocer las variables esperadas y enviar valores ya normalizados.
 
-## Crear y guardar
+## Identificador estable
 
-1. En **Plantillas**, selecciona **Nueva plantilla**.
-2. Define un nombre, un `code` y los tags necesarios.
-3. Abre el editor, configura el formato y agrega los elementos.
-4. Guarda antes de abrir la vista previa.
-5. Crea una versión nueva cuando necesites conservar el estado anterior.
+El campo `code` identifica la plantilla desde sistemas externos.
 
-## Texto con variables
+| Campo | Usar externamente | Uso recomendado | Observación |
+| --- | --- | --- | --- |
+| `code` | Sí | Guardarlo como `templateCode`. | Identificador estable para requests futuros. |
+| `name` | Sí | Mostrarlo en paneles o logs internos. | No debe usarse para identificar la plantilla. |
+| `id` | No | Solo soporte interno. | Puede cambiar o no ser útil fuera de la app. |
+| `versionNumber` | Sí | Registrar la versión usada. | Permite auditar qué versión estaba publicada. |
+| `pageFormat` | Sí | Validar tamaño esperado. | Ejemplo: `A4`. |
+| `pageOrientation` | Sí | Validar orientación esperada. | Ejemplo: `LANDSCAPE`. |
+| `tags` | Opcional | Filtrar catálogo en el consumidor. | No reemplaza al `code`. |
 
-Un elemento `multiVariableText` separa dos conceptos:
+Si el `code` cambia, la integración se rompe. Para cambios visuales usa nuevas versiones, no nuevos códigos, salvo que quieras crear un contrato independiente.
 
-| Propiedad | Función |
-| --- | --- |
-| `text` | Texto completo que se debe renderizar. Puede combinar contenido fijo, Markdown y `{variables}`. |
-| `content` | Objeto JSON con el valor de cada variable para vista previa o render. |
-| `variables` | Lista de nombres detectados en `text`. |
-| `textFormat` | `plain` o `inline-markdown`. |
-| `fontVariants` | Fuentes usadas para negrita, cursiva y código. |
+## Catálogo disponible
 
-Ejemplo:
+El catálogo devuelve las plantillas visibles para una API key.
+
+```http
+GET /api/v1/templates
+x-api-key: pk_live_xxxxxxxxxxxxxxxxx
+```
+
+Respuesta típica:
 
 ```json
 {
-  "name": "datos_curso",
-  "type": "multiVariableText",
-  "text": "Culminó el **Diplomado en Nutrición** con {horas} horas.",
-  "content": "{\"horas\":\"64\"}",
-  "variables": ["horas"],
-  "textFormat": "inline-markdown"
+  "data": [
+    {
+      "id": "cmrpcj5y2000lhzhjmk1w81dp",
+      "name": "Certificado Nutrición",
+      "code": "certificado_nutricion_a9d8a3d7",
+      "status": "DRAFT",
+      "versionNumber": 1,
+      "pageFormat": "A4",
+      "pageOrientation": "LANDSCAPE",
+      "pageWidthMm": 297,
+      "pageHeightMm": 210,
+      "tags": ["certificados", "diplomados"]
+    }
+  ]
 }
 ```
 
-La vista previa debe tomar **todo el valor de `text`** y reemplazar solamente `{horas}`. El resultado esperado es:
+## Contrato de variables
 
-```txt
-Culminó el Diplomado en Nutrición con 64 horas.
+Cada variable dinámica aparece dentro del diseño como `{variable}`. El consumidor debe enviar esas claves dentro de `input`.
+
+| Variable | Ejemplo | Responsable del formato |
+| --- | --- | --- |
+| `nombre_completo` | `María Pérez Ramos` | Sistema consumidor. |
+| `tipo_documento` | `DNI` | Sistema consumidor. |
+| `nro_documento` | `11223344` | Sistema consumidor. |
+| `horas` | `64` | Sistema consumidor. |
+| `fecha_emision` | `30 de septiembre del 2025` | Sistema consumidor. |
+
+Envía valores finales de impresión. No delegues al PDF Server reglas de negocio como calcular fechas, convertir números, traducir estados o decidir textos legales.
+
+## Campos estáticos y variables
+
+No todos los textos del diseño requieren datos externos.
+
+| Tipo de campo | En la plantilla | En el payload externo |
+| --- | --- | --- |
+| Texto fijo | `Latinoamérica, 30 de septiembre del 2025` | No se envía. |
+| Texto con variable | `Otorgado a {nombre_completo}` | `nombre_completo`. |
+| QR fijo | `https://dominio.com/verificar` | No se envía. |
+| QR dinámico | `{url_verificacion}` | `url_verificacion`. |
+
+Si un campo tiene `content: {}` no significa que esté vacío. En pdfme, el texto visible puede estar en `text` y las variables se reemplazan después.
+
+## Reglas de compatibilidad
+
+| Cambio en plantilla | Impacto externo | Recomendación |
+| --- | --- | --- |
+| Mover texto o imagen | Bajo | Mantener el mismo `code`. |
+| Cambiar color o fuente | Bajo | Mantener el mismo `code`. |
+| Agregar variable obligatoria | Alto | Avisar al consumidor antes de publicar. |
+| Renombrar variable | Alto | Evitar; rompe payloads existentes. |
+| Eliminar variable | Medio | Mantener tolerancia temporal si hay consumidores activos. |
+| Cambiar significado de variable | Alto | Crear variable nueva con nombre explícito. |
+
+## Payload recomendado
+
+```json
+{
+  "templateCode": "certificado_nutricion_a9d8a3d7",
+  "input": {
+    "nombre_completo": "María Pérez Ramos",
+    "tipo_documento": "DNI",
+    "nro_documento": "11223344",
+    "horas": "64",
+    "fecha_emision": "30 de septiembre del 2025"
+  }
+}
 ```
 
-No debe mostrar solo `horas`, `{}` ni el nombre de la variable. Esos resultados indican que se envió el objeto equivocado al renderer.
+## Checklist antes de integrar
 
-## Markdown en línea
-
-Con `textFormat: "inline-markdown"` puedes usar:
-
-```txt
-**negrita**
-*cursiva*
-`código`
-```
-
-Para que la negrita use la fuente correcta, configura `fontVariants.bold`. Si no existe una variante, el sistema puede usar el fallback sintético.
-
-## Nombres recomendados
-
-- Usa `snake_case`: `nombre_completo`, `fecha_emision`.
-- Evita espacios, tildes y caracteres especiales.
-- No repitas un nombre para datos con significados diferentes.
-- Mantén valores de prueba en `content` para validar la vista previa.
-
-## Versión actual
-
-Cada plantilla puede tener varias versiones, pero solo una se marca como actual. El catálogo y las futuras operaciones de render deben trabajar con esa versión. Confirma la versión activa antes de cambiar el diseño que usa una integración.
+| Revisión | Resultado esperado |
+| --- | --- |
+| El consumidor tiene una API key propia. | Una clave por sistema o ambiente. |
+| El `templateCode` existe en el catálogo. | Se obtiene desde `GET /api/v1/templates`. |
+| Las variables coinciden exactamente. | Sin tildes, espacios ni cambios de mayúsculas. |
+| Los datos ya llegan formateados. | Fechas, nombres y documentos listos para imprimir. |
+| Hay trazabilidad. | Se registra `templateCode`, HTTP status y usuario solicitante. |

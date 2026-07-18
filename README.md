@@ -1,12 +1,9 @@
 <div align="center">
 
-# pdfme-server
+# pdf-server
 
-**Self-hosted PDF template platform with React, Express, Prisma, PostgreSQL and pdfme.**
+**Plataforma para administrar plantillas pdfme y exponer una API protegida para integraciones externas.**
 
-Frontend and backend are separated: the frontend is the user-facing application, and the backend is only an API/runtime service.
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Built with pdfme](https://img.shields.io/badge/Built%20with-pdfme-blue)](https://github.com/pdfme/pdfme)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Prisma-31648c)](https://www.prisma.io/)
 
@@ -14,129 +11,118 @@ Frontend and backend are separated: the frontend is the user-facing application,
 
 ---
 
-## Objective
+## Objetivo
 
-Build an internal platform to manage pdfme templates and expose protected APIs for external systems that need to generate PDFs.
+`pdf-server` es un monorepo con frontend y backend en un solo repositorio. La app permite administrar plantillas PDF, controlar usuarios/permisos, crear API keys y exponer endpoints para que sistemas externos consulten plantillas y soliciten generación de documentos.
 
-The platform has two independent apps:
-
-- `frontend/`: React + Vite user interface.
-- `backend/`: Express API, Prisma, PostgreSQL, auth, API keys and pdfme generation.
-
-The backend does not serve an admin panel. It only exposes API endpoints and business logic.
-
----
-
-## Current Features
-
-- Login from the React frontend using backend sessions.
-- Protected API with PostgreSQL-backed sessions.
-- Template catalog API.
-- Template creation as a business entity.
-- Automatic creation of initial `template_version` and `template_page`.
-- API key creation with hash, prefix, expiration and revocation.
-- External API-key protected endpoints.
-- Prisma schema for users, roles, permissions, templates, versions, pages, tags, audit and sessions.
-
----
-
-## Project Structure
+La documentación funcional para integradores vive dentro del frontend autenticado en:
 
 ```txt
-pdfme-server/
-├── backend/       # Express API + Prisma + pdfme runtime
-├── frontend/      # React/Vite application
-├── docs/          # Project status and architecture notes
-├── README.md
-├── LICENSE
-└── package.json   # repository metadata only
+/documentation/{ruta}
 ```
+
+---
+
+## Estructura
+
+```txt
+pdf-server/
+├── backend/          # Express API + Prisma + PostgreSQL
+├── frontend/         # React/Vite + MUI + pdfme UI
+├── docs/             # Notas técnicas internas del proyecto
+├── .env.example      # Variables base para frontend y backend
+├── .nvmrc            # Versión Node sugerida para desarrollo
+├── package.json      # Metadatos raíz del monorepo
+└── README.md
+```
+
+---
+
+## Servicios
+
+| Servicio | Ruta | Puerto local | Descripción |
+| --- | --- | --- | --- |
+| Frontend | `frontend/` | `5173` | Aplicación web, editor, vista previa, usuarios, permisos y documentación. |
+| Backend | `backend/` | `4000` | API, autenticación, sesiones, plantillas, API keys y endpoints externos. |
+| PostgreSQL | Externo/local | Según instalación | Base de datos usada por Prisma. |
+
+URLs locales habituales:
+
+```txt
+Frontend:      http://localhost:5173
+Backend API:   http://localhost:4000/api
+Health check:  http://localhost:4000/api/health
+Documentación: http://localhost:5173/documentation/getting-started
+```
+
+En desarrollo, el frontend puede consumir `/api` usando el proxy de Vite hacia `http://localhost:4000` cuando `VITE_API_BASE_URL` está vacío.
 
 ---
 
 ## Stack
 
-| Area | Tool |
+| Área | Tecnología |
 | --- | --- |
-| Frontend | React + Vite |
-| Frontend data | TanStack Query planned |
-| Backend | Express on Node.js |
-| Database | PostgreSQL |
+| Frontend | React 19, Vite, MUI, Ant Design Icons |
+| Documentación interna | React Markdown + Remark GFM dentro del frontend |
+| Tablas | TanStack Table / Grid.js según módulo |
+| Backend | Express sobre Node.js |
+| Validación | Zod |
+| Base de datos | PostgreSQL |
 | ORM | Prisma |
-| Auth | Express session + PostgreSQL session store |
-| API credentials | Prefix + hashed secret + expiration + scopes |
-| PDF generation | pdfme |
+| PDF | pdfme |
+| Sesión | Cookie HTTP + almacenamiento en base de datos |
+| API externa | Header `x-api-key` con clave hasheada |
 
 ---
 
-## Development URLs
+## Requisitos
 
-```txt
-Frontend UI: http://localhost:5173
-Backend API: http://localhost:4000
-Health:      http://localhost:4000/api/health
+- Node.js `>=18.20.8`.
+- PostgreSQL accesible desde el backend.
+- npm.
+
+El archivo `.nvmrc` fija una versión sugerida para desarrollo con nvm:
+
+```bash
+nvm use
 ```
-
-The browser-facing application is the frontend URL. The backend URL is for API calls and health checks.
-
-## Frontend Documentation Route
-
-The frontend now includes an authenticated documentation view outside the main sidebar layout.
-
-```txt
-/documentation/{routes}
-```
-
-Current routes:
-
-- `/documentation/getting-started`
-- `/documentation/templates`
-- `/documentation/api`
-- `/documentation/access-control`
-
-Implementation notes are documented in [docs/FRONTEND_DOCUMENTATION_ROUTE.md](./docs/FRONTEND_DOCUMENTATION_ROUTE.md).
 
 ---
 
-## Backend Environment
+## Variables de entorno
 
-Create `backend/.env` from `backend/.env.example`:
+Puedes usar el archivo raíz como referencia general:
+
+```bash
+cp .env.example .env
+```
+
+Para desarrollo por carpetas, normalmente se crea cada archivo según el servicio:
 
 ```bash
 cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 ```
 
-Required variables:
+Variables principales:
 
-```env
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
-BACKEND_PORT=4000
-FRONTEND_URL=http://localhost:5173
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=change-this-admin-password
-SESSION_SECRET=change-this-session-secret
-SESSION_COOKIE_NAME=pdfme_session
-API_KEY_SECRET=change-this-api-key-secret
-```
-
-`ADMIN_EMAIL` and `ADMIN_PASSWORD` are used only to bootstrap the first internal admin user/session.
+| Variable | Servicio | Descripción |
+| --- | --- | --- |
+| `DATABASE_URL` | Backend | Conexión PostgreSQL usada por Prisma. |
+| `BACKEND_PORT` | Backend | Puerto HTTP del backend. Por defecto `4000`. |
+| `FRONTEND_URL` | Backend | Origen principal permitido para cookies/CORS. |
+| `CORS_ALLOWED_ORIGINS` | Backend | Lista separada por comas de orígenes permitidos. |
+| `ADMIN_EMAIL` | Backend | Email del administrador inicial para seed. |
+| `ADMIN_PASSWORD` | Backend | Contraseña del administrador inicial para seed. |
+| `AUTH_SECRET` | Backend | Secreto largo para autenticación/sesión. |
+| `AUTH_COOKIE_NAME` | Backend | Nombre de cookie de sesión. |
+| `API_KEY_SECRET` | Backend | Secreto largo para firmar/hashear API keys. |
+| `VITE_API_BASE_URL` | Frontend | Base URL del backend. Vacío usa `/api`. |
 
 ---
 
-## Frontend Environment
-
-Create `frontend/.env` from `frontend/.env.example` when needed:
-
-```env
-VITE_API_BASE_URL=
-VITE_APP_NAME=PDF Server
-```
-
-In development, leaving `VITE_API_BASE_URL` empty makes Vite proxy `/api` to `http://localhost:4000`.
-
----
-
-## Install
+## Instalación
 
 Backend:
 
@@ -159,9 +145,36 @@ npm run dev
 
 ---
 
-## API Routes
+## Scripts
 
-Internal session API:
+Backend:
+
+| Comando | Uso |
+| --- | --- |
+| `npm run dev` | Ejecuta `src/server.ts` con tsx. |
+| `npm run dev:watch` | Ejecuta backend con watch. |
+| `npm run build` | Compila TypeScript a `dist/`. |
+| `npm run start` | Ejecuta `dist/server.js`. |
+| `npm run check` | Valida TypeScript sin emitir archivos. |
+| `npm run prisma:generate` | Genera Prisma Client. |
+| `npm run prisma:push` | Sincroniza schema con base de datos. |
+| `npm run prisma:migrate` | Crea/aplica migración de desarrollo. |
+| `npm run prisma:seed` | Crea datos iniciales. |
+
+Frontend:
+
+| Comando | Uso |
+| --- | --- |
+| `npm run dev` | Levanta Vite en `5173`. |
+| `npm run build` | Compila TypeScript y genera `dist/`. |
+| `npm run preview` | Sirve el build de producción localmente. |
+| `npm run check` | Valida TypeScript sin emitir archivos. |
+
+---
+
+## Endpoints principales
+
+Autenticación interna por sesión:
 
 ```http
 POST /api/auth/login
@@ -169,73 +182,85 @@ POST /api/auth/logout
 GET  /api/auth/me
 ```
 
-Templates:
+Administración interna:
 
 ```http
 GET    /api/templates
 POST   /api/templates
+PATCH  /api/templates/:id/page-settings
 DELETE /api/templates/:id
+
+GET    /api/tags
+POST   /api/tags
+
+GET    /api/api-credentials
+POST   /api/api-credentials
+PATCH  /api/api-credentials/:id/revoke
+
+GET    /api/users
+GET    /api/permissions
+GET    /api/audit-logs
 ```
 
-API credentials:
-
-```http
-GET   /api/api-credentials
-POST  /api/api-credentials
-PATCH /api/api-credentials/:id/revoke
-```
-
-External API-key endpoints:
+API externa con `x-api-key`:
 
 ```http
 GET  /api/v1/templates
 POST /api/v1/render
 ```
 
+Estado del backend:
+
+```http
+GET /api/health
+```
+
 ---
 
-## Database Model
+## Documentación para integradores
 
-The approved v1 core remains:
+La documentación integrada está protegida por sesión y enfocada en consumo externo de API:
+
+```txt
+/documentation/getting-started
+/documentation/authentication
+/documentation/templates
+/documentation/api
+/documentation/responses
+```
+
+Contenido cubierto:
+
+- URLs locales y producción para consumir la API.
+- Cómo obtener una API key desde la app con permiso `api_keys.manage`.
+- Uso de `templateCode` como contrato externo.
+- Formato del payload `input`.
+- Ejemplos `curl` y TypeScript.
+- Respuestas, códigos HTTP, logging seguro y reintentos.
+
+---
+
+## Estado del render externo
+
+El endpoint `POST /api/v1/render` ya valida API key y recibe el payload. Actualmente responde `501` hasta conectar la generación final con pdfme sobre la versión actual de la plantilla.
+
+---
+
+## Modelo de datos
+
+Núcleo de plantillas:
 
 ```txt
 template -> template_version -> template_page
 ```
 
-Rules:
+Reglas principales:
 
-- `template` is the business-level template.
-- `template_version` is a complete version of that template.
-- `template_page` stores each page design and page configuration.
-- `template_version.is_current` defines the current/default version.
-- Generated PDFs are not stored in v1.
-- PDF generation happens on demand.
-
-Technical tables:
-
-- `session` is used by `connect-pg-simple` for backend sessions.
-- `_prisma_migrations` is managed by Prisma and is not modeled.
+- `template` representa la entidad de negocio.
+- `template_version` guarda una versión completa de la plantilla.
+- `template_page` guarda diseño y configuración de página.
+- `template_version.is_current` define la versión vigente.
+- Los PDFs generados no se almacenan por defecto.
+- La generación se solicita bajo demanda por API.
 
 ---
-
-## Roadmap
-
-- [x] Separate frontend and backend folders.
-- [x] Backend as API-only service.
-- [x] React/Vite frontend as user-facing app.
-- [x] PostgreSQL + Prisma schema.
-- [x] Login/session API.
-- [x] Template catalog create/list/delete.
-- [x] API key create/list/revoke.
-- [ ] User management UI.
-- [ ] Template edit UI.
-- [ ] pdfme Designer integration in frontend.
-- [ ] Real PDF preview.
-- [ ] Real `POST /api/v1/render` PDF generation.
-- [ ] Docker support.
-
----
-
-## License
-
-MIT. See [LICENSE](./LICENSE).

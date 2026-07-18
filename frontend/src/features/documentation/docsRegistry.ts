@@ -1,4 +1,5 @@
 import gettingStartedContent from './content/getting-started.md?raw';
+import authenticationContent from './content/authentication.md?raw';
 import templatesContent from './content/templates.md?raw';
 import apiContent from './content/api.md?raw';
 import responsesContent from './content/responses.md?raw';
@@ -14,29 +15,36 @@ export type DocumentationArticle = {
 export const documentationArticles: DocumentationArticle[] = [
   {
     slug: 'getting-started',
-    title: 'Primeros pasos',
-    description: 'Recorrido para iniciar sesión, administrar plantillas y preparar una integración.',
-    category: 'Aplicación',
+    title: 'Visión general',
+    description: 'Modelo de integración, datos mínimos y responsabilidades del sistema consumidor.',
+    category: 'Integración',
     content: gettingStartedContent,
   },
   {
+    slug: 'authentication',
+    title: 'Autenticación',
+    description: 'API keys, rotación, restricciones de origen y diagnóstico de acceso.',
+    category: 'Integración',
+    content: authenticationContent,
+  },
+  {
     slug: 'templates',
-    title: 'Plantillas y variables',
-    description: 'Edición, vista previa, variables, Markdown y versiones activas.',
-    category: 'Aplicación',
+    title: 'Catálogo y plantillas',
+    description: 'Cómo usar templateCode, leer el catálogo y mapear variables del contrato.',
+    category: 'Integración',
     content: templatesContent,
   },
   {
     slug: 'api',
-    title: 'API externa',
-    description: 'Autenticación, endpoints públicos y ejemplos listos para ejecutar.',
+    title: 'Endpoints y ejemplos',
+    description: 'Requests para consultar catálogo y preparar render desde un backend externo.',
     category: 'Integración',
     content: apiContent,
   },
   {
     slug: 'responses',
-    title: 'Respuestas y errores',
-    description: 'Códigos HTTP, cuerpos de respuesta y diagnóstico de errores frecuentes.',
+    title: 'Errores y operación',
+    description: 'Códigos HTTP, respuestas, logging seguro, reintentos y salud del servicio.',
     category: 'Integración',
     content: responsesContent,
   },

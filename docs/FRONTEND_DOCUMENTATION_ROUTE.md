@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Se agrego una vista separada de documentacion para usuarios internos y desarrolladores que integran la API de `pdfme-server`.
+Se agrego una vista separada de documentacion para usuarios internos y desarrolladores que integran la API de `pdf-server`.
 
 ## Ruta
 
@@ -15,7 +15,8 @@ Rutas actuales:
 - `/documentation/getting-started`
 - `/documentation/templates`
 - `/documentation/api`
-- `/documentation/access-control`
+- `/documentation/authentication`
+- `/documentation/responses`
 
 ## Comportamiento
 

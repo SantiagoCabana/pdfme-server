@@ -56,7 +56,6 @@ export function PrivateLayout() {
 
   const items = useMemo(() => [
     { path: '/templates', label: 'Plantillas', icon: <FileTextOutlined />, visible: can(user, 'templates.view') },
-    { path: '/documentation/getting-started', label: 'Documentación', icon: <ReadOutlined />, visible: Boolean(user) },
     { path: '/api-keys', label: 'Claves API', icon: <ApiOutlined />, visible: can(user, 'api_keys.manage') },
     { path: '/tags', label: 'Tags', icon: <TagsOutlined />, visible: can(user, 'templates.edit') },
     { path: '/users', label: 'Usuarios', icon: <UserOutlined />, visible: can(user, 'users.manage') },
@@ -96,6 +95,19 @@ export function PrivateLayout() {
 
   const themeModeLabel = themePreference === 'system' ? `Sistema (${mode === 'dark' ? 'oscuro' : 'claro'})` : themePreference === 'dark' ? 'Oscuro' : 'Claro';
   const themeModeIcon = themePreference === 'system' ? <DesktopOutlined /> : themePreference === 'dark' ? <MoonOutlined /> : <SunOutlined />;
+  const documentationSelected = location.pathname.startsWith('/documentation');
+  const documentationButtonSx = {
+    borderRadius: 1.25,
+    minHeight: 38,
+    width: '100%',
+    px: collapsed ? 0 : 1.25,
+    justifyContent: collapsed ? 'center' : 'flex-start',
+    color: documentationSelected ? 'primary.main' : 'text.secondary',
+    border: `1px solid ${documentationSelected ? theme.palette.primary.main : theme.palette.divider}`,
+    bgcolor: documentationSelected ? 'rgba(22, 119, 255, 0.09)' : 'transparent',
+    '&:hover': { bgcolor: 'action.hover' },
+    '& .MuiListItemIcon-root': { color: 'inherit' },
+  };
 
   const drawer = (
     <Box sx={{ height: '100%', width: currentDrawerWidth, bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', overflowX: 'hidden', transition: sidebarTransition }}>
@@ -214,6 +226,25 @@ export function PrivateLayout() {
 
       <Divider />
       <Box sx={{ p: collapsed ? 1 : 1.5, transition: sidebarTransition }}>
+        <Tooltip disableHoverListener={!collapsed} placement="right" title="Documentación">
+          <ListItemButton
+            component={RouterLink}
+            selected={documentationSelected}
+            target="_self"
+            to="/documentation/getting-started"
+            sx={{ ...documentationButtonSx, mb: 1 }}
+          >
+            <ListItemIcon sx={{ minWidth: collapsed ? 0 : 34, width: 34, color: 'inherit', fontSize: 16, justifyContent: 'center', mx: collapsed ? 'auto' : 0 }}>
+              <ReadOutlined />
+            </ListItemIcon>
+            {!collapsed ? (
+              <ListItemText
+                primary={<Typography variant="h6" color="inherit" noWrap>Documentación</Typography>}
+                sx={{ m: 0, minWidth: 0, '& .MuiTypography-root': { color: 'inherit', fontWeight: documentationSelected ? 500 : 400 } }}
+              />
+            ) : null}
+          </ListItemButton>
+        </Tooltip>
         {collapsed ? (
           <Box sx={{ display: 'grid', gap: 1, justifyItems: 'center' }}>
             <Tooltip placement="right" title={`Modo ${themeModeLabel}`}>

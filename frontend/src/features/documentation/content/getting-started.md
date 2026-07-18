@@ -1,46 +1,77 @@
-# Primeros pasos
+# Visión general
 
-Esta guía explica el flujo diario de PDFme Server. La documentación usa la misma sesión y el mismo dominio que la aplicación.
+PDF Server expone plantillas PDF mediante una API autenticada para que otros sistemas generen documentos con datos propios. La integración se basa en tres piezas: una API key, un `templateCode` y un objeto `input` con las variables que reemplazará la plantilla.
+
+## Modelo de integración
+
+| Pieza | La entrega | La usa | Propósito |
+| --- | --- | --- | --- |
+| API key | Administrador de PDF Server | Backend consumidor | Autorizar requests externos. |
+| `templateCode` | Administrador o catálogo API | Backend consumidor | Identificar la plantilla estable. |
+| Variables | Documentación de la plantilla | Backend consumidor | Completar textos dinámicos. |
+| Respuesta API | PDF Server | Backend consumidor | Confirmar resultado o diagnosticar error. |
+
+## URLs usadas en los ejemplos
+
+En local hay dos servicios levantados al mismo tiempo. El frontend sirve la interfaz y el backend expone la API que consumen otros sistemas.
+
+| Servicio | URL local | Uso |
+| --- | --- | --- |
+| Frontend de administración | `http://localhost:5173` | Iniciar sesión, revisar plantillas y crear claves API. |
+| Backend API | `http://localhost:4000/api` | Consumir endpoints externos como `/api/v1/templates`. |
+| Documentación | `http://localhost:5173/documentation/getting-started` | Consultar esta guía desde la misma app autenticada. |
+| Producción | `https://dominio.com/api` | Reemplaza `dominio.com` por el dominio real publicado. |
+
+Ejemplo local directo contra backend:
+
+```bash
+curl -sS "http://localhost:4000/api/v1/templates" \
+  -H "x-api-key: $PDFME_API_KEY"
+```
+
+Ejemplo en producción:
+
+```bash
+curl -sS "https://dominio.com/api/v1/templates" \
+  -H "x-api-key: $PDFME_API_KEY"
+```
 
 ## Flujo recomendado
 
-1. Inicia sesión con tu usuario.
-2. Abre **Plantillas** y crea una plantilla o selecciona una existente.
-3. Configura la hoja, agrega los elementos y guarda los cambios.
-4. Abre **Vista previa** y confirma textos, variables, imágenes y códigos QR.
-5. Si otro sistema consumirá la API, crea una credencial en **Claves API**.
-6. Entrega al integrador la URL del dominio, la clave y el `code` estable de la plantilla.
+1. Solicita una API key para tu sistema o entorno.
+2. Consulta el catálogo con `GET /api/v1/templates`.
+3. Selecciona y guarda el `code` de la plantilla que vas a consumir.
+4. Prepara el payload `input` con los nombres exactos de variables.
+5. Envía el request de render desde tu backend, no desde frontend público.
+6. Registra código HTTP, `templateCode`, usuario solicitante y `message` si ocurre un error.
 
-> La clave completa (`rawKey`) se muestra una sola vez. Guárdala en un gestor de secretos; si se pierde, crea otra y elimina la anterior.
+## Datos mínimos que debes recibir
 
-## Secciones de la aplicación
-
-| Sección | Uso |
-| --- | --- |
-| Plantillas | Crear, editar, previsualizar y versionar diseños. |
-| Claves API | Crear, activar, desactivar o eliminar credenciales externas. |
-| Tags | Clasificar plantillas. |
-| Usuarios | Administrar cuentas y roles. |
-| Permisos | Consultar o asignar capacidades. |
-| Auditoría | Revisar operaciones realizadas en el sistema. |
-
-Las secciones visibles dependen de los permisos de la sesión.
-
-## Datos para una integración
-
-| Dato | Ejemplo | Origen |
+| Dato | Ejemplo | Observación |
 | --- | --- | --- |
-| URL base | `https://dominio.com/api` | Dominio de la aplicación. |
-| API key | `pk_live_xxxxx` | Claves API. |
-| Template code | `c1_docencia_en_salud_a9d8a3d7` | Ficha de la plantilla. |
-| Variables | `nombre_completo`, `nro_documento` | Elementos variables del editor. |
+| Base URL | `http://localhost:4000/api` o `https://dominio.com/api` | Backend API según ambiente. |
+| API key | `pk_live_xxxxxxxxx` | Se muestra una sola vez al crearla. |
+| Template code | `certificado_nutricion_a9d8a3d7` | No uses el ID interno como contrato. |
+| Variables obligatorias | `nombre_completo`, `nro_documento` | Deben coincidir exactamente con la plantilla. |
+| Formato de fechas | `30 de septiembre del 2025` | Envíalas ya formateadas para el documento final. |
 
-## Antes de entregar una plantilla
+## Responsabilidades del sistema consumidor
 
-- Mantén estable el `code` si ya existe una integración.
-- Revisa cuál versión está marcada como actual.
-- Usa valores de ejemplo realistas en los campos variables.
-- Confirma el resultado desde **Vista previa**, no solo desde el editor.
-- Entrega al integrador únicamente las variables que la plantilla necesita.
+- Guardar la API key como secreto de servidor.
+- Validar campos obligatorios antes de llamar a PDF Server.
+- Enviar valores ya normalizados y listos para impresión.
+- No depender del texto visual de la plantilla para lógica de negocio.
+- Manejar explícitamente errores `400`, `401`, `404`, `409` y `501`.
+- Mantener trazabilidad del request sin exponer datos sensibles innecesarios.
 
-Continúa con [Plantillas y variables](/documentation/templates).
+## Qué no debe hacer una integración
+
+| Evitar | Motivo |
+| --- | --- |
+| Enviar API key desde navegador público. | Cualquier usuario podría extraerla. |
+| Guardar solo el `id` de plantilla. | Es un identificador interno, no contrato externo. |
+| Inventar nombres de variables. | Los nombres deben existir en el diseño. |
+| Mandar fechas sin formato final. | La plantilla no debe resolver localización ni redacción. |
+| Reintentar indefinidamente un `501`. | Indica funcionalidad pendiente, no error transitorio. |
+
+> Trata el `templateCode` y la lista de variables como un contrato de integración. Si el administrador cambia variables o estructura del documento, el consumidor debe actualizar su payload y volver a probar.

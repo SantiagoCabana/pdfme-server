@@ -33,6 +33,12 @@ dist/
 build/
 .output/
 
+# Docker / deployment local artifacts
+.docker/
+docker-data/
+*.tar
+*.tar.gz
+
 # TypeScript / framework cache
 *.tsbuildinfo
 .eslintcache
@@ -65,6 +71,7 @@ build/
 Thumbs.db
 .vscode-test
 .idea/
+.fleet/
 
 # Prisma local artifacts
 prisma/*.db

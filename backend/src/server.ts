@@ -66,7 +66,7 @@ app.use('/api', (request, response, next) => {
 app.use(express.json({ limit: '10mb' }));
 
 app.get('/', (_request, response) => {
-  response.json({ ok: true, service: 'pdfme-server-api' });
+  response.json({ ok: true, service: 'pdf-server-api' });
 });
 
 app.use('/api', healthRouter);

@@ -1,9 +1,9 @@
 {
-  "name": "pdfme-server",
+  "name": "pdf-server",
   "version": "0.3.0",
   "private": true,
-  "description": "Self-hosted PDF template platform with AdminJS, React, Prisma, PostgreSQL and pdfme.",
-  "license": "MIT",
+  "description": "Private PDF template platform with React, Express, Prisma, PostgreSQL and pdfme.",
+  "license": "UNLICENSED",
   "engines": {
     "node": ">=18.20.8"
   }
