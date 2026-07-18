@@ -61,7 +61,7 @@ curl -sS "https://dominio.com/api/v1/templates" \
 - Validar campos obligatorios antes de llamar a PDF Server.
 - Enviar valores ya normalizados y listos para impresión.
 - No depender del texto visual de la plantilla para lógica de negocio.
-- Manejar explícitamente errores `400`, `401`, `404`, `409` y `501`.
+- Manejar explícitamente errores `400`, `401`, `404`, `409` y `5xx`.
 - Mantener trazabilidad del request sin exponer datos sensibles innecesarios.
 
 ## Qué no debe hacer una integración
@@ -72,6 +72,6 @@ curl -sS "https://dominio.com/api/v1/templates" \
 | Guardar solo el `id` de plantilla. | Es un identificador interno, no contrato externo. |
 | Inventar nombres de variables. | Los nombres deben existir en el diseño. |
 | Mandar fechas sin formato final. | La plantilla no debe resolver localización ni redacción. |
-| Reintentar indefinidamente un `501`. | Indica funcionalidad pendiente, no error transitorio. |
+| Reintentar indefinidamente errores `4xx`. | Indican problema de contrato, autenticación o permisos. |
 
 > Trata el `templateCode` y la lista de variables como un contrato de integración. Si el administrador cambia variables o estructura del documento, el consumidor debe actualizar su payload y volver a probar.

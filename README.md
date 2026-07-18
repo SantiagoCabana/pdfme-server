@@ -267,7 +267,7 @@ Contenido cubierto:
 
 ## Estado del render externo
 
-El endpoint `POST /api/v1/render` ya valida API key y recibe el payload. Actualmente responde `501` hasta conectar la generación final con pdfme sobre la versión actual de la plantilla.
+El endpoint `POST /api/v1/render` valida la API key, toma la version actual de la plantilla y responde un PDF (`application/pdf`). Si el payload es invalido o faltan variables requeridas devuelve `400`; si el `templateCode` no existe devuelve `404`.
 
 ---
 

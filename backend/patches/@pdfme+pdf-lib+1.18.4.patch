@@ -1,0 +1,11 @@
+diff --git a/node_modules/@pdfme/pdf-lib/es/utils/png.js b/node_modules/@pdfme/pdf-lib/es/utils/png.js
+index 6cfe90c..35f6769 100644
+--- a/node_modules/@pdfme/pdf-lib/es/utils/png.js
++++ b/node_modules/@pdfme/pdf-lib/es/utils/png.js
+@@ -1,4 +1,5 @@
+-import UPNG from '@pdf-lib/upng';
++import UPNGModule from '@pdf-lib/upng';
++const UPNG = UPNGModule.default ?? UPNGModule;
+ const getImageType = (ctype) => {
+     if (ctype === 0)
+         return PngType.Greyscale;

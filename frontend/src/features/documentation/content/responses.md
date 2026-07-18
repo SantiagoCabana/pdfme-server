@@ -7,8 +7,9 @@ Un consumidor externo debe tratar cada respuesta como parte de un contrato opera
 | Caso | Forma esperada |
 | --- | --- |
 | Consulta exitosa | `{ "data": [...] }` |
+| Render exitoso | Binario PDF con `content-type: application/pdf` |
 | Error de autenticación | `{ "message": "API key invalida." }` |
-| Render no habilitado | `{ "ok": false, "message": "...", "received": {...} }` |
+| Error de render | `{ "message": "..." }` |
 
 ## Códigos HTTP
 
@@ -19,7 +20,6 @@ Un consumidor externo debe tratar cada respuesta como parte de un contrato opera
 | `401` | API key ausente, inválida, expirada o bloqueada por origen. | No. |
 | `404` | Recurso no encontrado. | No, salvo sincronización de catálogo. |
 | `409` | Conflicto de estado o unicidad. | No. |
-| `501` | Endpoint disponible pero generación final pendiente. | No. |
 | `5xx` | Error inesperado del servidor. | Sí, con backoff y límite. |
 
 ## `401` autenticación
@@ -42,22 +42,16 @@ Diagnóstico recomendado:
 
 No registres la API key completa. Si necesitas correlación, guarda solo un prefijo seguro como `pk_live_abcd...`.
 
-## `501` render reservado
+## `400` render rechazado
 
 ```json
 {
-  "ok": false,
-  "message": "Render reservado. Falta conectar pdfme generator al TemplateVersion actual.",
-  "received": {
-    "templateCode": "certificado_nutricion_a9d8a3d7",
-    "input": {
-      "nombre_completo": "María Pérez Ramos"
-    }
-  }
+  "message": "Faltan variables requeridas para renderizar la plantilla.",
+  "missingVariables": ["nro_documento"]
 }
 ```
 
-Esta respuesta confirma dos cosas: la API key fue aceptada y el payload llegó al backend. No debe diagnosticarse como problema de autenticación.
+Esta respuesta indica que la API key fue aceptada, pero el payload no cumple el contrato de la plantilla. Corrige el `input` antes de reenviar.
 
 ## Logging seguro
 
@@ -78,7 +72,6 @@ Esta respuesta confirma dos cosas: la API key fue aceptada y el payload llegó a
 | `400` | Corregir payload antes de reenviar. |
 | `401` | Revisar clave, expiración u origen. |
 | `404` | Resincronizar catálogo y validar `templateCode`. |
-| `501` | Esperar habilitación del generador; no reintentar en bucle. |
 | Timeout | Reintentar con backoff exponencial. |
 | `5xx` | Reintentar pocas veces y abrir alerta si persiste. |
 

@@ -12,15 +12,22 @@
     "prisma:push": "prisma db push --schema prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --schema prisma/schema.prisma",
     "prisma:seed": "tsx prisma/seed.ts",
-    "dev:watch": "tsx watch src/server.ts"
+    "dev:watch": "tsx watch src/server.ts",
+    "postinstall": "patch-package"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@pdfme/common": "^4.0.2",
-    "@pdfme/generator": "^4.0.2",
-    "@pdfme/schemas": "^4.0.2",
+    "@fontsource/lora": "^5.2.8",
+    "@fontsource/montserrat": "^5.2.8",
+    "@fontsource/oswald": "^5.2.8",
+    "@fontsource/playfair-display": "^5.2.8",
+    "@fontsource/poppins": "^5.2.7",
+    "@fontsource/roboto-mono": "^5.2.9",
+    "@pdfme/common": "^6.1.11",
+    "@pdfme/generator": "^6.1.11",
+    "@pdfme/schemas": "^6.1.11",
     "@prisma/client": "^6.10.1",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.6",
@@ -33,6 +40,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
     "@types/node": "^24.0.4",
+    "patch-package": "^8.0.1",
     "prisma": "^6.10.1",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"

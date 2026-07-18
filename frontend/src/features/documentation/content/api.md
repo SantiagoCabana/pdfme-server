@@ -79,7 +79,8 @@ curl -sS -X POST "https://dominio.com/api/v1/render" \
       "nro_documento": "11223344",
       "horas": "64"
     }
-  }'
+  }' \
+  --output certificado.pdf
 ```
 
 Estado actual del backend:
@@ -87,7 +88,7 @@ Estado actual del backend:
 | Endpoint | Autenticación | Implementación |
 | --- | --- | --- |
 | `GET /api/v1/templates` | Activa | Lista catálogo. |
-| `POST /api/v1/render` | Activa | Recibe payload y responde `501` hasta conectar el generador pdfme final. |
+| `POST /api/v1/render` | Activa | Genera el PDF usando la versión actual de la plantilla. |
 
 ## Cliente TypeScript
 
@@ -123,7 +124,7 @@ class PdfServerClient {
     return payload.data;
   }
 
-  async render(templateCode: string, input: RenderInput) {
+  async render(templateCode: string, input: RenderInput): Promise<ArrayBuffer> {
     const response = await fetch(`${this.baseUrl}/v1/render`, {
       method: 'POST',
       headers: {
@@ -133,13 +134,12 @@ class PdfServerClient {
       body: JSON.stringify({ templateCode, input }),
     });
 
-    const payload = await response.json();
-
     if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
       throw new Error(payload.message ?? `PDF Server respondió ${response.status}`);
     }
 
-    return payload;
+    return response.arrayBuffer();
   }
 }
 ```
