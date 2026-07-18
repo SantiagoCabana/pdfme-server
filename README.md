@@ -27,7 +27,7 @@ La documentación funcional para integradores vive dentro del frontend autentica
 
 ```txt
 pdfme-server/
-├── backend/          # Express API + Prisma + PostgreSQL
+├── backend/          # API + Prisma + PostgreSQL
 ├── frontend/         # React/Vite + MUI + pdfme UI
 ├── .env.example      # Variables base para frontend y backend
 ├── INSTALL.md        # Instalación local y despliegue por Dockerfiles separados
@@ -62,11 +62,10 @@ En desarrollo, el frontend usa `VITE_BACKEND_API_URL` para apuntar al backend. E
 
 | Área | Tecnología |
 | --- | --- |
-| Frontend | React 19, Vite, MUI, Ant Design Icons |
+| Frontend | Aplicación web con MUI y documentación integrada |
 | Documentación interna | React Markdown + Remark GFM dentro del frontend |
 | Tablas | TanStack Table / Grid.js según módulo |
-| Backend | Express sobre Node.js |
-| Validación | Zod |
+| Backend | API HTTP sobre Node.js |
 | Base de datos | PostgreSQL |
 | ORM | Prisma |
 | PDF | pdfme |
@@ -165,7 +164,7 @@ Backend:
 
 | Comando | Uso |
 | --- | --- |
-| `npm run dev` | Ejecuta `src/server.ts` con tsx. |
+| `npm run dev` | Ejecuta el backend en desarrollo. |
 | `npm run dev:watch` | Ejecuta backend con watch. |
 | `npm run build` | Compila TypeScript a `dist/`. |
 | `npm run start` | Ejecuta `dist/server.js`. |
@@ -281,26 +280,18 @@ Reglas principales:
 
 ## Librerías y referencias
 
-Principales librerías usadas o tomadas como referencia para construir la aplicación:
+Tecnologías principales y referencias visuales usadas en la aplicación:
 
-| Área | Librería / referencia | Uso en el proyecto | Repositorio |
-| --- | --- | --- | --- |
-| PDF | pdfme | Diseño, esquemas y generación de PDFs. | [pdfme/pdfme](https://github.com/pdfme/pdfme) |
-| UI base | MUI | Componentes visuales, layout, drawers, tablas y formularios. | [mui/material-ui](https://github.com/mui/material-ui) |
-| Inspiración visual | Mantis UI | Referencia de estructura visual tipo dashboard MUI. | [codedthemes/mantis-free-react-admin-template](https://github.com/codedthemes/mantis-free-react-admin-template) |
-| Frontend | React | Render de la aplicación web. | [facebook/react](https://github.com/facebook/react) |
-| Build frontend | Vite | Servidor dev y build de producción. | [vitejs/vite](https://github.com/vitejs/vite) |
-| Rutas frontend | React Router | Navegación interna de la app. | [remix-run/react-router](https://github.com/remix-run/react-router) |
-| Data fetching | TanStack Query | Estado de requests y cache cliente. | [TanStack/query](https://github.com/TanStack/query) |
-| Tablas | TanStack Table | Tablas tipadas y controladas en frontend. | [TanStack/table](https://github.com/TanStack/table) |
-| Tablas | Grid.js | Tablas rápidas para vistas administrativas. | [grid-js/gridjs](https://github.com/grid-js/gridjs) |
-| Markdown | React Markdown | Render de documentación interna. | [remarkjs/react-markdown](https://github.com/remarkjs/react-markdown) |
-| Markdown GFM | Remark GFM | Tablas, listas y formato GitHub Flavored Markdown. | [remarkjs/remark-gfm](https://github.com/remarkjs/remark-gfm) |
-| Scroll | SimpleBar | Scrollbars personalizados y consistentes. | [Grsmto/simplebar](https://github.com/Grsmto/simplebar) |
-| Iconos | Ant Design Icons | Iconografía principal del sidebar y acciones. | [ant-design/ant-design-icons](https://github.com/ant-design/ant-design-icons) |
-| Iconos | Lucide | Iconos complementarios. | [lucide-icons/lucide](https://github.com/lucide-icons/lucide) |
-| Alertas | SweetAlert2 | Diálogos y confirmaciones. | [sweetalert2/sweetalert2](https://github.com/sweetalert2/sweetalert2) |
-| Backend | Express | Servidor HTTP y rutas API. | [expressjs/express](https://github.com/expressjs/express) |
-| ORM | Prisma | Modelo de datos y cliente PostgreSQL. | [prisma/prisma](https://github.com/prisma/prisma) |
-| Validación | Zod | Validación de payloads y DTOs. | [colinhacks/zod](https://github.com/colinhacks/zod) |
-| TypeScript runtime | tsx | Ejecución TypeScript en desarrollo. | [privatenumber/tsx](https://github.com/privatenumber/tsx) |
+[![pdfme](https://img.shields.io/badge/pdfme-PDF%20templates-2563eb?style=for-the-badge)](https://github.com/pdfme/pdfme)
+[![MUI](https://img.shields.io/badge/MUI-UI%20components-007fff?style=for-the-badge&logo=mui&logoColor=white)](https://github.com/mui/material-ui)
+[![Mantis UI](https://img.shields.io/badge/Mantis%20UI-dashboard%20reference-111827?style=for-the-badge)](https://github.com/codedthemes/mantis-free-react-admin-template)
+[![React](https://img.shields.io/badge/React-frontend-149eca?style=for-the-badge&logo=react&logoColor=white)](https://github.com/facebook/react)
+[![Vite](https://img.shields.io/badge/Vite-build-646cff?style=for-the-badge&logo=vite&logoColor=white)](https://github.com/vitejs/vite)
+[![TanStack](https://img.shields.io/badge/TanStack-query%20%2F%20tables-ff4154?style=for-the-badge)](https://github.com/TanStack)
+[![Grid.js](https://img.shields.io/badge/Grid.js-data%20tables-1f2937?style=for-the-badge)](https://github.com/grid-js/gridjs)
+[![React Markdown](https://img.shields.io/badge/React%20Markdown-docs-0f172a?style=for-the-badge&logo=markdown&logoColor=white)](https://github.com/remarkjs/react-markdown)
+[![SimpleBar](https://img.shields.io/badge/SimpleBar-scrollbars-334155?style=for-the-badge)](https://github.com/Grsmto/simplebar)
+[![Ant Design Icons](https://img.shields.io/badge/Ant%20Design%20Icons-icons-1677ff?style=for-the-badge&logo=antdesign&logoColor=white)](https://github.com/ant-design/ant-design-icons)
+[![Lucide](https://img.shields.io/badge/Lucide-icons-f56565?style=for-the-badge)](https://github.com/lucide-icons/lucide)
+[![SweetAlert2](https://img.shields.io/badge/SweetAlert2-dialogs-8b5cf6?style=for-the-badge)](https://github.com/sweetalert2/sweetalert2)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-2d3748?style=for-the-badge&logo=prisma&logoColor=white)](https://github.com/prisma/prisma)
