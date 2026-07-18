@@ -54,7 +54,7 @@ Health check:  http://localhost:4000/api/health
 Documentación: http://localhost:5173/documentation/getting-started
 ```
 
-En desarrollo, el frontend usa `VITE_BACKEND_API_URL` para apuntar al backend. El valor local recomendado es `http://localhost:4000/api`.
+En desarrollo, el frontend usa `VITE_BACKEND_API_URL` para apuntar al backend. El valor local recomendado es `http://localhost:4000`. No agregues `/api`; las rutas internas de la app ya lo incluyen.
 
 ---
 
@@ -129,7 +129,7 @@ Frontend - build y conexión con backend:
 | Variable | Descripción |
 | --- | --- |
 | `VITE_APP_NAME` | Nombre visible de la aplicación usado en el logo y en el título de la pestaña. |
-| `VITE_BACKEND_API_URL` | Base URL del backend que consume el frontend. En local: `http://localhost:4000/api`. |
+| `VITE_BACKEND_API_URL` | Base URL del backend que consume el frontend. En local: `http://localhost:4000`. En despliegue con un solo dominio puede quedar vacia para usar `/api` relativo. |
 
 ---
 

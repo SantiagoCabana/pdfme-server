@@ -1,7 +1,21 @@
-const API_BASE_URL = import.meta.env.VITE_BACKEND_API_URL ?? '';
+const API_BASE_URL = String(import.meta.env.VITE_BACKEND_API_URL ?? '').trim().replace(/\/+$/, '');
 const GET_CACHE_TTL_MS = 1_500;
 const pendingGetRequests = new Map<string, Promise<unknown>>();
 const resolvedGetRequests = new Map<string, { expiresAt: number; value: unknown }>();
+
+function resolveApiUrl(path: string) {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+  if (!API_BASE_URL) return normalizedPath;
+
+  // Internal calls already include /api. If the deploy variable also includes it,
+  // avoid producing /api/api/auth/login.
+  if (API_BASE_URL.endsWith('/api') && normalizedPath.startsWith('/api/')) {
+    return `${API_BASE_URL}${normalizedPath.slice('/api'.length)}`;
+  }
+
+  return `${API_BASE_URL}${normalizedPath}`;
+}
 
 function getRequestMethod(init?: RequestInit) {
   return (init?.method ?? 'GET').toUpperCase();
@@ -35,7 +49,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     if (pendingRequest) return pendingRequest as Promise<T>;
   }
 
-  const request = fetch(`${API_BASE_URL}${path}`, {
+  const request = fetch(resolveApiUrl(path), {
     ...init,
     credentials: 'include',
     headers: {

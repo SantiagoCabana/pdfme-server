@@ -37,7 +37,7 @@ API_KEY_SECRET=generate-a-long-random-api-key-secret-of-at-least-32-chars
 
 ```env
 VITE_APP_NAME=PDF Server
-VITE_BACKEND_API_URL=http://localhost:4000/api
+VITE_BACKEND_API_URL=http://localhost:4000
 ```
 
 4. Prepara backend:
@@ -135,7 +135,7 @@ Build args del frontend:
 
 ```env
 VITE_APP_NAME=PDF Server
-VITE_BACKEND_API_URL=/api
+VITE_BACKEND_API_URL=
 ```
 
 Variables runtime del frontend:
@@ -145,6 +145,8 @@ BACKEND_UPSTREAM=https://backend-tu-app.dokploy.internal
 ```
 
 Configura `BACKEND_UPSTREAM` manualmente en Dokploy. Usa la URL interna que Dokploy asigne al backend. Si no tienes URL interna disponible, usa la URL publica del backend sin `/api` al final. No uses `http://backend:4000` cuando backend y frontend estan desplegados como aplicaciones separadas, porque ese hostname solo existe dentro de un mismo Docker Compose.
+
+`VITE_BACKEND_API_URL` es una variable de build. Para un solo dominio dejala vacia, porque el frontend llamara a `/api/...` en el mismo dominio y Nginx lo enviara a `BACKEND_UPSTREAM`. Si apuntas directo al backend en desarrollo, usa solo el origen: `http://localhost:4000`, no `http://localhost:4000/api`.
 
 ### 4. Rutas bajo un solo dominio
 
