@@ -141,10 +141,10 @@ VITE_BACKEND_API_URL=/api
 Variables runtime del frontend:
 
 ```env
-BACKEND_UPSTREAM=http://backend:4000
+BACKEND_UPSTREAM=https://backend-tu-app.dokploy.internal
 ```
 
-Si Dokploy no resuelve `backend` como hostname interno entre aplicaciones separadas, usa la URL interna que Dokploy asigne al servicio backend.
+Configura `BACKEND_UPSTREAM` manualmente en Dokploy. Usa la URL interna que Dokploy asigne al backend. Si no tienes URL interna disponible, usa la URL publica del backend sin `/api` al final. No uses `http://backend:4000` cuando backend y frontend estan desplegados como aplicaciones separadas, porque ese hostname solo existe dentro de un mismo Docker Compose.
 
 ### 4. Rutas bajo un solo dominio
 

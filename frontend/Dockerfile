@@ -16,7 +16,7 @@ RUN npm run build
 
 FROM nginx:1.27-alpine AS runtime
 
-ENV BACKEND_UPSTREAM=http://backend:4000
+ENV BACKEND_UPSTREAM=http://127.0.0.1:4000
 
 COPY docker/default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
