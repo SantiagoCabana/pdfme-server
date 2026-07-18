@@ -23,6 +23,18 @@ La documentación funcional para integradores vive dentro del frontend autentica
 
 ---
 
+## Vista de la aplicación
+
+Gestión de permisos por rol:
+
+![Ejemplo de permisos](./assets/permissions-example.png)
+
+Creación y configuración de plantillas:
+
+![Ejemplo de creación de plantillas](./assets/template-creation-example.png)
+
+---
+
 ## Estructura
 
 ```txt
