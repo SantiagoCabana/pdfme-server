@@ -63,11 +63,14 @@ async function main() {
     });
   }
 
-  if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
+  const initialAdminEmail = process.env.INITIAL_ADMIN_EMAIL;
+  const initialAdminPassword = process.env.INITIAL_ADMIN_PASSWORD;
+
+  if (!initialAdminEmail || !initialAdminPassword) {
     return;
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL.toLowerCase();
+  const adminEmail = initialAdminEmail.toLowerCase();
   const existingAdminUser = await prisma.userAccount.findUnique({
     where: { email: adminEmail },
   });
@@ -80,7 +83,7 @@ async function main() {
     data: {
       email: adminEmail,
       displayName: 'Administrador',
-      passwordHash: await bcrypt.hash(process.env.ADMIN_PASSWORD, 10),
+      passwordHash: await bcrypt.hash(initialAdminPassword, 10),
       isSuperAdmin: true,
       status: 'ACTIVE',
     },

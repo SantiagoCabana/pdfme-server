@@ -164,7 +164,7 @@ usersRouter.delete('/users/:id', requirePermission('users.manage'), async (reque
 
   let isValid = false;
   if (currentUser.id === 'bootstrap-admin') {
-    isValid = password === env.ADMIN_PASSWORD;
+    isValid = Boolean(env.INITIAL_ADMIN_PASSWORD && password === env.INITIAL_ADMIN_PASSWORD);
   } else {
     const actor = await prisma.userAccount.findUnique({
       where: { id: currentUser.id }

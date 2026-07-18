@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+const API_BASE_URL = import.meta.env.VITE_BACKEND_API_URL ?? '';
 const GET_CACHE_TTL_MS = 1_500;
 const pendingGetRequests = new Map<string, Promise<unknown>>();
 const resolvedGetRequests = new Map<string, { expiresAt: number; value: unknown }>();

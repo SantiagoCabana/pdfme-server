@@ -93,7 +93,7 @@ Respuesta esperada:
 ```json
 {
   "ok": true,
-  "service": "pdf-server-backend"
+  "service": "pdfme-server-backend"
 }
 ```
 

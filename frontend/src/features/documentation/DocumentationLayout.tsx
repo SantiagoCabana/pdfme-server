@@ -23,6 +23,7 @@ import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
   DesktopOutlined,
+  GithubOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MoonOutlined,
@@ -230,6 +231,21 @@ export function DocumentationLayout({
             <ListItemIcon sx={{ minWidth: collapsed ? 0 : 34, width: 34, color: 'inherit', fontSize: 16, justifyContent: 'center', mx: collapsed ? 'auto' : 0 }}><ArrowLeftOutlined /></ListItemIcon>
             {!collapsed ? (
               <ListItemText primary={<Typography variant="h6" color="inherit" noWrap>Volver a la app</Typography>} sx={{ m: 0, minWidth: 0, '& .MuiTypography-root': { color: 'inherit', fontWeight: 400 } }} />
+            ) : null}
+          </ListItemButton>
+        </Tooltip>
+        <Tooltip disableHoverListener={!collapsed} placement="right" title="Repositorio">
+          <ListItemButton
+            component="a"
+            href="https://github.com/SantiagoCabana/pdfme-server"
+            rel="noreferrer"
+            target="_blank"
+            sx={{ ...returnButtonSx, mb: 1 }}
+            aria-label="Repositorio"
+          >
+            <ListItemIcon sx={{ minWidth: collapsed ? 0 : 34, width: 34, color: 'inherit', fontSize: 16, justifyContent: 'center', mx: collapsed ? 'auto' : 0 }}><GithubOutlined /></ListItemIcon>
+            {!collapsed ? (
+              <ListItemText primary={<Typography variant="h6" color="inherit" noWrap>pdfme Server</Typography>} sx={{ m: 0, minWidth: 0, '& .MuiTypography-root': { color: 'inherit', fontWeight: 400 } }} />
             ) : null}
           </ListItemButton>
         </Tooltip>

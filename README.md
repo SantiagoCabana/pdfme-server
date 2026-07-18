@@ -1,6 +1,6 @@
 <div align="center">
 
-# pdf-server
+# pdfme-server
 
 **Plataforma para administrar plantillas pdfme y exponer una API protegida para integraciones externas.**
 
@@ -13,7 +13,7 @@
 
 ## Objetivo
 
-`pdf-server` es un monorepo con frontend y backend en un solo repositorio. La app permite administrar plantillas PDF, controlar usuarios/permisos, crear API keys y exponer endpoints para que sistemas externos consulten plantillas y soliciten generación de documentos.
+`pdfme-server` es un monorepo con frontend y backend en un solo repositorio. La app permite administrar plantillas PDF, controlar usuarios/permisos, crear API keys y exponer endpoints para que sistemas externos consulten plantillas y soliciten generación de documentos.
 
 La documentación funcional para integradores vive dentro del frontend autenticado en:
 
@@ -26,12 +26,11 @@ La documentación funcional para integradores vive dentro del frontend autentica
 ## Estructura
 
 ```txt
-pdf-server/
+pdfme-server/
 ├── backend/          # Express API + Prisma + PostgreSQL
 ├── frontend/         # React/Vite + MUI + pdfme UI
-├── docs/             # Notas técnicas internas del proyecto
 ├── .env.example      # Variables base para frontend y backend
-├── .nvmrc            # Versión Node sugerida para desarrollo
+├── INSTALL.md        # Instalación local y despliegue por Dockerfiles separados
 ├── package.json      # Metadatos raíz del monorepo
 └── README.md
 ```
@@ -55,7 +54,7 @@ Health check:  http://localhost:4000/api/health
 Documentación: http://localhost:5173/documentation/getting-started
 ```
 
-En desarrollo, el frontend puede consumir `/api` usando el proxy de Vite hacia `http://localhost:4000` cuando `VITE_API_BASE_URL` está vacío.
+En desarrollo, el frontend usa `VITE_BACKEND_API_URL` para apuntar al backend. El valor local recomendado es `http://localhost:4000/api`.
 
 ---
 
@@ -82,12 +81,6 @@ En desarrollo, el frontend puede consumir `/api` usando el proxy de Vite hacia `
 - PostgreSQL accesible desde el backend.
 - npm.
 
-El archivo `.nvmrc` fija una versión sugerida para desarrollo con nvm:
-
-```bash
-nvm use
-```
-
 ---
 
 ## Variables de entorno
@@ -107,22 +100,43 @@ cp frontend/.env.example frontend/.env
 
 Variables principales:
 
-| Variable | Servicio | Descripción |
-| --- | --- | --- |
-| `DATABASE_URL` | Backend | Conexión PostgreSQL usada por Prisma. |
-| `BACKEND_PORT` | Backend | Puerto HTTP del backend. Por defecto `4000`. |
-| `FRONTEND_URL` | Backend | Origen principal permitido para cookies/CORS. |
-| `CORS_ALLOWED_ORIGINS` | Backend | Lista separada por comas de orígenes permitidos. |
-| `ADMIN_EMAIL` | Backend | Email del administrador inicial para seed. |
-| `ADMIN_PASSWORD` | Backend | Contraseña del administrador inicial para seed. |
-| `AUTH_SECRET` | Backend | Secreto largo para autenticación/sesión. |
-| `AUTH_COOKIE_NAME` | Backend | Nombre de cookie de sesión. |
-| `API_KEY_SECRET` | Backend | Secreto largo para firmar/hashear API keys. |
-| `VITE_API_BASE_URL` | Frontend | Base URL del backend. Vacío usa `/api`. |
+Backend - API HTTP:
+
+| Variable | Descripción |
+| --- | --- |
+| `DATABASE_URL` | Conexión PostgreSQL usada por Prisma. |
+| `API_PORT` | Puerto HTTP del backend. Por defecto `4000`. |
+| `WEB_APP_URL` | URL principal del frontend permitida para cookies/CORS. |
+| `CORS_ALLOWED_ORIGINS` | Lista separada por comas de orígenes adicionales permitidos. |
+
+Backend - usuario administrador inicial para seed/bootstrap:
+
+| Variable | Descripción |
+| --- | --- |
+| `INITIAL_ADMIN_EMAIL` | Email del administrador inicial cuando aún no existe ningún usuario en la base de datos. |
+| `INITIAL_ADMIN_PASSWORD` | Contraseña del administrador inicial para el seed/bootstrap. |
+
+Backend - autenticación y claves externas:
+
+| Variable | Descripción |
+| --- | --- |
+| `AUTH_SECRET` | Secreto largo para firmar tokens de sesión. |
+| `AUTH_COOKIE_NAME` | Nombre de cookie de sesión. |
+| `AUTH_COOKIE_MAX_AGE_SECONDS` | Duración de la cookie de sesión en segundos. |
+| `API_KEY_SECRET` | Secreto largo para hashear API keys externas. |
+
+Frontend - build y conexión con backend:
+
+| Variable | Descripción |
+| --- | --- |
+| `VITE_APP_NAME` | Nombre visible de la aplicación usado en el logo y en el título de la pestaña. |
+| `VITE_BACKEND_API_URL` | Base URL del backend que consume el frontend. En local: `http://localhost:4000/api`. |
 
 ---
 
 ## Instalación
+
+Guía completa: [INSTALL.md](./INSTALL.md).
 
 Backend:
 

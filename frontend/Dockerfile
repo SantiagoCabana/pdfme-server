@@ -2,6 +2,12 @@ FROM node:18.20.8-bookworm-slim AS build
 
 WORKDIR /app
 
+ARG VITE_APP_NAME="PDF Server"
+ARG VITE_BACKEND_API_URL="/api"
+
+ENV VITE_APP_NAME=${VITE_APP_NAME}
+ENV VITE_BACKEND_API_URL=${VITE_BACKEND_API_URL}
+
 COPY package.json package-lock.json ./
 RUN npm ci
 

@@ -16,7 +16,7 @@ const app = express();
 app.set('etag', false);
 
 const configuredOrigins = new Set([
-  env.FRONTEND_URL,
+  env.WEB_APP_URL,
   ...(env.CORS_ALLOWED_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean) ?? []),
 ]);
 
@@ -66,7 +66,7 @@ app.use('/api', (request, response, next) => {
 app.use(express.json({ limit: '10mb' }));
 
 app.get('/', (_request, response) => {
-  response.json({ ok: true, service: 'pdf-server-api' });
+  response.json({ ok: true, service: 'pdfme-server-api' });
 });
 
 app.use('/api', healthRouter);
@@ -79,6 +79,6 @@ app.use('/api', auditRouter);
 app.use('/api', permissionsRouter);
 app.use('/api', renderRouter);
 
-app.listen(env.BACKEND_PORT, () => {
-  console.log(`Backend API listo en http://localhost:${env.BACKEND_PORT}`);
+app.listen(env.API_PORT, () => {
+  console.log(`Backend API listo en http://localhost:${env.API_PORT}`);
 });

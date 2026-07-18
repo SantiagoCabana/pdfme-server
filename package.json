@@ -1,5 +1,5 @@
 {
-  "name": "pdf-server",
+  "name": "pdfme-server",
   "version": "0.3.0",
   "private": true,
   "description": "Private PDF template platform with React, Express, Prisma, PostgreSQL and pdfme.",

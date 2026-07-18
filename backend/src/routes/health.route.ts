@@ -3,5 +3,5 @@ import { Router } from 'express';
 export const healthRouter = Router();
 
 healthRouter.get('/health', (_request, response) => {
-  response.json({ ok: true, service: 'pdf-server-backend' });
+  response.json({ ok: true, service: 'pdfme-server-backend' });
 });

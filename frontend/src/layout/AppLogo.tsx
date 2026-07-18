@@ -1,11 +1,12 @@
 import { Box, Typography } from '@mui/material';
+import { appName } from '../app/config';
 
 interface AppLogoProps {
   showText?: boolean;
   label?: string;
 }
 
-export function AppLogo({ showText = true, label = 'PDF Server' }: AppLogoProps) {
+export function AppLogo({ showText = true, label = appName }: AppLogoProps) {
   return (
     <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1.1, minWidth: 0 }}>
       <Box

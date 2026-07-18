@@ -23,6 +23,7 @@ import {
 import {
   ApiOutlined,
   FileTextOutlined,
+  GithubOutlined,
   HistoryOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -241,6 +242,26 @@ export function PrivateLayout() {
               <ListItemText
                 primary={<Typography variant="h6" color="inherit" noWrap>Documentación</Typography>}
                 sx={{ m: 0, minWidth: 0, '& .MuiTypography-root': { color: 'inherit', fontWeight: documentationSelected ? 500 : 400 } }}
+              />
+            ) : null}
+          </ListItemButton>
+        </Tooltip>
+        <Tooltip disableHoverListener={!collapsed} placement="right" title="Repositorio">
+          <ListItemButton
+            component="a"
+            href="https://github.com/SantiagoCabana/pdfme-server"
+            rel="noreferrer"
+            target="_blank"
+            sx={{ ...documentationButtonSx, color: 'text.secondary', borderColor: theme.palette.divider, bgcolor: 'transparent', mb: 1 }}
+            aria-label="Repositorio"
+          >
+            <ListItemIcon sx={{ minWidth: collapsed ? 0 : 34, width: 34, color: 'inherit', fontSize: 16, justifyContent: 'center', mx: collapsed ? 'auto' : 0 }}>
+              <GithubOutlined />
+            </ListItemIcon>
+            {!collapsed ? (
+              <ListItemText
+                primary={<Typography variant="h6" color="inherit" noWrap>pdfme Server</Typography>}
+                sx={{ m: 0, minWidth: 0, '& .MuiTypography-root': { color: 'inherit', fontWeight: 400 } }}
               />
             ) : null}
           </ListItemButton>

@@ -1,5 +1,5 @@
 {
-  "name": "@pdf-server/backend",
+  "name": "@pdfme-server/backend",
   "version": "0.3.0",
   "private": true,
   "type": "module",
