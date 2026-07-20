@@ -871,11 +871,17 @@ small {
 }
 
 .pdfme-workspace .pdfme-designer-canvas .selectable-locked,
-.pdfme-workspace .pdfme-designer-canvas .selectable-locked *,
-.pdfme-workspace .selectable-locked,
-.pdfme-workspace .selectable-locked * {
+.pdfme-workspace .selectable-locked {
   outline-color: #ff4d4f !important;
   border-color: #ff4d4f !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.pdfme-workspace .pdfme-designer-canvas .selectable-locked *,
+.pdfme-workspace .selectable-locked * {
+  pointer-events: none !important;
+  user-select: none !important;
 }
 
 .pdfme-workspace .ant-btn-icon,

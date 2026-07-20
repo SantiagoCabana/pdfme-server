@@ -699,7 +699,9 @@ export function TemplatesPage() {
       const container = document.querySelector('.pdfme-workspace');
       if (!container) return;
 
-      // 1. Update selectable classes on canvas elements
+      // 1. Mark locked canvas elements without mutating pdfme's internal selectable class.
+      // pdfme uses `.selectable` for drag/measurement; removing it during pointer moves can
+      // trigger an updateRect -> setState loop in its internal resize observer.
       designerTemplate.schemas.forEach((pageSchemas) => {
         if (!Array.isArray(pageSchemas)) return;
         pageSchemas.forEach((schema) => {
@@ -713,15 +715,9 @@ export function TemplatesPage() {
             if (!el.classList.contains('selectable-locked')) {
               el.classList.add('selectable-locked');
             }
-            if (el.classList.contains('selectable')) {
-              el.classList.remove('selectable');
-            }
           } else {
             if (el.classList.contains('selectable-locked')) {
               el.classList.remove('selectable-locked');
-            }
-            if (!el.classList.contains('selectable')) {
-              el.classList.add('selectable');
             }
           }
 
