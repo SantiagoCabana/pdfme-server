@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 
 import { authenticateApiKey } from '../services/api-credentials.service.js';
-import { createTemplate, createTemplateVersion, deleteTemplate, getTemplateByCode, listTemplateCatalog, setCurrentTemplateVersion, updateTemplateDetails, updateTemplatePageSettings } from '../services/templates.service.js';
+import { createTemplate, createTemplateVersion, deleteTemplate, duplicateTemplate, getTemplateByCode, listTemplateCatalog, setCurrentTemplateVersion, updateTemplateDetails, updateTemplatePageSettings } from '../services/templates.service.js';
 import { requirePermission } from '../middleware/session-auth.js';
 import { prisma } from '../prisma.js';
 import { logAuditEvent, getSpanishRole } from '../services/audit.service.js';
@@ -79,6 +79,36 @@ templatesRouter.post('/templates', requirePermission('templates.create'), async 
     response.status(201).json({ ok: true, template });
   } catch {
     response.status(409).json({ message: 'No se pudo crear la plantilla. Revisa que el codigo no exista.' });
+  }
+});
+
+templatesRouter.post('/templates/:id/duplicate', requirePermission('templates.create'), async (request, response) => {
+  try {
+    const template = await duplicateTemplate(request.params.id, {
+      createdById: response.locals.user?.id ?? null,
+    });
+
+    const actor = response.locals.user;
+    const actorRole = getSpanishRole(actor?.roles, actor?.isSuperAdmin);
+    const detail = `El ${actorRole.toLowerCase()} ${actor?.displayName || 'Desconocido'} ha duplicado la plantilla "${template.name}"`;
+    await logAuditEvent({
+      actorId: actor?.id ?? null,
+      action: 'Duplicar plantilla',
+      entityType: 'TEMPLATE',
+      entityId: template.id,
+      metadata: {
+        detail,
+        actorName: actor?.displayName || 'Desconocido',
+        actorRole,
+        templateName: template.name,
+        templateCode: template.code,
+        versionNumber: template.versionNumber,
+      }
+    });
+
+    response.status(201).json({ ok: true, template });
+  } catch {
+    response.status(404).json({ message: 'No se encontro la plantilla para duplicar.' });
   }
 });
 

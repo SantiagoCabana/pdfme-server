@@ -247,6 +247,82 @@ export async function createTemplate(input: {
   return mapTemplate(template);
 }
 
+export async function duplicateTemplate(id: string, input: { createdById?: string | null }) {
+  const source = await prisma.template.findFirstOrThrow({
+    where: { id, status: { not: 'ARCHIVED' } },
+    include: {
+      tags: { include: { tag: true } },
+      versions: {
+        where: { isCurrent: true },
+        take: 1,
+        include: { pages: { orderBy: { pageNumber: 'asc' } } },
+      },
+    },
+  });
+
+  const currentVersion = source.versions[0];
+  const pages = currentVersion?.pages.length ? currentVersion.pages : [];
+  const name = `Copia de ${source.name}`;
+  const createdById = input.createdById === 'bootstrap-admin' ? null : input.createdById ?? null;
+
+  const template = await prisma.template.create({
+    data: {
+      name,
+      code: buildTemplateCode(name),
+      thumbnailUrl: source.thumbnailUrl,
+      status: 'DRAFT',
+      createdById,
+      tags: {
+        create: source.tags.map((entry) => ({
+          tag: { connect: { id: entry.tag.id } },
+        })),
+      },
+      versions: {
+        create: {
+          versionNumber: 1,
+          notes: currentVersion?.notes ?? null,
+          defaultInput: currentVersion?.defaultInput ?? DEFAULT_INPUT,
+          inputExample: currentVersion?.inputExample ?? DEFAULT_INPUT,
+          isCurrent: true,
+          isPublished: false,
+          createdById,
+          pages: {
+            create: pages.length > 0
+              ? pages.map((page) => ({
+                pageNumber: page.pageNumber,
+                designerJson: page.designerJson ?? DEFAULT_DESIGNER_JSON,
+                pageFormat: page.pageFormat,
+                pageOrientation: page.pageOrientation,
+                pageWidthMm: page.pageWidthMm,
+                pageHeightMm: page.pageHeightMm,
+                paddingVerticalMm: page.paddingVerticalMm,
+                paddingHorizontalMm: page.paddingHorizontalMm,
+                sourceMode: page.sourceMode,
+                baseFileName: page.baseFileName,
+                baseFileUrl: page.baseFileUrl,
+                previewImageUrl: page.previewImageUrl,
+              }))
+              : {
+                pageNumber: 1,
+                designerJson: DEFAULT_DESIGNER_JSON,
+                pageFormat: 'A4',
+                pageOrientation: 'PORTRAIT',
+                pageWidthMm: 210,
+                pageHeightMm: 297,
+                paddingVerticalMm: 12,
+                paddingHorizontalMm: 12,
+                sourceMode: 'BLANK',
+              },
+          },
+        },
+      },
+    },
+    include: templateInclude,
+  });
+
+  return mapTemplate(template);
+}
+
 export async function updateTemplateDetails(id: string, input: {
   name?: string;
   code?: string;

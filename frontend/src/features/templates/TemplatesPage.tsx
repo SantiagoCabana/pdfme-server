@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeftOutlined,
+  CopyOutlined,
   DeleteOutlined,
   EditOutlined,
   EllipsisOutlined,
@@ -278,6 +279,7 @@ export function TemplatesPage() {
   const [saving, setSaving] = useState(false);
   const [savingVersion, setSavingVersion] = useState(false);
   const [switchingVersion, setSwitchingVersion] = useState(false);
+  const [duplicatingId, setDuplicatingId] = useState('');
   const [deletingId, setDeletingId] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(0);
@@ -634,6 +636,22 @@ export function TemplatesPage() {
   async function confirmRemove(template: TemplateItem) {
     const confirmed = await confirmDanger({ text: `¿Estás seguro que quieres eliminar la plantilla "${template.name}"?` });
     if (confirmed) await remove(template.id);
+  }
+
+  async function duplicate(template: TemplateItem) {
+    setError('');
+    setDuplicatingId(template.id);
+    setOperationLabel('Duplicando plantilla...');
+    try {
+      const payload = await apiRequest<{ template: TemplateItem }>(`/api/templates/${template.id}/duplicate`, { method: 'POST' });
+      setTemplates((current) => [payload.template, ...current]);
+      navigate(`/templates/edit/${payload.template.code}`);
+    } catch (err) {
+      notifyError(err, 'No se pudo duplicar la plantilla.');
+    } finally {
+      setDuplicatingId('');
+      clearOperationLabel();
+    }
   }
 
   function setFormat(format: string) {
@@ -1070,6 +1088,9 @@ export function TemplatesPage() {
                 <Stack key="a" direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }}>
                   <Button onClick={() => navigate(`/templates/preview/${template.code}`)} size="small" startIcon={<EyeOutlined />}>Preview</Button>
                   <Button onClick={() => navigate(`/templates/edit/${template.code}`)} size="small" startIcon={<EditOutlined />}>Editar</Button>
+                  {can(user, 'templates.create') ? (
+                    <Button disabled={duplicatingId === template.id} onClick={() => void duplicate(template)} size="small" startIcon={<CopyOutlined />}>Duplicar</Button>
+                  ) : null}
                   {can(user, 'templates.delete') ? (
                     <Button color="error" disabled={deletingId === template.id} onClick={() => void confirmRemove(template)} size="small" startIcon={<DeleteOutlined />}>
                       Eliminar
