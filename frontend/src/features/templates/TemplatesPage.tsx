@@ -296,6 +296,7 @@ export function TemplatesPage() {
   const [detailsTags, setDetailsTags] = useState<string[]>([]);
   const [savingDetails, setSavingDetails] = useState(false);
   const designerRef = useRef<PdfmeDesignerHandle | null>(null);
+  const getSchemaLockKey = (pageIndex: number, schemaName: string) => `${pageIndex}::${schemaName.trim()}`;
   const editorBusy = saving || savingVersion || savingDetails || switchingVersion;
   const editorBusyLabel = switchingVersion
     ? 'Cambiando version...'
@@ -499,10 +500,11 @@ export function TemplatesPage() {
     if (currentDesignerTemplate && currentDesignerTemplate.schemas) {
       currentDesignerTemplate = {
         ...currentDesignerTemplate,
-        schemas: currentDesignerTemplate.schemas.map((pageSchemas) => {
+        schemas: currentDesignerTemplate.schemas.map((pageSchemas, pageIndex) => {
           if (!Array.isArray(pageSchemas)) return pageSchemas;
           return pageSchemas.map((schema) => {
-            const isLocked = lockedSchemaNames.map((n) => n.trim()).includes(schema.name?.trim() || '');
+            const schemaName = schema.name?.trim() || '';
+            const isLocked = schemaName ? lockedSchemaNames.includes(getSchemaLockKey(pageIndex, schemaName)) : false;
             return {
               ...schema,
               __isLocked: isLocked
@@ -692,13 +694,13 @@ export function TemplatesPage() {
     const locked: string[] = [];
     const currentSchemas: Record<string, string> = {};
 
-    designerTemplate.schemas.forEach((pageSchemas) => {
+    designerTemplate.schemas.forEach((pageSchemas, pageIndex) => {
       if (!Array.isArray(pageSchemas)) return;
       pageSchemas.forEach((schema) => {
         if (!schema || !schema.name) return;
-        currentSchemas[schema.name] = schema.type || 'unknown';
+        currentSchemas[getSchemaLockKey(pageIndex, schema.name)] = schema.type || 'unknown';
         if (schema.__isLocked) {
-          locked.push(schema.name);
+          locked.push(getSchemaLockKey(pageIndex, schema.name));
         }
       });
     });
@@ -720,14 +722,14 @@ export function TemplatesPage() {
       // 1. Mark locked canvas elements without mutating pdfme's internal selectable class.
       // pdfme uses `.selectable` for drag/measurement; removing it during pointer moves can
       // trigger an updateRect -> setState loop in its internal resize observer.
-      designerTemplate.schemas.forEach((pageSchemas) => {
+      designerTemplate.schemas.forEach((pageSchemas, pageIndex) => {
         if (!Array.isArray(pageSchemas)) return;
         pageSchemas.forEach((schema) => {
           if (!schema || !schema.name) return;
           const el = container.querySelector(`div[title="${schema.name}"]`) as HTMLElement | null;
           if (!el) return;
 
-          const isLocked = lockedSchemaNames.includes(schema.name);
+          const isLocked = lockedSchemaNames.includes(getSchemaLockKey(pageIndex, schema.name));
 
           if (isLocked) {
             if (!el.classList.contains('selectable-locked')) {
@@ -744,32 +746,47 @@ export function TemplatesPage() {
         });
       });
 
-      // 2. Render lock/unlock buttons in the sidebar element list
+      // 2. Render lock/unlock buttons in the visible sidebar element list.
+      // pdfme reuses this DOM when switching pages, so handlers and metadata must be
+      // refreshed every pass instead of only when the button is first created.
       const parent = container.parentElement || document;
       const listItems = parent.querySelectorAll('ul > li');
-      listItems.forEach((li) => {
-        const rowDiv = li.querySelector('div') as HTMLDivElement | null;
-        if (!rowDiv) return;
+      const rows = Array.from(listItems).map((li) => {
+        const rowDiv = li.firstElementChild as HTMLDivElement | null;
+        const span = (rowDiv?.querySelector('span[title="Editar"]') || rowDiv?.querySelector('span[title="Edit"]')) as HTMLSpanElement | null;
+        const schemaName = span?.textContent?.trim() || '';
+        return { rowDiv, schemaName };
+      }).filter((row): row is { rowDiv: HTMLDivElement; schemaName: string } => Boolean(row.rowDiv && row.schemaName));
 
-        const span = (rowDiv.querySelector('span[title="Editar"]') || rowDiv.querySelector('span[title="Edit"]')) as HTMLSpanElement | null;
-        if (!span) return;
+      const visibleNames = new Set(rows.map((row) => row.schemaName));
+      let activePageIndex = 0;
+      let activePageMatches = -1;
+      designerTemplate.schemas.forEach((pageSchemas, pageIndex) => {
+        if (!Array.isArray(pageSchemas)) return;
+        const matches = pageSchemas.reduce((count, schema) => count + (schema.name && visibleNames.has(schema.name) ? 1 : 0), 0);
+        if (matches > activePageMatches) {
+          activePageMatches = matches;
+          activePageIndex = pageIndex;
+        }
+      });
 
-        const schemaName = span.textContent?.trim();
-        if (!schemaName) return;
+      rows.forEach(({ rowDiv, schemaName }) => {
+        const activePageSchemas = designerTemplate.schemas[activePageIndex];
+        let foundPageIndex = Array.isArray(activePageSchemas) && activePageSchemas.some((schema) => schema.name === schemaName)
+          ? activePageIndex
+          : -1;
 
-        let foundPageIndex = -1;
-        designerTemplate.schemas.forEach((pageSchemas, pageIndex) => {
-          if (Array.isArray(pageSchemas)) {
-            const hasSchema = pageSchemas.some((s) => s.name === schemaName);
-            if (hasSchema) {
-              foundPageIndex = pageIndex;
-            }
-          }
-        });
+        if (foundPageIndex === -1) {
+          designerTemplate.schemas.forEach((pageSchemas, pageIndex) => {
+            if (foundPageIndex !== -1 || !Array.isArray(pageSchemas)) return;
+            if (pageSchemas.some((schema) => schema.name === schemaName)) foundPageIndex = pageIndex;
+          });
+        }
 
         if (foundPageIndex === -1) return;
 
-        const isLocked = lockedSchemaNames.includes(schemaName);
+        const lockKey = getSchemaLockKey(foundPageIndex, schemaName);
+        const isLocked = lockedSchemaNames.includes(lockKey);
         const desiredTitle = isLocked ? 'Desbloquear' : 'Bloquear';
         const deseadoState = isLocked ? 'locked' : 'unlocked';
 
@@ -777,7 +794,6 @@ export function TemplatesPage() {
         if (!lockBtn) {
           lockBtn = document.createElement('button');
           lockBtn.className = 'sidebar-lock-btn';
-          lockBtn.setAttribute('data-state', deseadoState);
           lockBtn.style.background = 'none';
           lockBtn.style.border = 'none';
           lockBtn.style.cursor = 'pointer';
@@ -791,19 +807,6 @@ export function TemplatesPage() {
 
           lockBtn.style.setProperty('pointer-events', 'auto', 'important');
 
-          const handleAction = (e: Event) => {
-            e.stopPropagation();
-            e.preventDefault();
-          };
-
-          lockBtn.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            toggleLockSchema(foundPageIndex, schemaName);
-          });
-          lockBtn.addEventListener('mouseup', handleAction);
-          lockBtn.addEventListener('click', handleAction);
-
           lockBtn.addEventListener('mouseenter', () => {
             if (lockBtn) lockBtn.style.transform = 'scale(1.2)';
           });
@@ -812,7 +815,26 @@ export function TemplatesPage() {
           });
 
           rowDiv.appendChild(lockBtn);
+        }
 
+        lockBtn.dataset.pageIndex = String(foundPageIndex);
+        lockBtn.dataset.schemaName = schemaName;
+        lockBtn.onmousedown = (event) => {
+          event.stopPropagation();
+          event.preventDefault();
+          toggleLockSchema(foundPageIndex, schemaName);
+        };
+        lockBtn.onmouseup = (event) => {
+          event.stopPropagation();
+          event.preventDefault();
+        };
+        lockBtn.onclick = (event) => {
+          event.stopPropagation();
+          event.preventDefault();
+        };
+
+        if (lockBtn.getAttribute('data-state') !== deseadoState || !lockBtn.innerHTML.trim()) {
+          lockBtn.setAttribute('data-state', deseadoState);
           lockBtn.title = desiredTitle;
           if (isLocked) {
             lockBtn.style.color = '#ff4d4f';
@@ -828,26 +850,6 @@ export function TemplatesPage() {
                 <path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z"/>
               </svg>
             `;
-          }
-        } else {
-          if (lockBtn.getAttribute('data-state') !== deseadoState) {
-            lockBtn.setAttribute('data-state', deseadoState);
-            lockBtn.title = desiredTitle;
-            if (isLocked) {
-              lockBtn.style.color = '#ff4d4f';
-              lockBtn.innerHTML = `
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                  <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
-                </svg>
-              `;
-            } else {
-              lockBtn.style.color = '#ffffff';
-              lockBtn.innerHTML = `
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                  <path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z"/>
-                </svg>
-              `;
-            }
           }
         }
       });
@@ -866,25 +868,41 @@ export function TemplatesPage() {
     });
 
     const workspaceEl = document.querySelector('.pdfme-workspace');
-    if (workspaceEl) {
-      observer.observe(workspaceEl, {
+    const observedEl = workspaceEl?.parentElement || workspaceEl;
+    if (observedEl) {
+      observer.observe(observedEl, {
         childList: true,
         subtree: true,
       });
     }
 
+    const scheduleDOMUpdate = () => {
+      cancelAnimationFrame(frameId);
+      frameId = requestAnimationFrame(() => {
+        handleDOMUpdate();
+      });
+    };
+
+    observedEl?.addEventListener('click', scheduleDOMUpdate, true);
+    observedEl?.addEventListener('pointerup', scheduleDOMUpdate, true);
+    observedEl?.addEventListener('keyup', scheduleDOMUpdate, true);
+
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       cancelAnimationFrame(frameId);
+      observedEl?.removeEventListener('click', scheduleDOMUpdate, true);
+      observedEl?.removeEventListener('pointerup', scheduleDOMUpdate, true);
+      observedEl?.removeEventListener('keyup', scheduleDOMUpdate, true);
       observer.disconnect();
     };
   }, [designerTemplate, lockedSchemaNames, editingTemplate]);
 
   function toggleLockSchema(pageIndex: number, schemaName: string) {
+    const lockKey = getSchemaLockKey(pageIndex, schemaName);
     setLockedSchemaNames((current) => {
-      const exists = current.includes(schemaName);
-      return exists ? current.filter((name) => name !== schemaName) : [...current, schemaName];
+      const exists = current.includes(lockKey);
+      return exists ? current.filter((name) => name !== lockKey) : [...current, lockKey];
     });
   }
 
