@@ -5,7 +5,7 @@ FROM node:18.20.8-bookworm-slim AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund --loglevel=error
 
 ARG VITE_APP_NAME="PDF Server"
 ARG VITE_BACKEND_API_URL=""
@@ -14,7 +14,7 @@ ENV VITE_APP_NAME=${VITE_APP_NAME}
 ENV VITE_BACKEND_API_URL=${VITE_BACKEND_API_URL}
 
 COPY . .
-RUN npm run build
+RUN npm run build:docker
 
 FROM nginx:1.27-alpine AS runtime
 

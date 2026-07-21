@@ -297,6 +297,15 @@ export function TemplatesPage() {
   const [savingDetails, setSavingDetails] = useState(false);
   const designerRef = useRef<PdfmeDesignerHandle | null>(null);
   const getSchemaLockKey = (pageIndex: number, schemaName: string) => `${pageIndex}::${schemaName.trim()}`;
+  const getSchemaPositionKey = (pageIndex: number, schemaIndex: number) => `${pageIndex}::${schemaIndex}`;
+  const previousSchemaLockKeyByPositionRef = useRef<Record<string, string>>({});
+  const isSchemaLocked = (pageIndex: number, schemaName: string, schemaIndex?: number) => {
+    const lockKey = getSchemaLockKey(pageIndex, schemaName);
+    if (lockedSchemaNames.includes(lockKey)) return true;
+    if (typeof schemaIndex !== 'number') return false;
+    const previousLockKey = previousSchemaLockKeyByPositionRef.current[getSchemaPositionKey(pageIndex, schemaIndex)];
+    return previousLockKey ? lockedSchemaNames.includes(previousLockKey) : false;
+  };
   const editorBusy = saving || savingVersion || savingDetails || switchingVersion;
   const editorBusyLabel = switchingVersion
     ? 'Cambiando version...'
@@ -502,9 +511,9 @@ export function TemplatesPage() {
         ...currentDesignerTemplate,
         schemas: currentDesignerTemplate.schemas.map((pageSchemas, pageIndex) => {
           if (!Array.isArray(pageSchemas)) return pageSchemas;
-          return pageSchemas.map((schema) => {
+          return pageSchemas.map((schema, schemaIndex) => {
             const schemaName = schema.name?.trim() || '';
-            const isLocked = schemaName ? lockedSchemaNames.includes(getSchemaLockKey(pageIndex, schemaName)) : false;
+            const isLocked = schemaName ? isSchemaLocked(pageIndex, schemaName, schemaIndex) : false;
             return {
               ...schema,
               __isLocked: isLocked
@@ -521,6 +530,22 @@ export function TemplatesPage() {
         method: 'PATCH',
         body: JSON.stringify({ pageFormat, pageOrientation, pageWidthMm, pageHeightMm, designerJson: currentDesignerTemplate }),
       });
+      if (currentDesignerTemplate) {
+        setDesignerTemplate(currentDesignerTemplate);
+        const nextLockedSchemaNames: string[] = [];
+        const nextSchemaLockKeyByPosition: Record<string, string> = {};
+        currentDesignerTemplate.schemas.forEach((pageSchemas, pageIndex) => {
+          if (!Array.isArray(pageSchemas)) return;
+          pageSchemas.forEach((schema, schemaIndex) => {
+            if (!schema?.name) return;
+            const lockKey = getSchemaLockKey(pageIndex, schema.name);
+            nextSchemaLockKeyByPosition[getSchemaPositionKey(pageIndex, schemaIndex)] = lockKey;
+            if (schema.__isLocked) nextLockedSchemaNames.push(lockKey);
+          });
+        });
+        previousSchemaLockKeyByPositionRef.current = nextSchemaLockKeyByPosition;
+        setLockedSchemaNames(nextLockedSchemaNames);
+      }
       setEditingTemplate(payload.template);
       if (!routeCode) await load();
       return payload.template;
@@ -693,14 +718,17 @@ export function TemplatesPage() {
     }
     const locked: string[] = [];
     const currentSchemas: Record<string, string> = {};
+    const currentSchemaLockKeyByPosition: Record<string, string> = {};
 
     designerTemplate.schemas.forEach((pageSchemas, pageIndex) => {
       if (!Array.isArray(pageSchemas)) return;
-      pageSchemas.forEach((schema) => {
+      pageSchemas.forEach((schema, schemaIndex) => {
         if (!schema || !schema.name) return;
-        currentSchemas[getSchemaLockKey(pageIndex, schema.name)] = schema.type || 'unknown';
+        const lockKey = getSchemaLockKey(pageIndex, schema.name);
+        currentSchemas[lockKey] = schema.type || 'unknown';
+        currentSchemaLockKeyByPosition[getSchemaPositionKey(pageIndex, schemaIndex)] = lockKey;
         if (schema.__isLocked) {
-          locked.push(getSchemaLockKey(pageIndex, schema.name));
+          locked.push(lockKey);
         }
       });
     });
@@ -713,23 +741,25 @@ export function TemplatesPage() {
 
     const prevSchemas = prevSchemasRef.current;
     prevSchemasRef.current = currentSchemas;
+    previousSchemaLockKeyByPositionRef.current = currentSchemaLockKeyByPosition;
 
     // Apply the locking/unlocking styles and sidebar buttons
     const handleDOMUpdate = () => {
       const container = document.querySelector('.pdfme-workspace');
       if (!container) return;
+      const liveTemplate = designerRef.current?.getTemplate() ?? designerTemplate;
 
       // 1. Mark locked canvas elements without mutating pdfme's internal selectable class.
       // pdfme uses `.selectable` for drag/measurement; removing it during pointer moves can
       // trigger an updateRect -> setState loop in its internal resize observer.
-      designerTemplate.schemas.forEach((pageSchemas, pageIndex) => {
+      liveTemplate.schemas.forEach((pageSchemas, pageIndex) => {
         if (!Array.isArray(pageSchemas)) return;
-        pageSchemas.forEach((schema) => {
+        pageSchemas.forEach((schema, schemaIndex) => {
           if (!schema || !schema.name) return;
           const el = container.querySelector(`div[title="${schema.name}"]`) as HTMLElement | null;
           if (!el) return;
 
-          const isLocked = lockedSchemaNames.includes(getSchemaLockKey(pageIndex, schema.name));
+          const isLocked = isSchemaLocked(pageIndex, schema.name, schemaIndex);
 
           if (isLocked) {
             if (!el.classList.contains('selectable-locked')) {
@@ -761,7 +791,7 @@ export function TemplatesPage() {
       const visibleNames = new Set(rows.map((row) => row.schemaName));
       let activePageIndex = 0;
       let activePageMatches = -1;
-      designerTemplate.schemas.forEach((pageSchemas, pageIndex) => {
+      liveTemplate.schemas.forEach((pageSchemas, pageIndex) => {
         if (!Array.isArray(pageSchemas)) return;
         const matches = pageSchemas.reduce((count, schema) => count + (schema.name && visibleNames.has(schema.name) ? 1 : 0), 0);
         if (matches > activePageMatches) {
@@ -771,24 +801,40 @@ export function TemplatesPage() {
       });
 
       rows.forEach(({ rowDiv, schemaName }) => {
-        const activePageSchemas = designerTemplate.schemas[activePageIndex];
-        let foundPageIndex = Array.isArray(activePageSchemas) && activePageSchemas.some((schema) => schema.name === schemaName)
+        const activePageSchemas = liveTemplate.schemas[activePageIndex];
+        let foundSchemaIndex = Array.isArray(activePageSchemas) ? activePageSchemas.findIndex((schema) => schema.name === schemaName) : -1;
+        let foundPageIndex = foundSchemaIndex !== -1
           ? activePageIndex
           : -1;
 
         if (foundPageIndex === -1) {
-          designerTemplate.schemas.forEach((pageSchemas, pageIndex) => {
+          liveTemplate.schemas.forEach((pageSchemas, pageIndex) => {
             if (foundPageIndex !== -1 || !Array.isArray(pageSchemas)) return;
-            if (pageSchemas.some((schema) => schema.name === schemaName)) foundPageIndex = pageIndex;
+            const schemaIndex = pageSchemas.findIndex((schema) => schema.name === schemaName);
+            if (schemaIndex !== -1) {
+              foundPageIndex = pageIndex;
+              foundSchemaIndex = schemaIndex;
+            }
           });
         }
 
         if (foundPageIndex === -1) return;
 
         const lockKey = getSchemaLockKey(foundPageIndex, schemaName);
-        const isLocked = lockedSchemaNames.includes(lockKey);
+        const isLocked = isSchemaLocked(foundPageIndex, schemaName, foundSchemaIndex);
         const desiredTitle = isLocked ? 'Desbloquear' : 'Bloquear';
         const deseadoState = isLocked ? 'locked' : 'unlocked';
+
+        rowDiv.dataset.schemaLocked = isLocked ? 'true' : 'false';
+        const blockLockedRowAction = (event: MouseEvent) => {
+          if (rowDiv.dataset.schemaLocked !== 'true') return;
+          if ((event.target as HTMLElement | null)?.closest('.sidebar-lock-btn')) return;
+          event.stopPropagation();
+          event.preventDefault();
+        };
+        rowDiv.onmousedown = blockLockedRowAction;
+        rowDiv.onmouseup = blockLockedRowAction;
+        rowDiv.onclick = blockLockedRowAction;
 
         let lockBtn = rowDiv.querySelector('.sidebar-lock-btn') as HTMLButtonElement | null;
         if (!lockBtn) {
@@ -822,7 +868,7 @@ export function TemplatesPage() {
         lockBtn.onmousedown = (event) => {
           event.stopPropagation();
           event.preventDefault();
-          toggleLockSchema(foundPageIndex, schemaName);
+          toggleLockSchema(foundPageIndex, schemaName, foundSchemaIndex);
         };
         lockBtn.onmouseup = (event) => {
           event.stopPropagation();
@@ -887,6 +933,21 @@ export function TemplatesPage() {
     observedEl?.addEventListener('pointerup', scheduleDOMUpdate, true);
     observedEl?.addEventListener('keyup', scheduleDOMUpdate, true);
 
+    const blockLockedCanvasAction = (event: Event) => {
+      const target = event.target as HTMLElement | null;
+      if (!target || target.closest('.sidebar-lock-btn')) return;
+      const lockedEl = target.closest('.selectable-locked');
+      if (!lockedEl) return;
+      event.stopPropagation();
+      if ('stopImmediatePropagation' in event) event.stopImmediatePropagation();
+      event.preventDefault();
+    };
+
+    const lockedCanvasEvents = ['pointerdown', 'mousedown', 'click', 'dblclick', 'touchstart', 'dragstart'];
+    lockedCanvasEvents.forEach((eventName) => {
+      window.addEventListener(eventName, blockLockedCanvasAction, true);
+    });
+
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -894,15 +955,24 @@ export function TemplatesPage() {
       observedEl?.removeEventListener('click', scheduleDOMUpdate, true);
       observedEl?.removeEventListener('pointerup', scheduleDOMUpdate, true);
       observedEl?.removeEventListener('keyup', scheduleDOMUpdate, true);
+      lockedCanvasEvents.forEach((eventName) => {
+        window.removeEventListener(eventName, blockLockedCanvasAction, true);
+      });
       observer.disconnect();
     };
   }, [designerTemplate, lockedSchemaNames, editingTemplate]);
 
-  function toggleLockSchema(pageIndex: number, schemaName: string) {
+  function toggleLockSchema(pageIndex: number, schemaName: string, schemaIndex?: number) {
     const lockKey = getSchemaLockKey(pageIndex, schemaName);
+    const previousLockKey = typeof schemaIndex === 'number'
+      ? previousSchemaLockKeyByPositionRef.current[getSchemaPositionKey(pageIndex, schemaIndex)]
+      : undefined;
     setLockedSchemaNames((current) => {
-      const exists = current.includes(lockKey);
-      return exists ? current.filter((name) => name !== lockKey) : [...current, lockKey];
+      const exists = current.includes(lockKey) || Boolean(previousLockKey && current.includes(previousLockKey));
+      if (exists) {
+        return current.filter((name) => name !== lockKey && name !== previousLockKey);
+      }
+      return [...current, lockKey];
     });
   }
 

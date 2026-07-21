@@ -874,7 +874,8 @@ small {
 .pdfme-workspace .selectable-locked {
   outline-color: #ff4d4f !important;
   border-color: #ff4d4f !important;
-  pointer-events: none !important;
+  cursor: not-allowed !important;
+  pointer-events: auto !important;
   user-select: none !important;
 }
 
@@ -984,7 +985,8 @@ small {
 
 
 div.selectable-locked {
-  pointer-events: none !important;
+  cursor: not-allowed !important;
+  pointer-events: auto !important;
   user-select: none !important;
   outline-color: #ff4d4f !important;
   border-color: #ff4d4f !important;
