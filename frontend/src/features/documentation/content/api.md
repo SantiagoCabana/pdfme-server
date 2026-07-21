@@ -194,3 +194,52 @@ class PdfServerClient {
 | `/api/v1/templates` | `GET` | Catálogo de plantillas. |
 | `/api/v1/templates/:code/inputs` | `GET` | Variables y objetos cambiables. |
 | `/api/v1/render` | `POST` | PDF binario o error JSON. |
+
+## Contexto para IA y MCP
+
+PDF Server expone un contexto público para asistentes o herramientas que necesitan entender cómo integrarse sin leer datos privados.
+
+```http
+GET /api/mcp/context
+```
+
+```bash
+curl -sS "https://dominio.com/api/mcp/context"
+```
+
+Este endpoint devuelve el propósito de la aplicación, el modelo de autenticación, endpoints externos, convenciones de variables y objetos dinámicos. No consulta plantillas reales, usuarios, claves API ni auditoría.
+
+Uso recomendado:
+
+| Campo | Uso |
+| --- | --- |
+| `purpose` | Explica para qué sirve PDF Server. |
+| `security` | Indica qué datos no se exponen. |
+| `api.endpoints` | Lista rutas que puede usar un sistema externo. |
+| `api.inputModel` | Resume cómo enviar `templateCode` e `input`. |
+| `documentation` | Rutas humanas para completar la integración. |
+
+## Endpoints administrativos de documentación
+
+Estos endpoints usan la sesión de la app administrativa, no `x-api-key`.
+
+| Endpoint | Método | Uso |
+| --- | --- | --- |
+| `/api/documentation/share` | `GET` | Consulta el enlace público actual. |
+| `/api/documentation/share` | `POST` | Activa el enlace actual y lo devuelve. |
+| `/api/documentation/share` | `PATCH` | Activa u oculta el enlace con `{ "enabled": true }`. |
+| `/api/documentation/share/reset` | `POST` | Genera un UUID nuevo, activa el enlace y devuelve la URL base. |
+| `/api/documentation/share/:uuid` | `GET` | Valida si un enlace público puede leer documentación. |
+
+Respuesta administrativa:
+
+```json
+{
+  "share": {
+    "enabled": true,
+    "publicId": "018ff8b2-7c44-7d9e-a2f0-8c682f1c9ef1",
+    "createdAt": "2026-07-21T18:00:00.000Z",
+    "updatedAt": "2026-07-21T18:05:00.000Z"
+  }
+}
+```

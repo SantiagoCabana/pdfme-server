@@ -67,6 +67,29 @@ Si la clave tiene `allowedOrigins`, PDF Server valida el header `Origin` del req
 | Origen no permitido | `401` con `API key invalida.` |
 | Sin `Origin` y clave restringida | Puede ser rechazado según configuración. |
 
+## Compartir documentación
+
+La documentación puede compartirse sin entregar acceso a la aplicación administrativa. Desde la vista de documentación, activa `Enlace público` y usa `Copiar` o `Compartir` para entregar la URL.
+
+Ese enlace solo habilita rutas `/documentation/share/{uuid}/{seccion}`. No reutiliza la sesión del usuario, no permite entrar a plantillas, claves API, auditoría ni usuarios, y no expone datos de la base de datos.
+
+| Recurso | Acceso con enlace público |
+| --- | --- |
+| Documentación de integración | Sí |
+| Catálogo real de plantillas | No |
+| Claves API | No |
+| Sesión administrativa | No |
+| Datos renderizados | No |
+
+Solo existe un enlace público activo para documentación. El switch lo muestra u oculta sin cambiar la URL. La acción `Cambiar enlace` genera un UUID nuevo, activa la documentación pública y deja inválido el enlace anterior.
+
+| Acción | Resultado |
+| --- | --- |
+| Activar | El enlace actual empieza a funcionar. |
+| Ocultar | El enlace actual responde `401` y no muestra documentación. |
+| Copiar | Copia la URL pública de la sección actual. |
+| Cambiar enlace | Reemplaza el UUID y copia la nueva URL. |
+
 ## Ejemplo con variables de entorno
 
 ```ts

@@ -4,6 +4,7 @@ import express from 'express';
 import { env } from './env.js';
 import { apiCredentialsRouter } from './routes/api-credentials.route.js';
 import { authRouter } from './routes/auth.route.js';
+import { documentationRouter } from './routes/documentation.route.js';
 import { healthRouter } from './routes/health.route.js';
 import { permissionsRouter } from './routes/permissions.route.js';
 import { renderRouter } from './routes/render.route.js';
@@ -71,6 +72,7 @@ app.get('/', (_request, response) => {
 
 app.use('/api', healthRouter);
 app.use('/api', authRouter);
+app.use('/api', documentationRouter);
 app.use('/api', apiCredentialsRouter);
 app.use('/api', templatesRouter);
 app.use('/api', tagsRouter);
