@@ -1,64 +1,37 @@
-# Errores y operación
+# Errores y operacion
 
-La API devuelve JSON para consultas y errores. El render exitoso devuelve un PDF binario.
+La API usa JSON para consultas y errores. El render exitoso es la excepcion: devuelve el PDF binario directamente.
 
-## Formato por caso
+## Respuesta exitosa de render
 
-| Caso | Código | Respuesta |
-| --- | --- | --- |
-| Catálogo exitoso | `200` | `{ "data": [...] }` |
-| Inspección exitosa | `200` | `{ "template": {...}, "inputs": {...}, "conventions": {...} }` |
-| Render exitoso | `200` | Binario PDF con `content-type: application/pdf` |
-| Error validado | `4xx` | `{ "message": "..." }` o `{ "ok": false, "message": "..." }` |
-| Error inesperado | `500` | `{ "ok": false, "message": "..." }` |
+```http
+HTTP/1.1 200 OK
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="nutricion-v3.pdf"
+X-Template-Code: nutricion
+X-Template-Version: 3
+```
 
-## Códigos HTTP
+Body:
 
-| Código | Significado | Reintento automático |
-| --- | --- | --- |
-| `200` | Solicitud completada. | No aplica. |
-| `400` | JSON inválido, body incompleto o faltan variables requeridas. | No. |
-| `401` | API key ausente, inválida, expirada o bloqueada por origen. | No. |
-| `404` | Plantilla no encontrada o archivada. | No, salvo resincronización de catálogo. |
-| `409` | Conflicto en rutas administrativas. | No. |
-| `500` | Error no esperado renderizando o procesando. | Sí, con backoff y límite. |
+```text
+(binary PDF)
+```
 
-## `401` API key inválida
+No se devuelve base64. No se devuelve JSON con URL. El cliente debe leer el body como binario, buffer, blob o stream segun su plataforma.
+
+## Formato de error
+
+Los errores validados devuelven JSON. Segun la ruta, el payload puede incluir `ok: false`.
 
 ```json
 {
-  "message": "API key invalida."
+  "ok": false,
+  "message": "No se encontro la plantilla solicitada."
 }
 ```
 
-Revisa:
-
-| Punto | Qué confirmar |
-| --- | --- |
-| Header | Debe llamarse exactamente `x-api-key`. |
-| Valor | Debe ser la `rawKey` completa que se mostró al crear la clave. |
-| Estado | La clave debe estar activa. |
-| Expiración | `expiresAt` no debe estar vencido. |
-| Origen | Si hay `allowedOrigins`, el origen del request debe estar permitido. |
-
-## `400` payload inválido
-
-```json
-{
-  "message": "Payload invalido para renderizar."
-}
-```
-
-Ocurre cuando el body no cumple la forma mínima:
-
-```json
-{
-  "templateCode": "codigo_de_plantilla",
-  "input": {}
-}
-```
-
-## `400` faltan variables
+Cuando faltan variables de texto requeridas, tambien se devuelve `missingVariables`:
 
 ```json
 {
@@ -68,7 +41,70 @@ Ocurre cuando el body no cumple la forma mínima:
 }
 ```
 
-Esta validación aplica a variables de texto detectadas en `{variable}`. Los objetos cambiables con `#` son reemplazables si los envías, pero no se consideran variables de texto requeridas.
+## Codigos HTTP
+
+| Codigo | Significado | Cuando ocurre | Como solucionarlo |
+| --- | --- | --- | --- |
+| `400` | Request invalido. | JSON mal formado, falta `templateCode`, `input` no es objeto o faltan variables requeridas. | Validar el payload y consultar `/api/v1/templates/:code/inputs`. |
+| `401` | No autenticado. | Falta `x-api-key` o la clave es invalida, expirada o no cumple origen permitido. | Enviar la `rawKey` completa en el header correcto y revisar estado/expiracion. |
+| `403` | Acceso denegado por politica externa. | Proxy, firewall, WAF o regla de infraestructura bloquea la solicitud. | Revisar reglas del dominio, Cloudflare, CORS/proxy y origen del request. |
+| `404` | Recurso no encontrado. | `templateCode` inexistente, plantilla archivada o sin version actual disponible. | Usar `/api/v1/templates`, confirmar `code` y activar/versionar la plantilla. |
+| `500` | Error interno. | Fallo no esperado durante render, generacion PDF, base de datos o assets. | Reintentar con backoff y revisar logs del backend si persiste. |
+| `502` | Bad gateway. | El proxy o Cloudflare no pudo conectar con frontend/backend, o upstream mal configurado. | Verificar contenedor activo, puerto, healthcheck, DNS interno y configuracion de proxy. |
+
+## `400` payload invalido
+
+```json
+{
+  "message": "Payload invalido para renderizar."
+}
+```
+
+Forma minima esperada:
+
+```json
+{
+  "templateCode": "nutricion",
+  "input": {}
+}
+```
+
+## `400` variables faltantes
+
+```json
+{
+  "ok": false,
+  "message": "Faltan variables requeridas para renderizar la plantilla.",
+  "missingVariables": ["nombre_completo"]
+}
+```
+
+Acciones:
+
+| Paso | Accion |
+| --- | --- |
+| 1 | Consultar `GET /api/v1/templates/:code/inputs`. |
+| 2 | Completar todas las variables de texto requeridas. |
+| 3 | No enviar valores vacios si el campo debe imprimirse. |
+| 4 | Reintentar el render. |
+
+## `401` API key invalida
+
+```json
+{
+  "message": "API key invalida."
+}
+```
+
+Revisa:
+
+| Punto | Que confirmar |
+| --- | --- |
+| Header | Debe llamarse exactamente `x-api-key`. |
+| Valor | Debe ser la `rawKey` completa mostrada al crear la clave. |
+| Estado | La clave debe estar activa. |
+| Expiracion | `expiresAt` no debe estar vencido. |
+| Origen | Si hay origenes permitidos, el request debe cumplirlos. |
 
 ## `404` plantilla no encontrada
 
@@ -78,41 +114,50 @@ Esta validación aplica a variables de texto detectadas en `{variable}`. Los obj
 }
 ```
 
-Puede ocurrir si el `templateCode` no existe, fue archivado o el consumidor está usando un código antiguo.
+Puede significar:
 
-## Render exitoso
-
-El render exitoso no devuelve JSON. Devuelve el archivo PDF.
-
-| Header | Uso |
+| Causa | Validacion |
 | --- | --- |
-| `content-type: application/pdf` | Confirma que la respuesta es PDF. |
-| `content-disposition` | Nombre sugerido del archivo. |
-| `x-template-code` | Plantilla usada. |
-| `x-template-version` | Versión usada. |
+| `templateCode` incorrecto | Comparar contra `code` en `/api/v1/templates`. |
+| Se envio `id` o `name` | Enviar solo `code`. |
+| Plantilla archivada | Restaurar o usar otra plantilla. |
+| No hay version actual | Revisar publicacion/versionado en la app. |
 
-## Logging seguro
+## `502` en despliegues
 
-| Dato | Registrar | Evitar |
+`502` normalmente no lo genera el codigo de render. Lo produce el proxy cuando no puede llegar al servicio.
+
+| Sintoma | Causa probable |
+| --- | --- |
+| `host not found in upstream "backend"` | Nginx apunta a un hostname que no existe en la red del despliegue. |
+| `/api/api/auth/login` | La URL base del frontend ya incluye `/api` y el cliente agrego otro `/api`. |
+| Cloudflare 502 | El host origen no responde o el proxy esta apuntando al puerto equivocado. |
+| Backend responde, frontend no | Revisar nginx del frontend y variable de URL/proxy usada en build. |
+
+## Logging recomendado
+
+| Dato | Registrar | No registrar |
 | --- | --- | --- |
-| `templateCode` | Sí | No aplica. |
-| `x-template-version` | Sí | No aplica. |
-| Código HTTP | Sí | No aplica. |
-| `message` | Sí | No aplica. |
-| `missingVariables` | Sí | No aplica. |
-| Valores de `input` | Solo si tu política lo permite. | DNI, emails, teléfonos o datos sensibles innecesarios. |
-| API key | Solo alias o prefijo seguro. | Clave completa. |
-| Tiempo de respuesta | Sí | No aplica. |
+| `templateCode` | Si | No aplica. |
+| Codigo HTTP | Si | No aplica. |
+| `message` | Si | No aplica. |
+| `missingVariables` | Si | No aplica. |
+| Version (`x-template-version`) | Si | No aplica. |
+| Variables enviadas | Solo si no contienen datos sensibles. | DNI, emails, telefonos o datos personales si tu politica lo prohibe. |
+| API key | Solo alias o prefijo seguro. | Nunca guardar la clave completa. |
+| Tiempo de respuesta | Si | No aplica. |
 
 ## Reintentos
 
-| Error | Política sugerida |
-| --- | --- |
-| `400` | Corregir payload antes de reenviar. |
-| `401` | Revisar clave, expiración u origen. |
-| `404` | Resincronizar catálogo y validar `templateCode`. |
-| Timeout | Reintentar con backoff exponencial. |
-| `500` | Reintentar pocas veces y abrir alerta si persiste. |
+| Error | Reintentar | Motivo |
+| --- | --- | --- |
+| `400` | No | El payload debe corregirse. |
+| `401` | No | La autenticacion debe corregirse. |
+| `403` | No automaticamente | Primero corregir politica/proxy. |
+| `404` | No | El codigo o estado de plantilla debe corregirse. |
+| Timeout | Si | Puede ser temporal. |
+| `500` | Si, pocas veces | Puede ser transitorio. |
+| `502` | Si, si el proxy ya fue corregido | Mientras el upstream este mal, todos los reintentos fallaran. |
 
 ## Salud del backend
 

@@ -1,27 +1,62 @@
-# Plantillas y contrato de datos
+# Catalogo y plantillas
 
-Una plantilla define qué datos puede recibir el render. El consumidor externo no necesita conocer la estructura interna de pdfme; solo debe usar las claves detectadas por PDF Server.
+Una plantilla es el contrato visual y tecnico que usa PDF Server para generar un documento. El consumidor externo solo necesita conocer el `code` de la plantilla y las claves que acepta `input`.
 
-## Identificador externo
+## Campos principales
 
-| Campo | Uso para integración | Nota |
+| Campo | Para que sirve | Usarlo desde sistemas externos |
 | --- | --- | --- |
-| `code` | Sí | Se envía como `templateCode`. |
-| `name` | Sí | Útil para mostrar o registrar. |
-| `versionNumber` | Sí | Útil para auditoría. |
-| `pageFormat` | Opcional | Permite validar tamaño esperado. |
-| `pageOrientation` | Opcional | Permite validar orientación esperada. |
-| `id` | No como contrato | Es interno de la app. |
+| `code` | Identificador publico de la plantilla. | Si, como `templateCode`. |
+| `name` | Nombre visible en la app. | Si, para mostrar al usuario. |
+| `status` | Estado operativo. | Si, para filtrar plantillas productivas. |
+| `versionNumber` | Version actual usada por render. | Si, para auditoria. |
+| `id` | Identificador interno. | No como contrato externo. |
+| `pageFormat` | Formato de pagina. | Opcional. |
+| `pageOrientation` | Orientacion. | Opcional. |
+
+## TemplateCode
+
+El request de render debe enviar el campo `code`.
+
+```json
+{
+  "templateCode": "nutricion",
+  "input": {}
+}
+```
+
+No envies `id`, `name` ni un texto parecido. Si una plantilla se llama `Nutricion` pero su `code` es `nutricion_2026`, el valor correcto es `nutricion_2026`.
+
+## Estados
+
+| Estado | Descripcion | Render API |
+| --- | --- | --- |
+| `DRAFT` | Plantilla en preparacion o pruebas. | Puede renderizar si tiene version actual valida. |
+| `ACTIVE` | Plantilla lista para uso operativo. | Puede renderizar. |
+| `ARCHIVED` | Plantilla retirada. | No renderiza; responde como no encontrada. |
+
+Para integraciones productivas, publica y consume plantillas `ACTIVE`. Usa `DRAFT` solo para pruebas controladas.
+
+## Version actual
+
+El backend renderiza la version marcada como actual. La respuesta PDF incluye headers para auditarlo:
+
+```http
+x-template-code: nutricion
+x-template-version: 3
+```
+
+Registra esos headers si necesitas demostrar que version genero cada documento.
 
 ## Variables de texto
 
-Las variables de texto son los nombres entre llaves dentro de campos de texto:
+Las variables de texto son placeholders escritos dentro del contenido:
 
 ```text
 Otorgado a {nombre_completo}, identificado con {tipo_documento}: {nro_documento}
 ```
 
-Payload esperado:
+Payload:
 
 ```json
 {
@@ -33,34 +68,34 @@ Payload esperado:
 }
 ```
 
-Si la misma variable aparece en varias hojas, se envía una sola vez. Por ejemplo, `nombre_completo` se aplicará a todos los campos que usen `{nombre_completo}`.
+Si `{nombre_completo}` aparece en cinco hojas, se envia una sola vez. PDF Server aplica el mismo valor a todos los campos que usen esa variable.
 
-## Objetos cambiables
+## Objetos dinamicos
 
-Para objetos que no usan `{variable}` directamente, el editor permite marcarlos como dinámicos usando `#` al inicio del nombre del contenedor.
+Los objetos que no usan `{variable}` pueden declararse dinamicos iniciando el nombre del contenedor con `#`.
 
-| Tipo soportado | Ejemplo de nombre en editor | Clave enviada en API |
+| Tipo | Nombre en editor | Clave enviada |
 | --- | --- | --- |
 | QR | `#qr_alumno` | `qr_alumno` |
-| QR repetido | `#qr_alumno#1`, `#qr_alumno#2` | `qr_alumno` |
-| Imagen | `#firma_director` | `firma_director` |
-| Código de barras | `#codigo_certificado` | `codigo_certificado` |
+| Imagen | `#logo` | `logo` |
+| Codigo de barras | `#codigo_certificado` | `codigo_certificado` |
 | Fecha | `#fecha_emision` | `fecha_emision` |
+| Hora | `#hora_emision` | `hora_emision` |
 
 Tipos soportados actualmente: `image`, `qrcode`, `code128`, `date`, `dateTime`, `time`.
 
-## Repetir el mismo QR en varias páginas
+## Repetir objetos en varias hojas
 
-pdfme exige nombres de contenedor únicos. Para no enviar cinco claves distintas cuando el mismo QR aparece en varias hojas, usa un nombre base con sufijos:
+pdfme exige nombres de contenedor unicos. Para repetir el mismo QR sin enviar claves diferentes, usa sufijos compatibles sobre el mismo nombre base.
 
-| Hoja | Nombre del objeto en editor | Clave enviada |
+| Hoja | Nombre en editor | Clave API |
 | --- | --- | --- |
 | 1 | `#qr_alumno#1` | `qr_alumno` |
 | 2 | `#qr_alumno#2` | `qr_alumno` |
 | 3 | `#qr_alumno__p3` | `qr_alumno` |
 | 4 | `#qr_alumno__page4` | `qr_alumno` |
 
-Payload:
+Request:
 
 ```json
 {
@@ -70,36 +105,22 @@ Payload:
 }
 ```
 
-El backend aplicará el mismo valor a todos los objetos cuyo nombre derive de `#qr_alumno`.
+## Inspeccion desde la app
 
-## Ver entradas detectadas desde la app
-
-En el editor de plantilla usa **Acciones > Variables y objetos**. Esa vista muestra:
+En el editor usa **Acciones > Variables y objetos**. Esa vista lista el contrato de datos detectado y permite copiar un JSON base.
 
 | Columna | Significado |
 | --- | --- |
-| Tipo | `Variable` u `Objeto qrcode`, `Objeto image`, etc. |
+| Tipo | `Variable` u objeto dinamico como `Objeto qrcode`. |
 | Clave | Nombre que debe ir dentro de `input`. |
-| Hojas | Páginas donde aparece. |
-| Cantidad | Cantidad de contenedores que usan esa clave. |
+| Hojas | Paginas donde aparece. |
+| Cantidad | Numero de contenedores que usan esa clave. |
 
-El botón **Copiar JSON** genera un ejemplo listo para completar:
-
-```json
-{
-  "input": {
-    "nombre_completo": "",
-    "nro_documento": "",
-    "qr_alumno": ""
-  }
-}
-```
-
-## Ver entradas detectadas por API
+## Inspeccion por API
 
 ```http
 GET /api/v1/templates/:code/inputs
-x-api-key: pk_live_xxxxxxxxxxxxxxxxx
+x-api-key: API_KEY
 ```
 
 Respuesta resumida:
@@ -107,7 +128,7 @@ Respuesta resumida:
 ```json
 {
   "template": {
-    "code": "certificado_nutricion_a9d8a3d7",
+    "code": "nutricion",
     "name": "Certificado Nutricion",
     "versionNumber": 3,
     "pageCount": 5
@@ -123,13 +144,13 @@ Respuesta resumida:
 }
 ```
 
-## Compatibilidad
+## Cambios compatibles
 
-| Cambio en plantilla | Impacto externo | Recomendación |
+| Cambio en plantilla | Impacto externo | Recomendacion |
 | --- | --- | --- |
-| Mover un campo | Bajo | Mantener el mismo `code`. |
-| Cambiar fuente, color o tamaño | Bajo | Mantener el mismo `code`. |
+| Mover un campo | Bajo | Mantener las mismas claves. |
+| Cambiar fuente, color o tamaño | Bajo | No requiere cambio de API. |
 | Agregar variable requerida | Alto | Avisar y actualizar payload del consumidor. |
 | Renombrar variable | Alto | Evitar si ya hay integraciones. |
-| Cambiar `#qr_alumno` por `#qr_estudiante` | Alto | Cambia la clave esperada por la API. |
-| Duplicar páginas manteniendo sufijos compatibles | Bajo | Usar el mismo nombre base con sufijos. |
+| Cambiar `#qr_alumno` por `#qr_estudiante` | Alto | Cambia la clave esperada. |
+| Duplicar paginas con sufijos compatibles | Bajo | Mantener el mismo nombre base. |
