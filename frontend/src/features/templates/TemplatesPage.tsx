@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeftOutlined,
+  CodeOutlined,
   CopyOutlined,
   DeleteOutlined,
   EditOutlined,
@@ -47,13 +48,16 @@ import { DataTable, PaginationBar } from '../../shared/components/DataTable';
 import { LoadingState } from '../../shared/components/LoadingState';
 import { AppFormDialog, FormFieldStack } from '../../shared/components/AppFormDialog';
 import type { Schema, Template as PdfmeTemplate } from '@pdfme/common';
+import { alpha, useTheme } from '@mui/material/styles';
+import { h } from 'gridjs';
+import { Grid } from 'gridjs-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { can } from '../../app/session';
 import type { TagItem, TemplateItem } from '../../app/types';
 import { useAppContext } from '../../app/AppContext';
 import { apiRequest } from '../../shared/api/client';
-import { confirmDanger, notifyError } from '../../shared/notifications';
+import { confirmDanger, notifyError, notifySuccess } from '../../shared/notifications';
 import type { PdfmeDesignerHandle } from './components/PdfmeDesigner';
 import { normalizePdfmeTemplateFonts } from './components/pdfmeTemplateFonts';
 
@@ -73,6 +77,20 @@ type BlankBasePdf = {
   padding: [number, number, number, number];
 };
 
+type TemplateInputItem = {
+  key: string;
+  pages: number[];
+  schemaNames: string[];
+  type?: string;
+};
+
+type TemplateInputsSnapshot = {
+  objects: TemplateInputItem[];
+  variables: TemplateInputItem[];
+};
+
+const dynamicObjectSchemaTypes = new Set(['image', 'qrcode', 'code128', 'date', 'dateTime', 'time']);
+
 type EditorHeaderControlsProps = {
   editingTemplate: TemplateItem;
   hasMultipleVersions: boolean;
@@ -90,6 +108,7 @@ type EditorHeaderControlsProps = {
   onFormatChange: (format: string) => void;
   onHeightChange: (height: number) => void;
   onOpenDetails: () => void;
+  onOpenInputs: () => void;
   onOpenVersions: () => void;
   onSave: () => void;
   onSaveVersion: () => void;
@@ -114,6 +133,7 @@ function EditorHeaderControls({
   onFormatChange,
   onHeightChange,
   onOpenDetails,
+  onOpenInputs,
   onOpenVersions,
   onSave,
   onSaveVersion,
@@ -186,6 +206,7 @@ function EditorHeaderControls({
             <MenuItem disabled={!hasMultipleVersions} onClick={() => { closeMenu(); onOpenVersions(); }}>
               Cambiar version
             </MenuItem>
+            <MenuItem onClick={() => { closeMenu(); onOpenInputs(); }}>Variables y objetos</MenuItem>
             <MenuItem onClick={() => { closeMenu(); onOpenDetails(); }}>Propiedades</MenuItem>
           </Menu>
         </Stack>
@@ -256,8 +277,94 @@ function updatePdfmeBasePdf(current: PdfmeTemplate | null, patch: { width?: numb
   } as PdfmeTemplate;
 }
 
+function extractPlaceholders(value: unknown) {
+  if (typeof value !== 'string') return [];
+
+  return Array.from(value.matchAll(/\{([a-zA-Z0-9_]+)\}/g), (match) => match[1]).filter(Boolean);
+}
+
+function getDynamicObjectInputKey(schema: Schema) {
+  const schemaName = typeof schema.name === 'string' ? schema.name.trim() : '';
+  const schemaType = typeof schema.type === 'string' ? schema.type : '';
+
+  if (!schemaName.startsWith('#') || !dynamicObjectSchemaTypes.has(schemaType)) return '';
+
+  const rawKey = schemaName.slice(1).trim();
+  if (!rawKey) return '';
+
+  return rawKey
+    .replace(/#\d+$/i, '')
+    .replace(/__(?:p|page)?\d+$/i, '')
+    .replace(/_(?:p|page)\d+$/i, '');
+}
+
+function pushUnique<T>(list: T[], value: T) {
+  if (!list.includes(value)) list.push(value);
+}
+
+function collectTemplateInputsFromTemplate(template: PdfmeTemplate | null): TemplateInputsSnapshot {
+  const variableMap = new Map<string, TemplateInputItem>();
+  const objectMap = new Map<string, TemplateInputItem>();
+
+  template?.schemas?.forEach((pageSchemas, pageIndex) => {
+    if (!Array.isArray(pageSchemas)) return;
+
+    pageSchemas.forEach((schema) => {
+      const schemaName = typeof schema.name === 'string' ? schema.name : '';
+      const schemaType = typeof schema.type === 'string' ? schema.type : '';
+      const pageNumber = pageIndex + 1;
+      const objectKey = getDynamicObjectInputKey(schema);
+
+      if (objectKey) {
+        const mapKey = `${objectKey}::${schemaType}`;
+        const entry = objectMap.get(mapKey) ?? { key: objectKey, type: schemaType, schemaNames: [], pages: [] };
+        if (schemaName) pushUnique(entry.schemaNames, schemaName);
+        pushUnique(entry.pages, pageNumber);
+        objectMap.set(mapKey, entry);
+      }
+
+      const variables = new Set<string>();
+      const schemaVariables = 'variables' in schema && Array.isArray(schema.variables) ? schema.variables : [];
+      for (const variable of schemaVariables) {
+        if (typeof variable === 'string' && variable) variables.add(variable);
+      }
+      if ('text' in schema) for (const variable of extractPlaceholders(schema.text)) variables.add(variable);
+      if ('content' in schema) for (const variable of extractPlaceholders(schema.content)) variables.add(variable);
+
+      for (const variable of variables) {
+        const entry = variableMap.get(variable) ?? { key: variable, schemaNames: [], pages: [] };
+        if (schemaName) pushUnique(entry.schemaNames, schemaName);
+        pushUnique(entry.pages, pageNumber);
+        variableMap.set(variable, entry);
+      }
+    });
+  });
+
+  return {
+    objects: Array.from(objectMap.values()).sort((a, b) => a.key.localeCompare(b.key) || String(a.type).localeCompare(String(b.type))),
+    variables: Array.from(variableMap.values()).sort((a, b) => a.key.localeCompare(b.key)),
+  };
+}
+
+function buildInputsJson(snapshot: TemplateInputsSnapshot) {
+  const values: Record<string, string> = {};
+
+  for (const item of snapshot.variables) values[item.key] = '';
+  for (const item of snapshot.objects) values[item.key] = '';
+
+  return JSON.stringify({ values }, null, 2);
+}
+
+function getInputsRows(snapshot: TemplateInputsSnapshot) {
+  return [
+    ...snapshot.variables.map((item) => ({ ...item, sourceType: 'Variable' })),
+    ...snapshot.objects.map((item) => ({ ...item, sourceType: `Objeto ${item.type ?? ''}`.trim() })),
+  ].sort((a, b) => a.key.localeCompare(b.key) || a.sourceType.localeCompare(b.sourceType));
+}
+
 export function TemplatesPage() {
   const { user, mode, setHeaderAction, closeHeaderAction, openHeaderAction, setHeaderControls, setOperationLabel, clearOperationLabel } = useAppContext();
+  const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { code: routeCode } = useParams();
@@ -291,6 +398,8 @@ export function TemplatesPage() {
   const [lockedSchemaNames, setLockedSchemaNames] = useState<string[]>([]);
   const [versionsDialogOpen, setVersionsDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [inputsDialogOpen, setInputsDialogOpen] = useState(false);
+  const [inputsSnapshot, setInputsSnapshot] = useState<TemplateInputsSnapshot>({ objects: [], variables: [] });
   const [detailsName, setDetailsName] = useState('');
   const [detailsCode, setDetailsCode] = useState('');
   const [detailsTags, setDetailsTags] = useState<string[]>([]);
@@ -645,6 +754,21 @@ export function TemplatesPage() {
     }
   }
 
+  function openInputsDialog() {
+    const liveTemplate = designerRef.current?.getTemplate() ?? designerTemplate;
+    setInputsSnapshot(collectTemplateInputsFromTemplate(liveTemplate));
+    setInputsDialogOpen(true);
+  }
+
+  async function copyTextToClipboard(value: string, successMessage: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      await notifySuccess(successMessage);
+    } catch (error) {
+      notifyError(error, 'No se pudo copiar al portapapeles.');
+    }
+  }
+
   async function remove(id: string) {
     setError('');
     setDeletingId(id);
@@ -933,21 +1057,6 @@ export function TemplatesPage() {
     observedEl?.addEventListener('pointerup', scheduleDOMUpdate, true);
     observedEl?.addEventListener('keyup', scheduleDOMUpdate, true);
 
-    const blockLockedCanvasAction = (event: Event) => {
-      const target = event.target as HTMLElement | null;
-      if (!target || target.closest('.sidebar-lock-btn')) return;
-      const lockedEl = target.closest('.selectable-locked');
-      if (!lockedEl) return;
-      event.stopPropagation();
-      if ('stopImmediatePropagation' in event) event.stopImmediatePropagation();
-      event.preventDefault();
-    };
-
-    const lockedCanvasEvents = ['pointerdown', 'mousedown', 'click', 'dblclick', 'touchstart', 'dragstart'];
-    lockedCanvasEvents.forEach((eventName) => {
-      window.addEventListener(eventName, blockLockedCanvasAction, true);
-    });
-
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -955,9 +1064,6 @@ export function TemplatesPage() {
       observedEl?.removeEventListener('click', scheduleDOMUpdate, true);
       observedEl?.removeEventListener('pointerup', scheduleDOMUpdate, true);
       observedEl?.removeEventListener('keyup', scheduleDOMUpdate, true);
-      lockedCanvasEvents.forEach((eventName) => {
-        window.removeEventListener(eventName, blockLockedCanvasAction, true);
-      });
       observer.disconnect();
     };
   }, [designerTemplate, lockedSchemaNames, editingTemplate]);
@@ -1031,6 +1137,7 @@ export function TemplatesPage() {
         onFormatChange={setFormat}
         onHeightChange={(next) => { setPageHeightMm(next); setDesignerTemplate((current) => updatePdfmeBasePdf(current, { height: next })); }}
         onOpenDetails={openDetailsDialog}
+        onOpenInputs={openInputsDialog}
         onOpenVersions={() => setVersionsDialogOpen(true)}
         onSave={() => { void saveSettings(); }}
         onSaveVersion={() => { void saveVersion(); }}
@@ -1098,6 +1205,89 @@ export function TemplatesPage() {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setVersionsDialogOpen(false)}>Cerrar</Button>
+          </DialogActions>
+        </Dialog>
+        <Dialog
+          className="input-export-dialog"
+          fullWidth
+          maxWidth="lg"
+          onClose={() => setInputsDialogOpen(false)}
+          open={inputsDialogOpen}
+          sx={{
+            '--input-export-bg': theme.palette.background.default,
+            '--input-export-paper': theme.palette.background.paper,
+            '--input-export-paper-soft': theme.palette.action.hover,
+            '--input-export-border': theme.palette.divider,
+            '--input-export-border-strong': alpha(theme.palette.divider, theme.palette.mode === 'dark' ? 0.9 : 1),
+            '--input-export-text': theme.palette.text.primary,
+            '--input-export-muted': theme.palette.text.secondary,
+            '--input-export-primary': theme.palette.primary.main,
+            '& .MuiDialog-paper': { maxHeight: 'calc(100dvh - 32px)', width: { sm: 'min(1100px, calc(100vw - 32px))' } },
+          }}
+        >
+          <DialogTitle className="input-export-title">Variables y objetos cambiables</DialogTitle>
+          <DialogContent className="input-export-dialogContent" dividers sx={{ p: 0 }}>
+            <Stack className="input-export-body" spacing={1.5}>
+              <Box className="input-export-section">
+                <Stack className="input-export-sectionHeader" direction="row" spacing={1}>
+                  <Typography sx={{ fontWeight: 700 }} variant="subtitle2">Entradas detectadas</Typography>
+                  <Typography className="input-export-total" variant="caption">
+                    {inputsSnapshot.variables.length + inputsSnapshot.objects.length} entradas
+                  </Typography>
+                </Stack>
+                <Box className="input-export-gridPanel">
+                  <Grid
+                    columns={[
+                      {
+                        name: 'Tipo',
+                        formatter: (cell) => h('span', { className: 'input-export-textCell' }, String(cell ?? '')),
+                      },
+                      {
+                        name: 'Clave',
+                        formatter: (cell) => h('code', { className: 'input-export-key' }, String(cell ?? '')),
+                      },
+                      {
+                        name: 'Hojas',
+                        formatter: (cell) => h('span', { className: 'input-export-pages' }, String(cell ?? '')),
+                      },
+                      {
+                        name: 'Cantidad',
+                        sort: false,
+                        formatter: (cell) => h('span', { className: 'input-export-numberCell' }, String(cell ?? '')),
+                      },
+                    ]}
+                    data={getInputsRows(inputsSnapshot).map((item) => [
+                      item.sourceType,
+                      item.key,
+                      item.pages.join(', '),
+                      item.schemaNames.length,
+                    ])}
+                    height="min(42dvh, 360px)"
+                    sort
+                  />
+                </Box>
+              </Box>
+              <Divider className="input-export-divider" />
+              <Box className="input-export-section">
+                <Stack className="input-export-sectionHeader" direction="row" spacing={1}>
+                  <Typography sx={{ fontWeight: 700 }} variant="subtitle2">JSON para API</Typography>
+                </Stack>
+                <Box
+                  className="input-export-json"
+                  component="pre"
+                >{buildInputsJson(inputsSnapshot)}</Box>
+              </Box>
+            </Stack>
+          </DialogContent>
+          <DialogActions className="input-export-actions">
+            <Button onClick={() => setInputsDialogOpen(false)}>Cerrar</Button>
+            <Button
+              onClick={() => void copyTextToClipboard(buildInputsJson(inputsSnapshot), 'JSON copiado.')}
+              startIcon={<CodeOutlined />}
+              variant="contained"
+            >
+              Copiar JSON
+            </Button>
           </DialogActions>
         </Dialog>
         <AppFormDialog

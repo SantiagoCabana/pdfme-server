@@ -1,112 +1,135 @@
-# Catálogo y plantillas
+# Plantillas y contrato de datos
 
-Una plantilla publicada es el contrato que usa una aplicación externa para generar un documento. El consumidor no debe depender del `id` interno; debe guardar el `code`, conocer las variables esperadas y enviar valores ya normalizados.
+Una plantilla define qué datos puede recibir el render. El consumidor externo no necesita conocer la estructura interna de pdfme; solo debe usar las claves detectadas por PDF Server.
 
-## Identificador estable
+## Identificador externo
 
-El campo `code` identifica la plantilla desde sistemas externos.
+| Campo | Uso para integración | Nota |
+| --- | --- | --- |
+| `code` | Sí | Se envía como `templateCode`. |
+| `name` | Sí | Útil para mostrar o registrar. |
+| `versionNumber` | Sí | Útil para auditoría. |
+| `pageFormat` | Opcional | Permite validar tamaño esperado. |
+| `pageOrientation` | Opcional | Permite validar orientación esperada. |
+| `id` | No como contrato | Es interno de la app. |
 
-| Campo | Usar externamente | Uso recomendado | Observación |
-| --- | --- | --- | --- |
-| `code` | Sí | Guardarlo como `templateCode`. | Identificador estable para requests futuros. |
-| `name` | Sí | Mostrarlo en paneles o logs internos. | No debe usarse para identificar la plantilla. |
-| `id` | No | Solo soporte interno. | Puede cambiar o no ser útil fuera de la app. |
-| `versionNumber` | Sí | Registrar la versión usada. | Permite auditar qué versión estaba publicada. |
-| `pageFormat` | Sí | Validar tamaño esperado. | Ejemplo: `A4`. |
-| `pageOrientation` | Sí | Validar orientación esperada. | Ejemplo: `LANDSCAPE`. |
-| `tags` | Opcional | Filtrar catálogo en el consumidor. | No reemplaza al `code`. |
+## Variables de texto
 
-Si el `code` cambia, la integración se rompe. Para cambios visuales usa nuevas versiones, no nuevos códigos, salvo que quieras crear un contrato independiente.
+Las variables de texto son los nombres entre llaves dentro de campos de texto:
 
-## Catálogo disponible
-
-El catálogo devuelve las plantillas visibles para una API key.
-
-```http
-GET /api/v1/templates
-x-api-key: pk_live_xxxxxxxxxxxxxxxxx
+```text
+Otorgado a {nombre_completo}, identificado con {tipo_documento}: {nro_documento}
 ```
 
-Respuesta típica:
+Payload esperado:
 
 ```json
 {
-  "data": [
-    {
-      "id": "cmrpcj5y2000lhzhjmk1w81dp",
-      "name": "Certificado Nutrición",
-      "code": "certificado_nutricion_a9d8a3d7",
-      "status": "DRAFT",
-      "versionNumber": 1,
-      "pageFormat": "A4",
-      "pageOrientation": "LANDSCAPE",
-      "pageWidthMm": 297,
-      "pageHeightMm": 210,
-      "tags": ["certificados", "diplomados"]
-    }
-  ]
-}
-```
-
-## Contrato de variables
-
-Cada variable dinámica aparece dentro del diseño como `{variable}`. El consumidor debe enviar esas claves dentro de `input`.
-
-| Variable | Ejemplo | Responsable del formato |
-| --- | --- | --- |
-| `nombre_completo` | `María Pérez Ramos` | Sistema consumidor. |
-| `tipo_documento` | `DNI` | Sistema consumidor. |
-| `nro_documento` | `11223344` | Sistema consumidor. |
-| `horas` | `64` | Sistema consumidor. |
-| `fecha_emision` | `30 de septiembre del 2025` | Sistema consumidor. |
-
-Envía valores finales de impresión. No delegues al PDF Server reglas de negocio como calcular fechas, convertir números, traducir estados o decidir textos legales.
-
-## Campos estáticos y variables
-
-No todos los textos del diseño requieren datos externos.
-
-| Tipo de campo | En la plantilla | En el payload externo |
-| --- | --- | --- |
-| Texto fijo | `Latinoamérica, 30 de septiembre del 2025` | No se envía. |
-| Texto con variable | `Otorgado a {nombre_completo}` | `nombre_completo`. |
-| QR fijo | `https://dominio.com/verificar` | No se envía. |
-| QR dinámico | `{url_verificacion}` | `url_verificacion`. |
-
-Si un campo tiene `content: {}` no significa que esté vacío. En pdfme, el texto visible puede estar en `text` y las variables se reemplazan después.
-
-## Reglas de compatibilidad
-
-| Cambio en plantilla | Impacto externo | Recomendación |
-| --- | --- | --- |
-| Mover texto o imagen | Bajo | Mantener el mismo `code`. |
-| Cambiar color o fuente | Bajo | Mantener el mismo `code`. |
-| Agregar variable obligatoria | Alto | Avisar al consumidor antes de publicar. |
-| Renombrar variable | Alto | Evitar; rompe payloads existentes. |
-| Eliminar variable | Medio | Mantener tolerancia temporal si hay consumidores activos. |
-| Cambiar significado de variable | Alto | Crear variable nueva con nombre explícito. |
-
-## Payload recomendado
-
-```json
-{
-  "templateCode": "certificado_nutricion_a9d8a3d7",
   "input": {
-    "nombre_completo": "María Pérez Ramos",
+    "nombre_completo": "Maria Perez Ramos",
     "tipo_documento": "DNI",
-    "nro_documento": "11223344",
-    "horas": "64",
-    "fecha_emision": "30 de septiembre del 2025"
+    "nro_documento": "11223344"
   }
 }
 ```
 
-## Checklist antes de integrar
+Si la misma variable aparece en varias hojas, se envía una sola vez. Por ejemplo, `nombre_completo` se aplicará a todos los campos que usen `{nombre_completo}`.
 
-| Revisión | Resultado esperado |
+## Objetos cambiables
+
+Para objetos que no usan `{variable}` directamente, el editor permite marcarlos como dinámicos usando `#` al inicio del nombre del contenedor.
+
+| Tipo soportado | Ejemplo de nombre en editor | Clave enviada en API |
+| --- | --- | --- |
+| QR | `#qr_alumno` | `qr_alumno` |
+| QR repetido | `#qr_alumno#1`, `#qr_alumno#2` | `qr_alumno` |
+| Imagen | `#firma_director` | `firma_director` |
+| Código de barras | `#codigo_certificado` | `codigo_certificado` |
+| Fecha | `#fecha_emision` | `fecha_emision` |
+
+Tipos soportados actualmente: `image`, `qrcode`, `code128`, `date`, `dateTime`, `time`.
+
+## Repetir el mismo QR en varias páginas
+
+pdfme exige nombres de contenedor únicos. Para no enviar cinco claves distintas cuando el mismo QR aparece en varias hojas, usa un nombre base con sufijos:
+
+| Hoja | Nombre del objeto en editor | Clave enviada |
+| --- | --- | --- |
+| 1 | `#qr_alumno#1` | `qr_alumno` |
+| 2 | `#qr_alumno#2` | `qr_alumno` |
+| 3 | `#qr_alumno__p3` | `qr_alumno` |
+| 4 | `#qr_alumno__page4` | `qr_alumno` |
+
+Payload:
+
+```json
+{
+  "input": {
+    "qr_alumno": "http://bd.practissac.com/student/CD8b5EB45412"
+  }
+}
+```
+
+El backend aplicará el mismo valor a todos los objetos cuyo nombre derive de `#qr_alumno`.
+
+## Ver entradas detectadas desde la app
+
+En el editor de plantilla usa **Acciones > Variables y objetos**. Esa vista muestra:
+
+| Columna | Significado |
 | --- | --- |
-| El consumidor tiene una API key propia. | Una clave por sistema o ambiente. |
-| El `templateCode` existe en el catálogo. | Se obtiene desde `GET /api/v1/templates`. |
-| Las variables coinciden exactamente. | Sin tildes, espacios ni cambios de mayúsculas. |
-| Los datos ya llegan formateados. | Fechas, nombres y documentos listos para imprimir. |
-| Hay trazabilidad. | Se registra `templateCode`, HTTP status y usuario solicitante. |
+| Tipo | `Variable` u `Objeto qrcode`, `Objeto image`, etc. |
+| Clave | Nombre que debe ir dentro de `input`. |
+| Hojas | Páginas donde aparece. |
+| Cantidad | Cantidad de contenedores que usan esa clave. |
+
+El botón **Copiar JSON** genera un ejemplo listo para completar:
+
+```json
+{
+  "input": {
+    "nombre_completo": "",
+    "nro_documento": "",
+    "qr_alumno": ""
+  }
+}
+```
+
+## Ver entradas detectadas por API
+
+```http
+GET /api/v1/templates/:code/inputs
+x-api-key: pk_live_xxxxxxxxxxxxxxxxx
+```
+
+Respuesta resumida:
+
+```json
+{
+  "template": {
+    "code": "certificado_nutricion_a9d8a3d7",
+    "name": "Certificado Nutricion",
+    "versionNumber": 3,
+    "pageCount": 5
+  },
+  "inputs": {
+    "variables": [
+      { "key": "nombre_completo", "pages": [1, 2, 3, 4, 5] }
+    ],
+    "objects": [
+      { "key": "qr_alumno", "type": "qrcode", "pages": [1, 2, 3, 4, 5] }
+    ]
+  }
+}
+```
+
+## Compatibilidad
+
+| Cambio en plantilla | Impacto externo | Recomendación |
+| --- | --- | --- |
+| Mover un campo | Bajo | Mantener el mismo `code`. |
+| Cambiar fuente, color o tamaño | Bajo | Mantener el mismo `code`. |
+| Agregar variable requerida | Alto | Avisar y actualizar payload del consumidor. |
+| Renombrar variable | Alto | Evitar si ya hay integraciones. |
+| Cambiar `#qr_alumno` por `#qr_estudiante` | Alto | Cambia la clave esperada por la API. |
+| Duplicar páginas manteniendo sufijos compatibles | Bajo | Usar el mismo nombre base con sufijos. |

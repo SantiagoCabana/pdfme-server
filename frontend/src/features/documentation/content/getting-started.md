@@ -1,35 +1,32 @@
 # Visión general
 
-PDF Server expone plantillas PDF mediante una API autenticada para que otros sistemas generen documentos con datos propios. La integración se basa en tres piezas: una API key, un `templateCode` y un objeto `input` con las variables que reemplazará la plantilla.
+PDF Server permite que un sistema externo genere PDFs usando plantillas administradas en la app. El consumidor solo necesita una API key, el `templateCode` de la plantilla y un objeto `input` con los datos que deben reemplazarse.
 
-## Modelo de integración
+## Piezas de la integración
 
-| Pieza | La entrega | La usa | Propósito |
-| --- | --- | --- | --- |
-| API key | Administrador de PDF Server | Backend consumidor | Autorizar requests externos. |
-| `templateCode` | Administrador o catálogo API | Backend consumidor | Identificar la plantilla estable. |
-| Variables | Documentación de la plantilla | Backend consumidor | Completar textos dinámicos. |
-| Respuesta API | PDF Server | Backend consumidor | Confirmar resultado o diagnosticar error. |
-
-## URLs usadas en los ejemplos
-
-En local hay dos servicios levantados al mismo tiempo. El frontend sirve la interfaz y el backend expone la API que consumen otros sistemas.
-
-| Servicio | URL local | Uso |
+| Pieza | De dónde sale | Para qué sirve |
 | --- | --- | --- |
-| Frontend de administración | `http://localhost:5173` | Iniciar sesión, revisar plantillas y crear claves API. |
-| Backend API | `http://localhost:4000/api` | Consumir endpoints externos como `/api/v1/templates`. |
-| Documentación | `http://localhost:5173/documentation/getting-started` | Consultar esta guía desde la misma app autenticada. |
-| Producción | `https://dominio.com/api` | Reemplaza `dominio.com` por el dominio real publicado. |
+| API key | Panel de administración, sección Claves API | Autoriza las llamadas externas. |
+| `templateCode` | Catálogo API o detalle de plantilla | Identifica la plantilla que se va a renderizar. |
+| Entradas detectadas | Botón Variables y objetos en el editor o endpoint `/inputs` | Define qué claves debe enviar el consumidor. |
+| `input` | Backend consumidor | Contiene textos, QR, imágenes u otros valores dinámicos. |
+| PDF | `POST /api/v1/render` | Documento final en `application/pdf`. |
 
-Ejemplo local directo contra backend:
+## URLs usadas
+
+| Entorno | Frontend | Backend API |
+| --- | --- | --- |
+| Local | `http://localhost:5173` | `http://localhost:4000/api` |
+| Producción | `https://dominio.com` | `https://dominio.com/api` |
+
+En local puedes probar directo contra el backend:
 
 ```bash
 curl -sS "http://localhost:4000/api/v1/templates" \
   -H "x-api-key: $PDFME_API_KEY"
 ```
 
-Ejemplo en producción:
+En producción usa la ruta pública bajo el mismo dominio:
 
 ```bash
 curl -sS "https://dominio.com/api/v1/templates" \
@@ -38,40 +35,36 @@ curl -sS "https://dominio.com/api/v1/templates" \
 
 ## Flujo recomendado
 
-1. Solicita una API key para tu sistema o entorno.
-2. Consulta el catálogo con `GET /api/v1/templates`.
-3. Selecciona y guarda el `code` de la plantilla que vas a consumir.
-4. Prepara el payload `input` con los nombres exactos de variables.
-5. Envía el request de render desde tu backend, no desde frontend público.
-6. Registra código HTTP, `templateCode`, usuario solicitante y `message` si ocurre un error.
-
-## Datos mínimos que debes recibir
-
-| Dato | Ejemplo | Observación |
+| Paso | Acción | Resultado |
 | --- | --- | --- |
-| Base URL | `http://localhost:4000/api` o `https://dominio.com/api` | Backend API según ambiente. |
-| API key | `pk_live_xxxxxxxxx` | Se muestra una sola vez al crearla. |
-| Template code | `certificado_nutricion_a9d8a3d7` | No uses el ID interno como contrato. |
-| Variables obligatorias | `nombre_completo`, `nro_documento` | Deben coincidir exactamente con la plantilla. |
-| Formato de fechas | `30 de septiembre del 2025` | Envíalas ya formateadas para el documento final. |
+| 1 | Crear una API key para el sistema consumidor. | Tienes una `rawKey` segura para backend. |
+| 2 | Consultar `GET /api/v1/templates`. | Obtienes el `templateCode`. |
+| 3 | Consultar `GET /api/v1/templates/:code/inputs`. | Obtienes variables y objetos cambiables. |
+| 4 | Construir el objeto `input`. | Las claves coinciden con la plantilla. |
+| 5 | Llamar `POST /api/v1/render`. | Recibes el PDF final. |
 
-## Responsabilidades del sistema consumidor
+## Payload mínimo
 
-- Guardar la API key como secreto de servidor.
-- Validar campos obligatorios antes de llamar a PDF Server.
-- Enviar valores ya normalizados y listos para impresión.
-- No depender del texto visual de la plantilla para lógica de negocio.
-- Manejar explícitamente errores `400`, `401`, `404`, `409` y `5xx`.
-- Mantener trazabilidad del request sin exponer datos sensibles innecesarios.
+```json
+{
+  "templateCode": "certificado_nutricion_a9d8a3d7",
+  "input": {
+    "nombre_completo": "Maria Perez Ramos",
+    "tipo_documento": "DNI",
+    "nro_documento": "11223344",
+    "qr_alumno": "http://bd.practissac.com/student/CD8b5EB45412"
+  }
+}
+```
 
-## Qué no debe hacer una integración
+## Reglas rápidas
 
-| Evitar | Motivo |
+| Regla | Motivo |
 | --- | --- |
-| Enviar API key desde navegador público. | Cualquier usuario podría extraerla. |
-| Guardar solo el `id` de plantilla. | Es un identificador interno, no contrato externo. |
-| Inventar nombres de variables. | Los nombres deben existir en el diseño. |
-| Mandar fechas sin formato final. | La plantilla no debe resolver localización ni redacción. |
-| Reintentar indefinidamente errores `4xx`. | Indican problema de contrato, autenticación o permisos. |
+| Llama la API desde backend, no desde JavaScript público. | La API key no debe exponerse al navegador. |
+| Usa `code` como `templateCode`. | Es el identificador externo estable. |
+| No uses nombres de contenedores pdfme para textos. | Para textos importan las variables entre `{}`. |
+| Para QR, imágenes y fechas dinámicas usa nombres con `#` en el editor. | Así el backend sabe qué objetos puede reemplazar. |
+| Envía fechas y textos ya formateados. | PDF Server no aplica reglas de negocio ni localización. |
 
-> Trata el `templateCode` y la lista de variables como un contrato de integración. Si el administrador cambia variables o estructura del documento, el consumidor debe actualizar su payload y volver a probar.
+> El contrato externo de una plantilla es la combinación de `templateCode` + entradas detectadas. Si cambias variables u objetos dinámicos en la plantilla, el sistema consumidor debe actualizar su payload.

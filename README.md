@@ -231,6 +231,7 @@ API externa con `x-api-key`:
 
 ```http
 GET  /api/v1/templates
+GET  /api/v1/templates/:code/inputs
 POST /api/v1/render
 ```
 
@@ -260,6 +261,8 @@ Contenido cubierto:
 - Cómo obtener una API key desde la app con permiso `api_keys.manage`.
 - Uso de `templateCode` como contrato externo.
 - Formato del payload `input`.
+- Variables de texto y objetos cambiables con prefijo `#`.
+- Endpoint `/api/v1/templates/:code/inputs` para inspeccionar el contrato actual de una plantilla.
 - Ejemplos `curl` y TypeScript.
 - Respuestas, códigos HTTP, logging seguro y reintentos.
 

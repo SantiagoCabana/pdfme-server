@@ -43,6 +43,8 @@ const plugins = {
   checkbox,
 };
 
+const DYNAMIC_OBJECT_SCHEMA_TYPES = new Set(['image', 'qrcode', 'code128', 'date', 'dateTime', 'time']);
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -100,6 +102,69 @@ function extractPlaceholders(value: unknown) {
   return Array.from(matches, (match) => match[1]).filter(Boolean);
 }
 
+function getDynamicObjectInputKey(schema: JsonRecord) {
+  const schemaName = typeof schema.name === 'string' ? schema.name.trim() : '';
+  const schemaType = typeof schema.type === 'string' ? schema.type : '';
+
+  if (!schemaName.startsWith('#') || !DYNAMIC_OBJECT_SCHEMA_TYPES.has(schemaType)) return '';
+
+  const rawKey = schemaName.slice(1).trim();
+  if (!rawKey) return '';
+
+  return rawKey
+    .replace(/#\d+$/i, '')
+    .replace(/__(?:p|page)?\d+$/i, '')
+    .replace(/_(?:p|page)\d+$/i, '');
+}
+
+function pushUnique<T>(list: T[], value: T) {
+  if (!list.includes(value)) list.push(value);
+}
+
+export function collectTemplateInputs(schemaPages: JsonRecord[][]) {
+  const variableMap = new Map<string, { key: string; schemaNames: string[]; pages: number[] }>();
+  const objectMap = new Map<string, { key: string; type: string; schemaNames: string[]; pages: number[] }>();
+
+  schemaPages.forEach((page, pageIndex) => {
+    page.forEach((schema) => {
+      const schemaName = typeof schema.name === 'string' ? schema.name : '';
+      const pageNumber = pageIndex + 1;
+      const dynamicObjectKey = getDynamicObjectInputKey(schema);
+
+      if (dynamicObjectKey) {
+        const type = typeof schema.type === 'string' ? schema.type : 'unknown';
+        const mapKey = `${dynamicObjectKey}::${type}`;
+        const entry = objectMap.get(mapKey) ?? { key: dynamicObjectKey, type, schemaNames: [], pages: [] };
+
+        if (schemaName) pushUnique(entry.schemaNames, schemaName);
+        pushUnique(entry.pages, pageNumber);
+        objectMap.set(mapKey, entry);
+      }
+
+      const variables = new Set<string>();
+      if (Array.isArray(schema.variables)) {
+        for (const variable of schema.variables) {
+          if (typeof variable === 'string' && variable) variables.add(variable);
+        }
+      }
+      for (const variable of extractPlaceholders(schema.text)) variables.add(variable);
+      for (const variable of extractPlaceholders(schema.content)) variables.add(variable);
+
+      for (const variable of variables) {
+        const entry = variableMap.get(variable) ?? { key: variable, schemaNames: [], pages: [] };
+        if (schemaName) pushUnique(entry.schemaNames, schemaName);
+        pushUnique(entry.pages, pageNumber);
+        variableMap.set(variable, entry);
+      }
+    });
+  });
+
+  return {
+    variables: Array.from(variableMap.values()).sort((a, b) => a.key.localeCompare(b.key)),
+    objects: Array.from(objectMap.values()).sort((a, b) => a.key.localeCompare(b.key) || a.type.localeCompare(b.type)),
+  };
+}
+
 function interpolate(value: unknown, input: JsonRecord) {
   if (typeof value !== 'string') return stringifyInputValue(value);
 
@@ -138,6 +203,12 @@ function buildPdfmeInput(schemaPages: JsonRecord[][], input: JsonRecord) {
         continue;
       }
 
+      const dynamicObjectKey = getDynamicObjectInputKey(schema);
+      if (dynamicObjectKey && Object.prototype.hasOwnProperty.call(input, dynamicObjectKey)) {
+        pdfmeInput[fieldName] = stringifyInputValue(input[dynamicObjectKey]);
+        continue;
+      }
+
       if (schema.type === 'multiVariableText') {
         const defaults = parseObjectContent(schema.content);
         const values = { ...defaults };
@@ -164,6 +235,44 @@ function buildPdfmeInput(schemaPages: JsonRecord[][], input: JsonRecord) {
   }
 
   return pdfmeInput;
+}
+
+export async function inspectTemplateInputs(templateCode: string) {
+  const template = await prisma.template.findFirst({
+    where: { code: templateCode, status: { not: 'ARCHIVED' } },
+    include: {
+      versions: {
+        where: { isCurrent: true, status: true },
+        include: { pages: { orderBy: { pageNumber: 'asc' } } },
+        take: 1,
+      },
+    },
+  });
+
+  const currentVersion = template?.versions[0];
+
+  if (!template || !currentVersion) {
+    return { ok: false as const, status: 404, message: 'No se encontro la plantilla solicitada.' };
+  }
+
+  const designerJson = composeDesignerJson(currentVersion.pages);
+  const schemaPages = normalizeSchemaPages(getSchemaPages(designerJson));
+
+  return {
+    ok: true as const,
+    template: {
+      code: template.code,
+      name: template.name,
+      versionNumber: currentVersion.versionNumber,
+      pageCount: currentVersion.pages.length,
+    },
+    inputs: collectTemplateInputs(schemaPages),
+    conventions: {
+      dynamicObjectPrefix: '#',
+      reusableSuffixes: ['#1', '#2', '__p2', '__p3', '__page2', '_p2', '_page2'],
+      supportedDynamicObjectTypes: Array.from(DYNAMIC_OBJECT_SCHEMA_TYPES),
+    },
+  };
 }
 
 export async function renderTemplatePdf(input: {

@@ -16,7 +16,7 @@ export const documentationArticles: DocumentationArticle[] = [
   {
     slug: 'getting-started',
     title: 'Visión general',
-    description: 'Modelo de integración, datos mínimos y responsabilidades del sistema consumidor.',
+    description: 'Flujo completo para generar PDFs desde sistemas externos.',
     category: 'Integración',
     content: gettingStartedContent,
   },
@@ -30,14 +30,14 @@ export const documentationArticles: DocumentationArticle[] = [
   {
     slug: 'templates',
     title: 'Catálogo y plantillas',
-    description: 'Cómo usar templateCode, leer el catálogo y mapear variables del contrato.',
+    description: 'Cómo usar templateCode, variables de texto y objetos cambiables.',
     category: 'Integración',
     content: templatesContent,
   },
   {
     slug: 'api',
     title: 'Endpoints y ejemplos',
-    description: 'Requests para consultar catálogo y preparar render desde un backend externo.',
+    description: 'Catálogo, inspección de entradas y render con ejemplos curl y TypeScript.',
     category: 'Integración',
     content: apiContent,
   },

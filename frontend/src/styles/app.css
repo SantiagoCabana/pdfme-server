@@ -874,8 +874,7 @@ small {
 .pdfme-workspace .selectable-locked {
   outline-color: #ff4d4f !important;
   border-color: #ff4d4f !important;
-  cursor: not-allowed !important;
-  pointer-events: auto !important;
+  pointer-events: none !important;
   user-select: none !important;
 }
 
@@ -985,8 +984,7 @@ small {
 
 
 div.selectable-locked {
-  cursor: not-allowed !important;
-  pointer-events: auto !important;
+  pointer-events: none !important;
   user-select: none !important;
   outline-color: #ff4d4f !important;
   border-color: #ff4d4f !important;
@@ -1024,6 +1022,351 @@ div.selectable-locked {
 [data-theme='dark'] .sidebar-lock-btn[data-state="unlocked"],
 [data-theme='dark'] .sidebar-lock-btn[data-state="unlocked"] svg {
   color: #ffffff !important;
+}
+
+.input-export-dialogContent,
+.input-export-json {
+  scrollbar-color: rgba(100, 116, 139, 0.48) transparent;
+  scrollbar-width: thin;
+}
+
+.input-export-dialog {
+  --input-export-bg: var(--mui-palette-background-default, #f0f2f8);
+  --input-export-paper: var(--mui-palette-background-paper, #ffffff);
+  --input-export-paper-soft: rgba(22, 119, 255, 0.06);
+  --input-export-border: var(--mui-palette-divider, #f0f0f0);
+  --input-export-border-strong: rgba(22, 119, 255, 0.2);
+  --input-export-text: var(--mui-palette-text-primary, #262626);
+  --input-export-muted: var(--mui-palette-text-secondary, #8c8c8c);
+  --input-export-primary: var(--mui-palette-primary-main, #1677ff);
+}
+
+.input-export-dialogContent::-webkit-scrollbar,
+.input-export-json::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.input-export-dialogContent::-webkit-scrollbar-track,
+.input-export-json::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.input-export-dialogContent::-webkit-scrollbar-thumb,
+.input-export-json::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.42);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.input-export-dialogContent::-webkit-scrollbar-thumb:hover,
+.input-export-json::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.66);
+  background-clip: padding-box;
+}
+
+[data-theme='dark'] .input-export-dialogContent,
+[data-theme='dark'] .input-export-json {
+  scrollbar-color: rgba(148, 163, 184, 0.52) transparent;
+}
+
+[data-theme='dark'] .input-export-dialogContent::-webkit-scrollbar-thumb,
+[data-theme='dark'] .input-export-json::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.46);
+  background-clip: padding-box;
+}
+
+.input-export-dialog .MuiDialog-paper {
+  background: var(--input-export-paper) !important;
+  border: 1px solid var(--input-export-border);
+  border-radius: 16px;
+  color: var(--input-export-text);
+  overflow: hidden;
+}
+
+.input-export-title {
+  background: var(--input-export-paper-soft) !important;
+  border-bottom: 1px solid var(--input-export-border);
+  color: var(--input-export-text);
+  font-size: 1rem !important;
+  font-weight: 800 !important;
+  padding: 16px 20px !important;
+}
+
+.input-export-dialogContent {
+  background: var(--input-export-bg) !important;
+  overflow: auto;
+}
+
+.input-export-body {
+  padding: 16px;
+}
+
+.input-export-section {
+  min-width: 0;
+}
+
+.input-export-sectionHeader {
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  min-height: 28px;
+}
+
+.input-export-total {
+  color: var(--input-export-muted);
+  font-weight: 600;
+}
+
+.input-export-divider {
+  border-color: var(--input-export-border) !important;
+}
+
+.input-export-actions {
+  background: var(--input-export-paper) !important;
+  border-top: 1px solid var(--input-export-border);
+  gap: 8px;
+  padding: 12px 20px !important;
+}
+
+.input-export-gridPanel {
+  background: var(--input-export-paper);
+  border: 1px solid var(--input-export-border-strong);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
+  min-height: 180px;
+  overflow: hidden;
+}
+
+[data-theme='dark'] .input-export-gridPanel {
+  border-color: var(--input-export-border-strong);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+.input-export-gridPanel .gridjs-container {
+  height: min(42dvh, 360px) !important;
+}
+
+.input-export-gridPanel .gridjs-head,
+.input-export-gridPanel .gridjs-footer {
+  background: var(--input-export-paper) !important;
+}
+
+.input-export-gridPanel .gridjs-wrapper {
+  background: var(--input-export-paper) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+
+.input-export-gridPanel .gridjs-table {
+  background: var(--input-export-paper) !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  min-width: 0 !important;
+  table-layout: fixed !important;
+  width: 100% !important;
+}
+
+.input-export-gridPanel .gridjs-thead,
+.input-export-gridPanel .gridjs-tbody,
+.input-export-gridPanel .gridjs-tr {
+  background: var(--input-export-paper) !important;
+}
+
+.input-export-gridPanel .gridjs-th {
+  background: var(--input-export-paper-soft) !important;
+  color: var(--input-export-muted) !important;
+  border-bottom: 2px solid var(--input-export-border) !important;
+  border-right: 1px solid var(--input-export-border) !important;
+  box-shadow: none !important;
+  font-size: 0.69rem !important;
+  height: 42px !important;
+  letter-spacing: 0.045em !important;
+  padding: 9px 12px !important;
+  text-transform: uppercase !important;
+  vertical-align: middle !important;
+}
+
+.input-export-gridPanel .gridjs-td {
+  background: var(--input-export-paper) !important;
+  border-bottom: 1px solid var(--input-export-border) !important;
+  border-right: 1px solid var(--input-export-border) !important;
+  color: var(--input-export-text) !important;
+  height: 44px !important;
+  padding: 9px 12px !important;
+  vertical-align: middle !important;
+}
+
+.input-export-gridPanel .gridjs-tr:nth-child(even) .gridjs-td {
+  background: var(--input-export-bg) !important;
+}
+
+.input-export-gridPanel .gridjs-tr:hover .gridjs-td {
+  background: color-mix(in srgb, var(--input-export-primary) 10%, var(--input-export-paper)) !important;
+}
+
+[data-theme='dark'] .input-export-gridPanel .gridjs-th {
+  background: var(--input-export-paper-soft) !important;
+  color: var(--input-export-text) !important;
+}
+
+[data-theme='dark'] .input-export-gridPanel .gridjs-tr:nth-child(even) .gridjs-td {
+  background: var(--input-export-bg) !important;
+}
+
+[data-theme='dark'] .input-export-gridPanel .gridjs-tr:hover .gridjs-td {
+  background: color-mix(in srgb, var(--input-export-primary) 16%, var(--input-export-paper)) !important;
+}
+
+.input-export-gridPanel .gridjs-th:last-child,
+.input-export-gridPanel .gridjs-td:last-child {
+  border-right: none !important;
+}
+
+.input-export-gridPanel .gridjs-tr:last-child .gridjs-td {
+  border-bottom: none !important;
+}
+
+.input-export-gridPanel .gridjs-th:nth-child(1),
+.input-export-gridPanel .gridjs-td:nth-child(1) {
+  width: 17%;
+}
+
+.input-export-gridPanel .gridjs-th:nth-child(2),
+.input-export-gridPanel .gridjs-td:nth-child(2) {
+  width: 36%;
+}
+
+.input-export-gridPanel .gridjs-th:nth-child(3),
+.input-export-gridPanel .gridjs-td:nth-child(3) {
+  width: 33%;
+}
+
+.input-export-gridPanel .gridjs-th:nth-child(4),
+.input-export-gridPanel .gridjs-td:nth-child(4) {
+  text-align: center !important;
+  width: 14%;
+}
+
+.input-export-gridPanel .gridjs-th,
+.input-export-gridPanel .gridjs-td {
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.input-export-gridPanel .gridjs-td > * {
+  min-width: 0;
+}
+
+.input-export-textCell,
+.input-export-pages,
+.input-export-numberCell {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.input-export-textCell,
+.input-export-pages {
+  color: var(--input-export-muted);
+  font-size: 0.78rem;
+}
+
+.input-export-numberCell {
+  color: var(--input-export-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.input-export-key {
+  background: transparent;
+  border: 0;
+  color: var(--input-export-text);
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.65;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .input-export-gridPanel .gridjs-th,
+  .input-export-gridPanel .gridjs-td {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .input-export-gridPanel .gridjs-th:nth-child(1),
+  .input-export-gridPanel .gridjs-td:nth-child(1) {
+    width: 20%;
+  }
+
+  .input-export-gridPanel .gridjs-th:nth-child(2),
+  .input-export-gridPanel .gridjs-td:nth-child(2) {
+    width: 37%;
+  }
+
+  .input-export-gridPanel .gridjs-th:nth-child(3),
+  .input-export-gridPanel .gridjs-td:nth-child(3) {
+    width: 27%;
+  }
+
+  .input-export-gridPanel .gridjs-th:nth-child(4),
+  .input-export-gridPanel .gridjs-td:nth-child(4) {
+    width: 16%;
+  }
+}
+
+.input-export-json {
+  background: var(--input-export-paper) !important;
+  border: 1px solid var(--input-export-border-strong);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
+  color: var(--input-export-text);
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.75rem;
+  line-height: 1.55;
+  margin: 0;
+  max-height: min(28dvh, 240px);
+  overflow: auto;
+  padding: 12px;
+  white-space: pre;
+}
+
+[data-theme='dark'] .input-export-json {
+  background: var(--input-export-paper) !important;
+  border-color: var(--input-export-border-strong);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+@media (max-width: 640px) {
+  .input-export-title {
+    padding: 14px 16px !important;
+  }
+
+  .input-export-body {
+    padding: 12px;
+  }
+
+  .input-export-actions {
+    padding: 10px 12px !important;
+  }
 }
 
 /* Iconos de tipos de esquema en la barra lateral */

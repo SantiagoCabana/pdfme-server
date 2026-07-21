@@ -1,22 +1,28 @@
 # Endpoints y ejemplos
 
-La integración externa debe ejecutarse desde un backend, worker o servicio controlado. El navegador del usuario final no debe conocer la API key.
+Todos los endpoints externos usan el prefijo `/api/v1` y requieren el header `x-api-key`.
 
 ## Base URL
 
-| Entorno | URL |
-| --- | --- |
-| Desarrollo local directo | `http://localhost:4000/api` |
-| Desarrollo usando el frontend | `http://localhost:5173/api` |
-| Producción | `https://dominio.com/api` |
+| Ambiente | Base URL | Ejemplo |
+| --- | --- | --- |
+| Local backend directo | `http://localhost:4000/api` | `http://localhost:4000/api/v1/templates` |
+| Producción | `https://dominio.com/api` | `https://dominio.com/api/v1/render` |
 
-En producción, frontend y backend deben operar bajo el mismo dominio o detrás del mismo proxy. La integración externa solo necesita la URL pública de API.
+Si usas proxy bajo el mismo dominio, el frontend vive en `https://dominio.com` y la API en `https://dominio.com/api`.
+
+## Autenticación
+
+```http
+x-api-key: pk_live_xxxxxxxxxxxxxxxxx
+```
+
+La clave debe guardarse en el backend consumidor. No la envíes desde frontend público.
 
 ## Listar plantillas
 
 ```http
 GET /api/v1/templates
-x-api-key: pk_live_xxxxxxxxxxxxxxxxx
 ```
 
 ```bash
@@ -30,10 +36,11 @@ Respuesta `200`:
 {
   "data": [
     {
-      "name": "Certificado Nutrición",
+      "id": "cmrpcj5y2000lhzhjmk1w81dp",
+      "name": "Certificado Nutricion",
       "code": "certificado_nutricion_a9d8a3d7",
       "status": "DRAFT",
-      "versionNumber": 1,
+      "versionNumber": 3,
       "pageFormat": "A4",
       "pageOrientation": "LANDSCAPE",
       "pageWidthMm": 297,
@@ -44,7 +51,49 @@ Respuesta `200`:
 }
 ```
 
-## Solicitar render
+## Inspeccionar entradas de una plantilla
+
+Usa este endpoint antes de integrar o cuando cambie una plantilla.
+
+```http
+GET /api/v1/templates/:code/inputs
+```
+
+```bash
+curl -sS "https://dominio.com/api/v1/templates/certificado_nutricion_a9d8a3d7/inputs" \
+  -H "x-api-key: $PDFME_API_KEY"
+```
+
+Respuesta `200`:
+
+```json
+{
+  "template": {
+    "code": "certificado_nutricion_a9d8a3d7",
+    "name": "Certificado Nutricion",
+    "versionNumber": 3,
+    "pageCount": 5
+  },
+  "inputs": {
+    "variables": [
+      { "key": "nombre_completo", "schemaNames": ["d1_nombre_completo_alumno"], "pages": [1, 2, 3, 4, 5] },
+      { "key": "nro_documento", "schemaNames": ["d1_nro_documento_alumno"], "pages": [1, 2, 3, 4, 5] }
+    ],
+    "objects": [
+      { "key": "qr_alumno", "type": "qrcode", "schemaNames": ["#qr_alumno#1", "#qr_alumno#2"], "pages": [1, 2] }
+    ]
+  },
+  "conventions": {
+    "dynamicObjectPrefix": "#",
+    "reusableSuffixes": ["#1", "#2", "__p2", "__p3", "__page2", "_p2", "_page2"],
+    "supportedDynamicObjectTypes": ["image", "qrcode", "code128", "date", "dateTime", "time"]
+  }
+}
+```
+
+Para construir el payload solo usa `key`. `schemaNames` sirve para soporte interno, no para integraciones.
+
+## Renderizar PDF
 
 ```http
 POST /api/v1/render
@@ -52,57 +101,55 @@ content-type: application/json
 x-api-key: pk_live_xxxxxxxxxxxxxxxxx
 ```
 
+Body:
+
 ```json
 {
   "templateCode": "certificado_nutricion_a9d8a3d7",
   "input": {
-    "nombre_completo": "María Pérez Ramos",
+    "nombre_completo": "Maria Perez Ramos",
     "tipo_documento": "DNI",
     "nro_documento": "11223344",
     "horas": "64",
-    "fecha_emision": "30 de septiembre del 2025"
+    "fecha_x_fecha_y": "22 de septiembre al 22 de septiembre del 2024",
+    "qr_alumno": "http://bd.practissac.com/student/CD8b5EB45412"
   }
 }
 ```
 
-Ejemplo con `curl`:
+Ejemplo `curl` para Postman o terminal:
 
 ```bash
-curl -sS -X POST "https://dominio.com/api/v1/render" \
+curl -X POST "https://dominio.com/api/v1/render" \
   -H "content-type: application/json" \
   -H "x-api-key: $PDFME_API_KEY" \
   -d '{
     "templateCode": "certificado_nutricion_a9d8a3d7",
     "input": {
-      "nombre_completo": "María Pérez Ramos",
+      "nombre_completo": "Maria Perez Ramos",
       "tipo_documento": "DNI",
       "nro_documento": "11223344",
-      "horas": "64"
+      "horas": "64",
+      "fecha_x_fecha_y": "22 de septiembre al 22 de septiembre del 2024",
+      "qr_alumno": "http://bd.practissac.com/student/CD8b5EB45412"
     }
   }' \
   --output certificado.pdf
 ```
 
-Estado actual del backend:
+Respuesta exitosa:
 
-| Endpoint | Autenticación | Implementación |
-| --- | --- | --- |
-| `GET /api/v1/templates` | Activa | Lista catálogo. |
-| `POST /api/v1/render` | Activa | Genera el PDF usando la versión actual de la plantilla. |
+| Header | Valor |
+| --- | --- |
+| `content-type` | `application/pdf` |
+| `content-disposition` | `attachment; filename="certificado_nutricion_a9d8a3d7-v3.pdf"` |
+| `x-template-code` | Código de la plantilla renderizada. |
+| `x-template-version` | Versión usada para generar el PDF. |
 
 ## Cliente TypeScript
 
 ```ts
-type PdfServerTemplate = {
-  code: string;
-  name: string;
-  status: string;
-  versionNumber: number;
-  pageFormat: string;
-  pageOrientation: 'PORTRAIT' | 'LANDSCAPE';
-};
-
-type RenderInput = Record<string, string | number | boolean | null>;
+type TemplateInput = Record<string, string | number | boolean | null>;
 
 class PdfServerClient {
   constructor(
@@ -110,21 +157,17 @@ class PdfServerClient {
     private readonly apiKey: string,
   ) {}
 
-  async listTemplates(): Promise<PdfServerTemplate[]> {
-    const response = await fetch(`${this.baseUrl}/v1/templates`, {
+  async getTemplateInputs(templateCode: string) {
+    const response = await fetch(`${this.baseUrl}/v1/templates/${templateCode}/inputs`, {
       headers: { 'x-api-key': this.apiKey },
     });
 
     const payload = await response.json();
-
-    if (!response.ok) {
-      throw new Error(payload.message ?? `PDF Server respondió ${response.status}`);
-    }
-
-    return payload.data;
+    if (!response.ok) throw new Error(payload.message ?? `PDF Server respondió ${response.status}`);
+    return payload;
   }
 
-  async render(templateCode: string, input: RenderInput): Promise<ArrayBuffer> {
+  async render(templateCode: string, input: TemplateInput): Promise<ArrayBuffer> {
     const response = await fetch(`${this.baseUrl}/v1/render`, {
       method: 'POST',
       headers: {
@@ -144,23 +187,10 @@ class PdfServerClient {
 }
 ```
 
-## Patrón backend recomendado
+## Endpoints disponibles
 
-| Paso | Acción |
-| --- | --- |
-| 1 | Guardar `PDFME_API_URL` y `PDFME_API_KEY` como variables de entorno. |
-| 2 | Consultar el catálogo durante configuración o sincronización. |
-| 3 | Guardar el `templateCode` seleccionado en el sistema consumidor. |
-| 4 | Construir `input` desde datos propios ya validados. |
-| 5 | Llamar a render desde backend, nunca desde JavaScript público. |
-| 6 | Registrar status HTTP, `templateCode` y correlación interna del request. |
-
-## Validación previa
-
-| Validación | Motivo |
-| --- | --- |
-| `templateCode` existe en catálogo. | Evita errores por códigos antiguos o mal copiados. |
-| `input` contiene variables requeridas. | Evita documentos incompletos. |
-| Fechas ya están localizadas. | Mantiene consistencia visual y legal. |
-| Números se envían como texto si deben imprimirse. | Evita separadores o decimales inesperados. |
-| Nombres largos fueron probados. | Reduce cortes visuales en certificados. |
+| Endpoint | Método | Respuesta |
+| --- | --- | --- |
+| `/api/v1/templates` | `GET` | Catálogo de plantillas. |
+| `/api/v1/templates/:code/inputs` | `GET` | Variables y objetos cambiables. |
+| `/api/v1/render` | `POST` | PDF binario o error JSON. |

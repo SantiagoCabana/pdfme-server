@@ -7,6 +7,7 @@ import { createTemplate, createTemplateVersion, deleteTemplate, duplicateTemplat
 import { requirePermission } from '../middleware/session-auth.js';
 import { prisma } from '../prisma.js';
 import { logAuditEvent, getSpanishRole } from '../services/audit.service.js';
+import { inspectTemplateInputs } from '../services/render.service.js';
 
 export const templatesRouter = Router();
 
@@ -293,4 +294,24 @@ templatesRouter.get('/v1/templates', async (request, response) => {
   }
 
   response.json({ data: await listTemplateCatalog() });
+});
+
+templatesRouter.get('/v1/templates/:code/inputs', async (request, response) => {
+  const credential = await authenticateApiKey(String(request.header('x-api-key') ?? ''), {
+    origin: request.header('origin'),
+    ip: request.ip,
+  });
+
+  if (!credential) {
+    response.status(401).json({ message: 'API key invalida.' });
+    return;
+  }
+
+  const result = await inspectTemplateInputs(request.params.code);
+  if (!result.ok) {
+    response.status(result.status).json({ message: result.message });
+    return;
+  }
+
+  response.json({ template: result.template, inputs: result.inputs, conventions: result.conventions });
 });
