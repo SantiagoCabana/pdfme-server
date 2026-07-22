@@ -2,6 +2,20 @@
 
 Esta página describe cómo un sistema externo consulta plantillas, descubre su contrato de entradas y genera documentos. Incluye la correspondencia entre cada capacidad configurada en el editor y el valor que debe enviarse en `input`.
 
+## Antes de integrar
+
+> La API entrega valores. La plantilla define si esos valores aparecen como texto, Markdown, enlace, QR, imagen, fecha u otro componente.
+
+`input` no es una descripción visual del documento. Cada propiedad debe contener únicamente el valor que espera el componente asociado.
+
+```text
+API:       "codigo_alumno": "STU-000123"
+Plantilla: [{codigo_alumno}](https://portal.example.com/students/{codigo_alumno})
+Resultado: texto STU-000123 con un enlace clicable
+```
+
+No envíes una URL completa, Markdown o un objeto especial en `codigo_alumno` si la plantilla ya construye el enlace. Para saber qué enviar, revisa la plantilla y consulta `/api/v1/templates/:code/inputs`.
+
 ## Base URL
 
 Todos los endpoints externos usan el prefijo `/api/v1`.
@@ -9,17 +23,17 @@ Todos los endpoints externos usan el prefijo `/api/v1`.
 | Entorno | Base de la API | Endpoint de render |
 | --- | --- | --- |
 | Backend local directo | `http://localhost:4000/api` | `http://localhost:4000/api/v1/render` |
-| Aplicación bajo un dominio | `https://dominio.com/api` | `https://dominio.com/api/v1/render` |
-| Producción de ejemplo | `https://pdfme.practis.pe/api` | `https://pdfme.practis.pe/api/v1/render` |
+| Aplicación bajo un dominio | `https://pdf.example.com/api` | `https://pdf.example.com/api/v1/render` |
+| Producción de ejemplo | `https://pdf.example.com/api` | `https://pdf.example.com/api/v1/render` |
 
-La base debe contener `/api` una sola vez. Si configuras `https://dominio.com/api`, no construyas rutas como `/api/api/v1/render`.
+La base debe contener `/api` una sola vez. Si configuras `https://pdf.example.com/api`, no construyas rutas como `/api/api/v1/render`.
 
 ## Autenticación
 
 Todos los endpoints `/api/v1/*` requieren:
 
 ```http
-x-api-key: pk_live_xxxxxxxxxxxxxxxxx
+x-api-key: YOUR_API_KEY
 ```
 
 La API key se crea en **Claves API** por un usuario con permiso `api_keys.manage`. Guarda la `rawKey` en el backend consumidor o en un gestor de secretos; no la expongas en el navegador.
@@ -48,7 +62,7 @@ x-api-key: API_KEY
 ```
 
 ```bash
-curl -sS "https://dominio.com/api/v1/templates" \
+curl -sS "https://pdf.example.com/api/v1/templates" \
   -H "x-api-key: $PDFME_API_KEY"
 ```
 
@@ -111,7 +125,7 @@ x-api-key: API_KEY
 ```
 
 ```bash
-curl -sS "https://dominio.com/api/v1/templates/nutricion/inputs" \
+curl -sS "https://pdf.example.com/api/v1/templates/nutricion/inputs" \
   -H "x-api-key: $PDFME_API_KEY"
 ```
 
@@ -152,20 +166,35 @@ Respuesta:
 
 Para construir `input`, usa únicamente cada `key`. `schemaNames` ayuda a ubicar elementos dentro del editor, pero no es necesario para una integración normal.
 
-## Correspondencia entre plantilla e input
+## Tipos de entrada
 
-| Capacidad en la plantilla | Definición | Valor en `input` |
-| --- | --- | --- |
-| Texto simple | `{nombre_completo}` | `"nombre_completo": "Juan Pérez"` |
-| Varias variables | `{tipo_documento}: {nro_documento}` | Enviar ambas claves. |
-| Texto fijo en negrita | `**{nombre_curso}**` en modo Markdown | `"nombre_curso": "Nutrición"` |
-| Enlace con código | `[{codigo}](https://dominio/student/{codigo})` | `"codigo": "3541397b0026"` |
-| Enlace completo | `[Abrir ficha]({url_ficha})` | `"url_ficha": "https://..."` |
-| QR | Nombre `#qr_alumno` | `"qr_alumno": "https://..."` |
-| Imagen | Nombre `#logo` | `"logo": "data:image/png;base64,..."` |
-| Código 128 | Nombre `#codigo_certificado` | `"codigo_certificado": "CERT-001"` |
-| Fecha | Nombre `#fecha_emision` | `"fecha_emision": "2026-07-22"` |
-| Fecha redactada | `{fecha_emision_texto}` | `"fecha_emision_texto": "22 de julio de 2026"` |
+La clave debe coincidir exactamente con la variable u objeto detectado. El valor requerido depende del componente de la plantilla.
+
+| Clave | Tipo en la plantilla | Valor que envía la API | Ejemplo |
+| --- | --- | --- | --- |
+| `nombre_completo` | Texto simple o variable Markdown | Texto sin instrucciones visuales. | `"JUAN PÉREZ"` |
+| `nro_documento` | Texto | Texto o número convertido a texto. | `"12345678"` |
+| `fecha_emision_texto` | Texto | Fecha ya redactada. | `"22 de julio de 2026"` |
+| `horas` | Texto | Número convertido a texto. | `"16"` |
+| `codigo_alumno` | Variable dentro de enlace Markdown | Solo el código requerido por la expresión. | `"STU-000123"` |
+| `url_ficha` | Variable usada como destino completo | URL completa. | `"https://portal.example.com/students/STU-000123"` |
+| `qr_alumno` | Objeto `qrcode` | Contenido final que debe codificar el QR. | `"https://portal.example.com/verify/STU-000123"` |
+| `logo` | Objeto `image` | Data URI o URL HTTPS accesible por el backend. | `"data:image/png;base64,..."` |
+| `codigo_certificado` | Objeto `code128` | Texto que debe codificar la barra. | `"CERT-2026-0001"` |
+| `fecha_emision` | Objeto `date` | Fecha en el formato acordado. | `"2026-07-22"` |
+
+### Mismo dato, contratos diferentes
+
+Este payload es válido cuando la plantilla muestra un código enlazado y también contiene un QR:
+
+```json
+{
+  "codigo_alumno": "STU-000123",
+  "qr_alumno": "https://portal.example.com/verify/STU-000123"
+}
+```
+
+`codigo_alumno` completa una variable dentro de una expresión Markdown. `qr_alumno` alimenta un componente QR y por eso recibe el contenido final que será codificado. PDF Server no construye uno a partir del otro.
 
 ## Texto simple por API
 
@@ -223,14 +252,14 @@ Los asteriscos enviados como parte del valor se imprimen; no convierten ese frag
 Plantilla:
 
 ```text
-[{codigo_qr_alumno}](https://bd.practissac.com/student/{codigo_qr_alumno})
+[{codigo_alumno}](https://portal.example.com/students/{codigo_alumno})
 ```
 
 Input:
 
 ```json
 {
-  "codigo_qr_alumno": "3541397b0026"
+  "codigo_alumno": "STU-000123"
 }
 ```
 
@@ -238,9 +267,31 @@ Resultado:
 
 | Texto visible | Destino clicable |
 | --- | --- |
-| `3541397b0026` | `https://bd.practissac.com/student/3541397b0026` |
+| `STU-000123` | `https://portal.example.com/students/STU-000123` |
 
 Cuando una variable está incrustada dentro de una URL mayor, PDF Server codifica el segmento para evitar caracteres inválidos. Si la URL completa llega en una sola variable, usa `[Abrir]({url_ficha})`.
+
+### Errores frecuentes con enlaces
+
+Si la plantilla ya contiene `https://portal.example.com/students/`, esto es incorrecto:
+
+```json
+{
+  "codigo_alumno": "https://portal.example.com/students/STU-000123"
+}
+```
+
+La URL completa se usaría como si fuera el código y el destino quedaría duplicado o codificado dentro de la ruta.
+
+También es incorrecto enviar una estructura inventada:
+
+```json
+{
+  "codigo_alumno": "[[\"STU-000123\",\"https://portal.example.com/students/STU-000123\"]]"
+}
+```
+
+Los valores de variables se tratan como texto literal. La API no interpreta arreglos serializados, HTML ni Markdown enviado dentro del valor.
 
 ## QR repetido en varias páginas
 
@@ -256,7 +307,7 @@ Input único:
 
 ```json
 {
-  "qr_alumno": "http://bd.practissac.com/student/CD8b5EB45412"
+  "qr_alumno": "https://portal.example.com/verify/CERT-2026-0001"
 }
 ```
 
@@ -295,10 +346,17 @@ Los tres primeros valores alimentan objetos `date`, `dateTime` y `time`. El últ
 | Variable con `null` | Se considera faltante. |
 | Variable con cadena vacía | Se considera faltante. |
 | Falta un objeto `#...` | El objeto conserva su contenido predeterminado o queda según la plantilla. |
-| Se envía una clave desconocida | No modifica la plantilla. |
+| Se envía una clave que no coincide con variable, objeto ni contenedor | No modifica la plantilla. |
 | Se repite una clave en varias páginas | El mismo valor se aplica en todas. |
 
 Todas las variables `{...}` detectadas se validan como requeridas. Consulta `/inputs` antes de renderizar y no envíes valores vacíos.
+
+La validación usa el comportamiento real del servidor:
+
+- Una variable ausente, `null` o `""` produce `400`.
+- Una variable adicional no usada se ignora.
+- Un objeto dinámico ausente no forma parte de `missingVariables`.
+- Una misma clave se aplica en todos los elementos y páginas donde fue declarada.
 
 ## Reemplazo directo por nombre interno
 
@@ -326,8 +384,8 @@ Request completo:
     "nro_documento": "12345678",
     "nombre_curso": "Diplomado Internacional en Nutrición",
     "horas": "64",
-    "codigo_qr_alumno": "3541397b0026",
-    "qr_alumno": "http://bd.practissac.com/student/CD8b5EB45412",
+    "codigo_alumno": "STU-000123",
+    "qr_alumno": "https://portal.example.com/verify/STU-000123",
     "fecha_emision_texto": "22 de julio de 2026"
   }
 }
@@ -355,7 +413,7 @@ X-Template-Version: 3
 ## curl y Postman
 
 ```bash
-curl -X POST "https://dominio.com/api/v1/render" \
+curl -X POST "https://pdf.example.com/api/v1/render" \
   -H "x-api-key: $PDFME_API_KEY" \
   -H "Content-Type: application/json" \
   -H "Accept: application/pdf" \
@@ -365,7 +423,8 @@ curl -X POST "https://dominio.com/api/v1/render" \
       "nombre_completo": "Juan Perez Ramos",
       "tipo_documento": "DNI",
       "nro_documento": "12345678",
-      "qr_alumno": "http://bd.practissac.com/student/CD8b5EB45412"
+      "codigo_alumno": "STU-000123",
+      "qr_alumno": "https://portal.example.com/verify/STU-000123"
     }
   }' \
   --output certificado.pdf
@@ -378,10 +437,16 @@ En Postman selecciona **Send and Download**. La respuesta no debe visualizarse c
 ```js
 import fs from 'node:fs';
 
-const response = await fetch('https://dominio.com/api/v1/render', {
+const apiKey = process.env.PDFME_API_KEY;
+
+if (!apiKey) {
+  throw new Error('PDFME_API_KEY no está configurada');
+}
+
+const response = await fetch('https://pdf.example.com/api/v1/render', {
   method: 'POST',
   headers: {
-    'x-api-key': process.env.PDFME_API_KEY,
+    'x-api-key': apiKey,
     'Content-Type': 'application/json',
     'Accept': 'application/pdf',
   },
@@ -391,7 +456,8 @@ const response = await fetch('https://dominio.com/api/v1/render', {
       nombre_completo: 'Juan Perez Ramos',
       tipo_documento: 'DNI',
       nro_documento: '12345678',
-      qr_alumno: 'http://bd.practissac.com/student/CD8b5EB45412',
+      codigo_alumno: 'STU-000123',
+      qr_alumno: 'https://portal.example.com/verify/STU-000123',
     },
   }),
 });
@@ -419,8 +485,20 @@ Inject o Webhook
 Function node:
 
 ```js
+const apiKey = env.get('PDFME_API_KEY');
+const apiBaseUrl = env.get('PDFME_API_URL') || 'https://pdf.example.com/api';
+
+if (!apiKey) {
+  node.error('PDFME_API_KEY no está configurada', msg);
+  return null;
+}
+
+const source = msg.payload || {};
+
+msg.method = 'POST';
+msg.url = `${apiBaseUrl}/v1/render`;
 msg.headers = {
-  'x-api-key': env.get('PDFME_API_KEY'),
+  'x-api-key': apiKey,
   'Content-Type': 'application/json',
   'Accept': 'application/pdf'
 };
@@ -428,17 +506,57 @@ msg.headers = {
 msg.payload = {
   templateCode: 'nutricion',
   input: {
-    nombre_completo: msg.payload.nombre_completo,
-    tipo_documento: msg.payload.tipo_documento,
-    nro_documento: msg.payload.nro_documento,
-    qr_alumno: msg.payload.qr_alumno
+    nombre_completo: source.nombre_completo,
+    tipo_documento: source.tipo_documento,
+    nro_documento: source.nro_documento,
+    codigo_alumno: source.codigo_alumno,
+    qr_alumno: source.qr_alumno
   }
 };
 
 return msg;
 ```
 
-Configura el nodo HTTP Request para retornar un buffer binario. No conviertas el PDF a texto; usa base64 solo si el siguiente sistema lo exige expresamente.
+Configura el nodo **HTTP Request** así:
+
+| Opción | Valor |
+| --- | --- |
+| Método | Usar `msg.method` (`POST`). |
+| URL | Usar `msg.url`. |
+| Payload | JSON desde `msg.payload`. |
+| Return | Binary buffer. |
+
+Después del nodo HTTP, una respuesta correcta cumple:
+
+```js
+msg.statusCode === 200;
+Buffer.isBuffer(msg.payload) === true;
+msg.headers['content-type'].includes('application/pdf');
+```
+
+No ejecutes `JSON.parse(msg.payload)` cuando el estado sea `200`: `msg.payload` es el archivo PDF binario. Solo los errores se procesan como JSON.
+
+Nunca incluyas una API key real como valor alternativo dentro del Function node. Las exportaciones de Node-RED, capturas y repositorios pueden exponerla. Si una clave fue publicada, revócala y genera otra.
+
+## Responsabilidad después del render
+
+PDF Server responde únicamente con el documento:
+
+```text
+POST /api/v1/render -> HTTP 200 -> Buffer PDF
+```
+
+Estas acciones pertenecen al sistema consumidor:
+
+| Acción posterior | Responsable |
+| --- | --- |
+| Elegir el nombre definitivo | Integración. |
+| Guardar en disco o nube | Integración. |
+| Subir a Google Drive | Integración. |
+| Enviar por correo | Integración. |
+| Guardar una URL o ID externo | Integración. |
+
+PDF Server no devuelve propiedades propias de un flujo como `msg.body_quest.webpdf.current_doc`. Si tu aplicación necesita esa estructura, debe crearla después de recibir y almacenar el PDF.
 
 ## Google Drive
 

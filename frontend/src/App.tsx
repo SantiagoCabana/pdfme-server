@@ -44,7 +44,7 @@ function withRouteLoader(element: ReactNode) {
 
 export default function App() {
   const [user, setUser] = useState<SessionUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !window.location.pathname.startsWith('/documentation'));
   const [reloadDataToken, setReloadDataToken] = useState(0);
   const [headerAction, setHeaderAction] = useState<HeaderAction>(null);
   const [headerActionOpen, setHeaderActionOpen] = useState(false);

@@ -2,6 +2,21 @@
 
 Esta página explica cómo construir el contenido de una plantilla: qué formato de texto elegir, cómo declarar variables, cómo crear enlaces y cómo exponer QR, imágenes, códigos o fechas para que luego puedan cambiarse por API.
 
+## Regla fundamental
+
+> La API entrega valores. La plantilla define su presentación.
+
+La plantilla decide la posición, fuente, formato y tipo de componente. El consumidor solo completa las claves declaradas en `input`.
+
+| La API envía | La plantilla determina |
+| --- | --- |
+| `"nombre_completo": "JUAN PÉREZ"` | Dónde aparece, fuente, tamaño y color. |
+| `"codigo_alumno": "STU-000123"` | Si se imprime como texto o se usa dentro de un enlace. |
+| `"qr_alumno": "https://portal.example.com/verify/STU-000123"` | Tamaño, posición y apariencia del QR. |
+| `"logo": "https://assets.example.com/logo.png"` | Tamaño y posición de la imagen. |
+
+No diseñes el documento desde el payload. El payload no debe contener HTML, estructuras inventadas ni instrucciones visuales.
+
 ## Modelo de una plantilla
 
 Una plantilla combina tres niveles distintos. Mantenerlos separados evita errores al integrar:
@@ -13,6 +28,26 @@ Una plantilla combina tres niveles distintos. Mantenerlos separados evita errore
 | Objeto cambiable | `#qr_alumno#1` | Declara un elemento completo que puede recibir contenido desde la API. |
 
 El nombre del contenedor organiza internamente a pdfme. Para una integración normal importan las variables entre llaves y los objetos cuyo nombre comienza con `#`.
+
+## Contenido fijo, variable y composición
+
+Una expresión de plantilla puede mezclar partes fijas con variables:
+
+| Parte | Ejemplo | Quién la proporciona |
+| --- | --- | --- |
+| Contenido fijo | `https://portal.example.com/students/` | La plantilla. |
+| Variable | `{codigo_alumno}` | La API mediante `input.codigo_alumno`. |
+| Composición | `https://portal.example.com/students/{codigo_alumno}` | La plantilla durante el render. |
+
+Ejemplo completo:
+
+```text
+Plantilla: [{codigo_alumno}](https://portal.example.com/students/{codigo_alumno})
+Input:     "codigo_alumno": "STU-000123"
+Resultado: texto STU-000123 con destino https://portal.example.com/students/STU-000123
+```
+
+Revisa primero la expresión de la plantilla. Después envía únicamente el dato que esa expresión necesita.
 
 ## Texto simple o Markdown
 
@@ -56,7 +91,7 @@ Activa **Markdown** cuando necesites estilos dentro de una misma caja. PDF Serve
 | Negrita y cursiva | `***texto***` |
 | Tachado | `~~texto~~` |
 | Código | `` `texto` `` |
-| Enlace | `[texto](https://dominio.com)` |
+| Enlace | `[texto](https://portal.example.com)` |
 
 Ejemplo:
 
@@ -145,7 +180,7 @@ Los valores recibidos para una variable se insertan como texto literal. Si el va
 En modo Markdown, usa la sintaxis estándar:
 
 ```text
-[Consultar certificado](https://bd.practissac.com)
+[Consultar certificado](https://portal.example.com)
 ```
 
 El PDF mostrará el texto y conservará el destino clicable. Para un color concreto, configura `fontColor` en la caja.
@@ -155,16 +190,34 @@ El PDF mostrará el texto y conservará el destino clicable. Para un color concr
 Puedes mostrar un código y usarlo también dentro de la URL:
 
 ```text
-[{codigo_qr_alumno}](https://bd.practissac.com/student/{codigo_qr_alumno})
+[{codigo_alumno}](https://portal.example.com/students/{codigo_alumno})
 ```
 
-Con el valor `3541397b0026`, el PDF muestra `3541397b0026` y abre:
+Payload correcto:
+
+```json
+{
+  "codigo_alumno": "STU-000123"
+}
+```
+
+El PDF muestra `STU-000123` y abre:
 
 ```text
-https://bd.practissac.com/student/3541397b0026
+https://portal.example.com/students/STU-000123
 ```
 
 Cuando toda la caja es un único enlace y conserva el color negro predeterminado, PDF Server aplica azul `#1677ff`. pdfme agrega el subrayado y la anotación clicable. Si el enlace está mezclado con más texto, define el color deseado en el editor o utiliza una caja independiente.
+
+No envíes la URL completa si la plantilla ya contiene el dominio y la ruta:
+
+```json
+{
+  "codigo_alumno": "https://portal.example.com/students/STU-000123"
+}
+```
+
+Ese valor se trataría como el código y produciría texto o un destino incorrecto. Tampoco envíes arreglos serializados, HTML o una expresión Markdown completa dentro de la variable.
 
 ## Enlace recibido completo
 
@@ -174,7 +227,7 @@ También puedes usar una variable cuyo valor ya sea la URL completa:
 [Abrir ficha]({url_ficha})
 ```
 
-La integración enviará, por ejemplo, `https://bd.practissac.com/student/3541397b0026` en `url_ficha`.
+La integración enviará, por ejemplo, `https://portal.example.com/students/STU-000123` en `url_ficha`.
 
 ## Objetos estáticos y cambiables
 
@@ -222,10 +275,19 @@ Una URL remota exige que el backend pueda acceder al recurso durante el render. 
 El contenido del QR puede ser una URL, un identificador o cualquier texto válido:
 
 ```text
-https://bd.practissac.com/student/CD8b5EB45412
+https://portal.example.com/verify/CERT-2026-0001
 ```
 
 El nombre `#qr_alumno` declara que el contenido es reemplazable. No agregues `{}` alrededor del valor de un objeto QR.
+
+Un enlace de texto y un QR son componentes diferentes:
+
+| Clave | Tipo | Valor esperado |
+| --- | --- | --- |
+| `codigo_alumno` | Variable en Markdown | `STU-000123` |
+| `qr_alumno` | Objeto `qrcode` | `https://portal.example.com/verify/STU-000123` |
+
+PDF Server no deriva automáticamente `qr_alumno` desde `codigo_alumno`. Si la plantilla utiliza ambos, la integración debe enviar ambas claves.
 
 ## Fechas y horas
 

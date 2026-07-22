@@ -21,18 +21,18 @@ export const documentationArticles: DocumentationArticle[] = [
     content: gettingStartedContent,
   },
   {
-    slug: 'authentication',
-    title: 'Autenticación',
-    description: 'API keys, rotación, restricciones de origen y diagnóstico de acceso.',
-    category: 'Integración',
-    content: authenticationContent,
-  },
-  {
     slug: 'templates',
     title: 'Plantillas y contenido',
     description: 'Texto simple, Markdown, variables, enlaces y objetos cambiables.',
     category: 'Aplicación',
     content: templatesContent,
+  },
+  {
+    slug: 'authentication',
+    title: 'Autenticación',
+    description: 'API keys, rotación, restricciones de origen y diagnóstico de acceso.',
+    category: 'Integración',
+    content: authenticationContent,
   },
   {
     slug: 'api',

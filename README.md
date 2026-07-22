@@ -15,7 +15,7 @@
 
 `pdfme-server` es un monorepo con frontend y backend en un solo repositorio. La app permite administrar plantillas PDF, controlar usuarios/permisos, crear API keys y exponer endpoints para que sistemas externos consulten plantillas y soliciten generación de documentos.
 
-La documentación funcional para integradores vive dentro del frontend autenticado en:
+La documentación funcional para integradores es pública y vive dentro del frontend en:
 
 ```txt
 /documentation/{ruta}

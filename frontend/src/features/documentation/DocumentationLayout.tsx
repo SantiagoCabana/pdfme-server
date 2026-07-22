@@ -4,7 +4,6 @@ import {
   AppBar,
   Avatar,
   Box,
-  Button,
   Divider,
   Drawer,
   IconButton,
@@ -13,8 +12,6 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Stack,
-  Switch,
   TextField,
   Toolbar,
   Tooltip,
@@ -27,11 +24,9 @@ import {
   ArrowRightOutlined,
   DesktopOutlined,
   GithubOutlined,
-  LinkOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MoonOutlined,
-  ReloadOutlined,
   SearchOutlined,
   SunOutlined,
 } from '@ant-design/icons';
@@ -49,15 +44,6 @@ type DocumentationLayoutProps = {
   user: SessionUser | null;
   mode: ThemeMode;
   themePreference: ThemePreference;
-  isPublicShare?: boolean;
-  shareToken?: string;
-  publicShare?: {
-    enabled: boolean;
-    publicId: string;
-    createdAt: string;
-    updatedAt: string;
-  } | null;
-  shareLoading?: boolean;
   activeArticle: DocumentationArticle;
   filteredArticles: DocumentationArticle[];
   previousArticle?: DocumentationArticle;
@@ -65,9 +51,6 @@ type DocumentationLayoutProps = {
   query: string;
   onQueryChange: (query: string) => void;
   onToggleMode: () => void;
-  onCopyShareLink?: () => void;
-  onTogglePublicShare?: (enabled: boolean) => void;
-  onResetPublicShare?: () => void;
   children: ReactNode;
 };
 
@@ -75,10 +58,6 @@ export function DocumentationLayout({
   user,
   mode,
   themePreference,
-  isPublicShare = false,
-  shareToken = '',
-  publicShare = null,
-  shareLoading = false,
   activeArticle,
   filteredArticles,
   previousArticle,
@@ -86,9 +65,6 @@ export function DocumentationLayout({
   query,
   onQueryChange,
   onToggleMode,
-  onCopyShareLink,
-  onTogglePublicShare,
-  onResetPublicShare,
   children,
 }: DocumentationLayoutProps) {
   const theme = useTheme();
@@ -110,8 +86,7 @@ export function DocumentationLayout({
     ? `Sistema (${mode === 'dark' ? 'oscuro' : 'claro'})`
     : themePreference === 'dark' ? 'Oscuro' : 'Claro';
   const themeIcon = themePreference === 'system' ? <DesktopOutlined /> : themePreference === 'dark' ? <MoonOutlined /> : <SunOutlined />;
-  const docsBasePath = isPublicShare ? `/documentation/share/${shareToken}` : '/documentation';
-  const getArticlePath = (slug: string) => `${docsBasePath}/${slug}`;
+  const getArticlePath = (slug: string) => `/documentation/${slug}`;
   const returnButtonSx = {
     borderRadius: 1.25,
     minHeight: 38,
@@ -246,22 +221,20 @@ export function DocumentationLayout({
       </AppScrollbar>
       <Divider />
       <Box sx={{ p: collapsed ? 1 : 1.5, transition: sidebarTransition }}>
-        {!isPublicShare ? (
-          <Tooltip disableHoverListener={!collapsed} placement="right" title="Volver a la app">
-            <ListItemButton
-              component={RouterLink}
-              target="_self"
-              to="/templates"
-              sx={{ ...returnButtonSx, mb: 1 }}
-              aria-label="Volver a la app"
-            >
-              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 34, width: 34, color: 'inherit', fontSize: 16, justifyContent: 'center', mx: collapsed ? 'auto' : 0 }}><ArrowLeftOutlined /></ListItemIcon>
-              {!collapsed ? (
-                <ListItemText primary={<Typography variant="h6" color="inherit" noWrap>Volver a la app</Typography>} sx={{ m: 0, minWidth: 0, '& .MuiTypography-root': { color: 'inherit', fontWeight: 400 } }} />
-              ) : null}
-            </ListItemButton>
-          </Tooltip>
-        ) : null}
+        <Tooltip disableHoverListener={!collapsed} placement="right" title={user ? 'Volver a la app' : 'Iniciar sesión'}>
+          <ListItemButton
+            component={RouterLink}
+            target="_self"
+            to={user ? '/templates' : '/login'}
+            sx={{ ...returnButtonSx, mb: 1 }}
+            aria-label={user ? 'Volver a la app' : 'Iniciar sesión'}
+          >
+            <ListItemIcon sx={{ minWidth: collapsed ? 0 : 34, width: 34, color: 'inherit', fontSize: 16, justifyContent: 'center', mx: collapsed ? 'auto' : 0 }}><ArrowLeftOutlined /></ListItemIcon>
+            {!collapsed ? (
+              <ListItemText primary={<Typography variant="h6" color="inherit" noWrap>{user ? 'Volver a la app' : 'Iniciar sesión'}</Typography>} sx={{ m: 0, minWidth: 0, '& .MuiTypography-root': { color: 'inherit', fontWeight: 400 } }} />
+            ) : null}
+          </ListItemButton>
+        </Tooltip>
         <Tooltip disableHoverListener={!collapsed} placement="right" title="Repositorio">
           <ListItemButton
             component="a"
@@ -312,8 +285,7 @@ export function DocumentationLayout({
             </Tooltip>
           </Box>
         ) : (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 42, px: 0.5 }}>
-            <Typography variant="caption" color="text.secondary" noWrap>Documentación pública</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minHeight: 42, px: 0.5 }}>
             <Tooltip title={`Modo ${themeLabel}`}>
               <IconButton onClick={onToggleMode} color="secondary" size="small">{themeIcon}</IconButton>
             </Tooltip>
@@ -339,36 +311,6 @@ export function DocumentationLayout({
           <Typography className="docs-headerTitle" noWrap>{activeArticle.title}</Typography>
           <Box sx={{ flexGrow: 1 }} />
           <Box className="docs-headerActions">
-            {publicShare && !isPublicShare ? (
-              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', display: { xs: 'none', md: 'flex' } }}>
-                <Tooltip title="Cambiar enlace publico">
-                  <span>
-                    <IconButton disabled={shareLoading} onClick={onResetPublicShare} size="small" color="secondary" aria-label="Cambiar enlace publico">
-                      <ReloadOutlined />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Button
-                  onClick={onCopyShareLink}
-                  disabled={shareLoading}
-                  size="small"
-                  startIcon={<LinkOutlined />}
-                  variant="outlined"
-                  sx={{ whiteSpace: 'nowrap' }}
-                >
-                  Copiar
-                </Button>
-                <Tooltip title={publicShare.enabled ? 'Ocultar enlace publico' : 'Activar enlace publico'}>
-                  <Switch
-                    checked={publicShare.enabled}
-                    disabled={shareLoading}
-                    onChange={(event) => onTogglePublicShare?.(event.target.checked)}
-                    size="small"
-                    slotProps={{ input: { 'aria-label': 'Activar documentacion publica' } }}
-                  />
-                </Tooltip>
-              </Stack>
-            ) : null}
             <TextField
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
