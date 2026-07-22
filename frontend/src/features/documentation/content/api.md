@@ -240,6 +240,7 @@ Para armar el request solo usa `key`. `schemaNames` existe para soporte tecnico 
 | QR | `#qr_alumno` | `"qr_alumno": "https://..."` |
 | Imagen | `#logo` | `"logo": "data:image/png;base64,..."` |
 | Fecha | `#fecha_emision` | `"fecha_emision": "2026-07-21"` |
+| Texto enlazado | `[{codigo_qr_alumno}](https://bd.practissac.com/student/{codigo_qr_alumno})` | `"codigo_qr_alumno": "3541397b0026"` |
 
 Convencion recomendada:
 

@@ -170,6 +170,45 @@ function interpolate(value: unknown, input: JsonRecord) {
 
   return value.replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key: string) => stringifyInputValue(input[key]));
 }
+function interpolateMarkdownLinkHrefs(value: string, input: JsonRecord) {
+  return value.replace(/\]\(([^)]+)\)/g, (_match, href: string) => {
+    const normalizedHref = href.trim();
+    const interpolatedHref = normalizedHref.replace(/\{([a-zA-Z0-9_]+)\}/g, (placeholder, key: string) => {
+      const rawValue = stringifyInputValue(input[key]);
+      return normalizedHref === placeholder ? rawValue : encodeURIComponent(rawValue);
+    });
+
+    return `](${interpolatedHref})`;
+  });
+}
+
+function isSingleMarkdownLink(value: string) {
+  return /^\s*\[[\s\S]+\]\([^)]+\)\s*$/.test(value);
+}
+
+function prepareSchemaPagesForRender(schemaPages: JsonRecord[][], input: JsonRecord) {
+  return schemaPages.map((page) => page.map((schema) => {
+    if (schema.textFormat !== 'inline-markdown') return schema;
+
+    const preparedSchema = { ...schema };
+
+    if (typeof preparedSchema.text === 'string') {
+      const nextText = interpolateMarkdownLinkHrefs(preparedSchema.text, input);
+      if (nextText !== preparedSchema.text) preparedSchema.text = nextText;
+
+      if (isSingleMarkdownLink(nextText) && (!preparedSchema.fontColor || preparedSchema.fontColor === '#000000')) {
+        preparedSchema.fontColor = '#1677ff';
+      }
+    }
+
+    if (typeof preparedSchema.content === 'string') {
+      const nextContent = interpolateMarkdownLinkHrefs(preparedSchema.content, input);
+      if (nextContent !== preparedSchema.content) preparedSchema.content = nextContent;
+    }
+
+    return preparedSchema;
+  }));
+}
 
 function collectRequiredVariables(schemaPages: JsonRecord[][]) {
   const requiredVariables = new Set<string>();
@@ -313,7 +352,8 @@ export async function renderTemplatePdf(input: {
     };
   }
 
-  const pdfmeInput = buildPdfmeInput(schemaPages, input.values);
+  const preparedSchemaPages = prepareSchemaPagesForRender(schemaPages, input.values);
+  const pdfmeInput = buildPdfmeInput(preparedSchemaPages, input.values);
   const basePdf = isRecord(designerJson) && 'basePdf' in designerJson && designerJson.basePdf
     ? designerJson.basePdf
     : BLANK_PDF;
@@ -322,7 +362,7 @@ export async function renderTemplatePdf(input: {
   const pdf = await generate({
     template: {
       basePdf: basePdf as never,
-      schemas: schemaPages as never,
+      schemas: preparedSchemaPages as never,
     },
     inputs: [pdfmeInput],
     plugins,

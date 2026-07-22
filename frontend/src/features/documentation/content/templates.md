@@ -70,6 +70,28 @@ Payload:
 
 Si `{nombre_completo}` aparece en cinco hojas, se envia una sola vez. PDF Server aplica el mismo valor a todos los campos que usen esa variable.
 
+## Texto con enlace
+
+Para que una variable se muestre como texto clickeable, el campo debe usar `textFormat: inline-markdown` y el contenido debe escribirse como markdown link.
+
+Ejemplo para mostrar el codigo del alumno y abrir su ficha:
+
+```text
+[{codigo_qr_alumno}](https://bd.practissac.com/student/{codigo_qr_alumno})
+```
+
+Request:
+
+```json
+{
+  "input": {
+    "codigo_qr_alumno": "3541397b0026"
+  }
+}
+```
+
+Resultado esperado en el PDF: el texto `3541397b0026` se muestra como enlace subrayado y abre `https://bd.practissac.com/student/3541397b0026`.
+
 ## Objetos dinamicos
 
 Los objetos que no usan `{variable}` pueden declararse dinamicos iniciando el nombre del contenedor con `#`.
