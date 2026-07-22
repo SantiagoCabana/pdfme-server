@@ -285,7 +285,8 @@ export function DocumentationLayout({
             </Tooltip>
           </Box>
         ) : (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minHeight: 42, px: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 42, px: 0.5 }}>
+            <Typography variant="caption" color="text.secondary" noWrap>Documentación pública</Typography>
             <Tooltip title={`Modo ${themeLabel}`}>
               <IconButton onClick={onToggleMode} color="secondary" size="small">{themeIcon}</IconButton>
             </Tooltip>
