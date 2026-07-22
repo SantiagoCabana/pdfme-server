@@ -172,6 +172,9 @@ documentationRouter.get('/mcp/context', (_request, response) => {
         templateCode: 'Codigo estable de plantilla.',
         input: 'Objeto JSON con variables de texto y objetos dinamicos.',
         variables: 'Las variables se detectan por placeholders como {nombre_completo}. La misma clave se aplica en todas las paginas donde exista.',
+        textModes: 'plain imprime texto simple; inline-markdown admite negrita, cursiva, tachado, codigo y enlaces definidos en la plantilla.',
+        markdownValues: 'Los valores enviados para variables se insertan como texto literal. El formato Markdown debe definirse alrededor de la variable en la plantilla.',
+        dynamicLinks: 'Un enlace puede combinar variables en su etiqueta y destino. Ejemplo: [{codigo}](https://dominio/student/{codigo}).',
         dynamicObjects: 'Los objetos cuyo nombre empieza con # pueden actualizarse por API. Ejemplo: #qr_alumno#1 y #qr_alumno#2 usan input.qr_alumno.',
       },
       dynamicObjectTypes: ['image', 'qrcode', 'code128', 'date', 'dateTime', 'time'],
@@ -179,8 +182,8 @@ documentationRouter.get('/mcp/context', (_request, response) => {
     documentation: [
       { title: 'Vision general', url: '/documentation/getting-started' },
       { title: 'Autenticacion', url: '/documentation/authentication' },
-      { title: 'Catalogo y plantillas', url: '/documentation/templates' },
-      { title: 'Endpoints y ejemplos', url: '/documentation/api' },
+      { title: 'Plantillas y contenido', url: '/documentation/templates' },
+      { title: 'API e integracion', url: '/documentation/api' },
       { title: 'Errores y operacion', url: '/documentation/responses' },
     ],
   });

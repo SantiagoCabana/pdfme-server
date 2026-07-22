@@ -1,178 +1,297 @@
-# Catalogo y plantillas
+# Plantillas y contenido
 
-Una plantilla es el contrato visual y tecnico que usa PDF Server para generar un documento. El consumidor externo solo necesita conocer el `code` de la plantilla y las claves que acepta `input`.
+Esta página explica cómo construir el contenido de una plantilla: qué formato de texto elegir, cómo declarar variables, cómo crear enlaces y cómo exponer QR, imágenes, códigos o fechas para que luego puedan cambiarse por API.
 
-## Campos principales
+## Modelo de una plantilla
 
-| Campo | Para que sirve | Usarlo desde sistemas externos |
+Una plantilla combina tres niveles distintos. Mantenerlos separados evita errores al integrar:
+
+| Nivel | Ejemplo | Función |
 | --- | --- | --- |
-| `code` | Identificador publico de la plantilla. | Si, como `templateCode`. |
-| `name` | Nombre visible en la app. | Si, para mostrar al usuario. |
-| `status` | Estado operativo. | Si, para filtrar plantillas productivas. |
-| `versionNumber` | Version actual usada por render. | Si, para auditoria. |
-| `id` | Identificador interno. | No como contrato externo. |
-| `pageFormat` | Formato de pagina. | Opcional. |
-| `pageOrientation` | Orientacion. | Opcional. |
+| Contenedor | `d1_nombre_alumno` | Identifica un elemento dentro del editor. Debe ser único. |
+| Variable de texto | `{nombre_completo}` | Declara un valor reemplazable dentro de un texto. Puede repetirse en varias hojas. |
+| Objeto cambiable | `#qr_alumno#1` | Declara un elemento completo que puede recibir contenido desde la API. |
 
-## TemplateCode
+El nombre del contenedor organiza internamente a pdfme. Para una integración normal importan las variables entre llaves y los objetos cuyo nombre comienza con `#`.
 
-El request de render debe enviar el campo `code`.
+## Texto simple o Markdown
+
+Los campos `multiVariableText` permiten elegir el formato del contenido.
+
+| Modo | Valor técnico | Usarlo cuando |
+| --- | --- | --- |
+| Simple | `plain` | Todo el texto comparte fuente, peso, color y estilo. |
+| Markdown | `inline-markdown` | Una misma caja necesita negrita, cursiva, tachado, código o enlaces. |
+
+El modo cambia cómo se interpreta el contenido de la caja. No cambia la sintaxis de las variables: `{nombre_completo}` funciona en ambos modos.
+
+## Modo simple
+
+En modo simple, el contenido se imprime literalmente y conserva saltos de línea.
+
+```text
+Se certifica que {nombre_completo}
+completó el curso {nombre_curso}.
+```
+
+| Capacidad | Comportamiento |
+| --- | --- |
+| Variables | Sí, con `{clave}`. |
+| Saltos de línea | Sí. |
+| Alineación y espaciado | Se configuran en el panel del editor. |
+| Negrita parcial | No. Se aplica a toda la caja. |
+| Enlaces clicables | No. |
+| Símbolos `*`, `~` o `` ` `` | Se imprimen como texto normal. |
+
+Usa este modo para nombres, documentos, fechas, títulos y cualquier campo con un solo estilo visual.
+
+## Modo Markdown
+
+Activa **Markdown** cuando necesites estilos dentro de una misma caja. PDF Server admite Markdown en línea, no documentos Markdown completos.
+
+| Resultado | Sintaxis |
+| --- | --- |
+| Negrita | `**texto**` |
+| Cursiva | `*texto*` |
+| Negrita y cursiva | `***texto***` |
+| Tachado | `~~texto~~` |
+| Código | `` `texto` `` |
+| Enlace | `[texto](https://dominio.com)` |
+
+Ejemplo:
+
+```text
+En mérito por culminar el **{nombre_curso}** con una duración de **{horas} horas**.
+```
+
+La API debe enviar valores normales:
 
 ```json
 {
-  "templateCode": "nutricion",
-  "input": {}
+  "nombre_curso": "Diplomado Internacional en Nutrición",
+  "horas": "64"
 }
 ```
 
-No envies `id`, `name` ni un texto parecido. Si una plantilla se llama `Nutricion` pero su `code` es `nutricion_2026`, el valor correcto es `nutricion_2026`.
+El estilo está definido en la plantilla; el consumidor no necesita agregar los asteriscos.
 
-## Estados
+## Fuentes para Markdown
 
-| Estado | Descripcion | Render API |
+Cada estilo puede usar una variante de fuente distinta:
+
+| Variante | Propiedad | Ejemplo |
 | --- | --- | --- |
-| `DRAFT` | Plantilla en preparacion o pruebas. | Puede renderizar si tiene version actual valida. |
-| `ACTIVE` | Plantilla lista para uso operativo. | Puede renderizar. |
-| `ARCHIVED` | Plantilla retirada. | No renderiza; responde como no encontrada. |
+| Base | `fontName` | `Poppins 400` |
+| Negrita | `fontVariants.bold` | `Poppins 700` |
+| Cursiva | `fontVariants.italic` | `Poppins 400 Italic` |
+| Negrita cursiva | `fontVariants.boldItalic` | `Poppins 700 Italic` |
+| Código | `fontVariants.code` | `Roboto Mono 400` |
 
-Para integraciones productivas, publica y consume plantillas `ACTIVE`. Usa `DRAFT` solo para pruebas controladas.
+Si una variante no está cargada, `fontVariantFallback: synthetic` intenta simular el estilo. Para un resultado consistente, carga y selecciona las variantes reales usadas por la plantilla.
 
-## Version actual
+## Caracteres literales en Markdown
 
-El backend renderiza la version marcada como actual. La respuesta PDF incluye headers para auditarlo:
+Anteponles `\` cuando quieras imprimir caracteres de control sin aplicar formato.
 
-```http
-x-template-code: nutricion
-x-template-version: 3
+```text
+\**Este texto conserva los asteriscos\**
 ```
 
-Registra esos headers si necesitas demostrar que version genero cada documento.
+Se pueden escapar `\`, `*`, `~`, `` ` ``, `[`, `]`, `(` y `)`.
 
 ## Variables de texto
 
-Las variables de texto son placeholders escritos dentro del contenido:
+Una variable usa un nombre entre llaves:
 
 ```text
-Otorgado a {nombre_completo}, identificado con {tipo_documento}: {nro_documento}
+{nombre_completo}
 ```
 
-Payload:
+También puedes combinar varias dentro de la misma caja:
 
-```json
-{
-  "input": {
-    "nombre_completo": "Maria Perez Ramos",
-    "tipo_documento": "DNI",
-    "nro_documento": "11223344"
-  }
-}
+```text
+{tipo_documento}: {nro_documento}
 ```
 
-Si `{nombre_completo}` aparece en cinco hojas, se envia una sola vez. PDF Server aplica el mismo valor a todos los campos que usen esa variable.
+| Regla | Ejemplo correcto |
+| --- | --- |
+| Usa letras, números y guion bajo. | `{fecha_emision}` |
+| Mantén una convención estable. | `{nombre_completo}` |
+| Evita espacios y signos. | No usar `{nombre completo}`. |
+| Reutiliza la misma clave para el mismo dato. | `{nombre_completo}` en todas las hojas. |
 
-## Texto con enlace
+Si una variable aparece en cinco páginas, se declara igual en todas. El nombre del contenedor puede cambiar, pero la variable permanece igual.
 
-Para que una variable se muestre como texto clickeable, el campo debe usar `textFormat: inline-markdown` y el contenido debe escribirse como markdown link.
+## Variables dentro de Markdown
 
-Ejemplo para mostrar el codigo del alumno y abrir su ficha:
+Las variables pueden ocupar todo el fragmento o solo una parte:
+
+```text
+**{nombre_completo}**
+```
+
+```text
+Curso: ***{nombre_curso}***
+```
+
+```text
+Código: `{codigo_certificado}`
+```
+
+Los valores recibidos para una variable se insertan como texto literal. Si el valor contiene `**`, `~`, `` ` `` o corchetes, esos caracteres no crean un estilo nuevo. La negrita, la cursiva y los enlaces deben definirse en el contenido de la plantilla.
+
+## Enlaces fijos
+
+En modo Markdown, usa la sintaxis estándar:
+
+```text
+[Consultar certificado](https://bd.practissac.com)
+```
+
+El PDF mostrará el texto y conservará el destino clicable. Para un color concreto, configura `fontColor` en la caja.
+
+## Enlace construido con una variable
+
+Puedes mostrar un código y usarlo también dentro de la URL:
 
 ```text
 [{codigo_qr_alumno}](https://bd.practissac.com/student/{codigo_qr_alumno})
 ```
 
-Request:
+Con el valor `3541397b0026`, el PDF muestra `3541397b0026` y abre:
 
-```json
-{
-  "input": {
-    "codigo_qr_alumno": "3541397b0026"
-  }
-}
+```text
+https://bd.practissac.com/student/3541397b0026
 ```
 
-Resultado esperado en el PDF: el texto `3541397b0026` se muestra como enlace subrayado y abre `https://bd.practissac.com/student/3541397b0026`.
+Cuando toda la caja es un único enlace y conserva el color negro predeterminado, PDF Server aplica azul `#1677ff`. pdfme agrega el subrayado y la anotación clicable. Si el enlace está mezclado con más texto, define el color deseado en el editor o utiliza una caja independiente.
 
-## Objetos dinamicos
+## Enlace recibido completo
 
-Los objetos que no usan `{variable}` pueden declararse dinamicos iniciando el nombre del contenedor con `#`.
+También puedes usar una variable cuyo valor ya sea la URL completa:
 
-| Tipo | Nombre en editor | Clave enviada |
+```text
+[Abrir ficha]({url_ficha})
+```
+
+La integración enviará, por ejemplo, `https://bd.practissac.com/student/3541397b0026` en `url_ficha`.
+
+## Objetos estáticos y cambiables
+
+Una imagen, QR o fecha sin prefijo `#` conserva el contenido definido en la plantilla. Para permitir que la API reemplace el objeto completo, inicia su nombre con `#`.
+
+| Tipo | Nombre en el editor | Clave externa |
 | --- | --- | --- |
-| QR | `#qr_alumno` | `qr_alumno` |
 | Imagen | `#logo` | `logo` |
-| Codigo de barras | `#codigo_certificado` | `codigo_certificado` |
+| QR | `#qr_alumno` | `qr_alumno` |
+| Código 128 | `#codigo_certificado` | `codigo_certificado` |
 | Fecha | `#fecha_emision` | `fecha_emision` |
+| Fecha y hora | `#fecha_hora_emision` | `fecha_hora_emision` |
 | Hora | `#hora_emision` | `hora_emision` |
 
-Tipos soportados actualmente: `image`, `qrcode`, `code128`, `date`, `dateTime`, `time`.
+Tipos cambiables detectados: `image`, `qrcode`, `code128`, `date`, `dateTime` y `time`.
 
-## Repetir objetos en varias hojas
+El prefijo `#` solo se usa en el editor. En el JSON externo se envía la clave sin `#`.
 
-pdfme exige nombres de contenedor unicos. Para repetir el mismo QR sin enviar claves diferentes, usa sufijos compatibles sobre el mismo nombre base.
+## Repetir un objeto en varias páginas
 
-| Hoja | Nombre en editor | Clave API |
+pdfme requiere nombres de contenedor únicos. Agrega un sufijo reconocido para reutilizar una sola clave externa:
+
+| Página | Nombre del contenedor | Clave resultante |
 | --- | --- | --- |
 | 1 | `#qr_alumno#1` | `qr_alumno` |
 | 2 | `#qr_alumno#2` | `qr_alumno` |
 | 3 | `#qr_alumno__p3` | `qr_alumno` |
 | 4 | `#qr_alumno__page4` | `qr_alumno` |
+| 5 | `#qr_alumno_page5` | `qr_alumno` |
 
-Request:
+Sufijos admitidos: `#<n>`, `__p<n>`, `__page<n>`, `_p<n>` y `_page<n>`, donde `<n>` es el número usado para diferenciar el contenedor.
 
-```json
-{
-  "input": {
-    "qr_alumno": "http://bd.practissac.com/student/CD8b5EB45412"
-  }
-}
+## Imágenes dinámicas
+
+Para imágenes, la forma más estable es enviar un Data URI:
+
+```text
+data:image/png;base64,iVBORw0KGgo...
 ```
 
-## Inspeccion desde la app
+Una URL remota exige que el backend pueda acceder al recurso durante el render. Usa HTTPS, evita enlaces temporales demasiado cortos y prueba el acceso desde el entorno donde corre PDF Server.
 
-En el editor usa **Acciones > Variables y objetos**. Esa vista lista el contrato de datos detectado y permite copiar un JSON base.
+## QR y códigos de barras
+
+El contenido del QR puede ser una URL, un identificador o cualquier texto válido:
+
+```text
+https://bd.practissac.com/student/CD8b5EB45412
+```
+
+El nombre `#qr_alumno` declara que el contenido es reemplazable. No agregues `{}` alrededor del valor de un objeto QR.
+
+## Fechas y horas
+
+Los objetos `date`, `dateTime` y `time` son elementos completos. Usa nombres con `#` si su valor debe llegar desde la API. Mantén un formato único por integración y verifica el resultado en la vista previa antes de publicar la versión.
+
+| Tipo | Valor recomendado |
+| --- | --- |
+| `date` | `2026-07-22` |
+| `dateTime` | `2026-07-22T15:30:00-05:00` |
+| `time` | `15:30` |
+
+Si necesitas una fecha redactada como `22 de julio de 2026`, normalmente conviene usar una variable de texto simple y enviarla ya formateada.
+
+## Contenido fijo y valores predeterminados
+
+| Contenido | Ejemplo | Comportamiento |
+| --- | --- | --- |
+| Fijo | `Certificado de participación` | Nunca cambia por una integración normal. |
+| Variable | `{nombre_completo}` | Debe recibirse en `input`. |
+| Predeterminado | Valor guardado en `content` | Se usa en el editor y puede servir como muestra. |
+| Objeto cambiable | `#qr_alumno` | Se reemplaza si llega su clave externa. |
+
+Las variables detectadas se consideran requeridas para render. Un valor predeterminado ayuda al diseño, pero no elimina esa validación en la API.
+
+## Bloqueo y orden de capas
+
+Bloquear un elemento evita seleccionarlo o moverlo accidentalmente en el editor. El bloqueo, la posición y el orden de capas no cambian su clave externa ni impiden que el backend lo renderice.
+
+Usa bloqueo para fondos, marcos, firmas fijas y elementos terminados. Mantén desbloqueados solo los campos que todavía requieren ajustes visuales.
+
+## Páginas, versiones y estado
+
+| Concepto | Efecto |
+| --- | --- |
+| Página | Cada página conserva sus propios contenedores y bloqueos. |
+| Versión actual | Es la versión que usa el render. |
+| `DRAFT` | Puede renderizarse para pruebas si tiene versión actual válida. |
+| `ACTIVE` | Estado recomendado para producción. |
+| `ARCHIVED` | No está disponible para render externo. |
+
+Duplicar páginas o plantillas no obliga a cambiar variables si el contrato externo debe seguir siendo el mismo.
+
+## Revisar el contrato detectado
+
+En el editor abre **Acciones > Variables y objetos**. La tabla muestra:
 
 | Columna | Significado |
 | --- | --- |
-| Tipo | `Variable` u objeto dinamico como `Objeto qrcode`. |
-| Clave | Nombre que debe ir dentro de `input`. |
-| Hojas | Paginas donde aparece. |
-| Cantidad | Numero de contenedores que usan esa clave. |
+| Tipo | Variable de texto u objeto cambiable. |
+| Clave | Propiedad que deberá existir dentro de `input`. |
+| Hojas | Páginas donde se utiliza. |
+| Cantidad | Número de elementos que comparten la clave. |
 
-## Inspeccion por API
+Usa **Copiar JSON** como base para una prueba. La API también expone este contrato mediante `GET /api/v1/templates/:code/inputs`.
 
-```http
-GET /api/v1/templates/:code/inputs
-x-api-key: API_KEY
-```
+## Lista de verificación
 
-Respuesta resumida:
+Antes de publicar una plantilla:
 
-```json
-{
-  "template": {
-    "code": "nutricion",
-    "name": "Certificado Nutricion",
-    "versionNumber": 3,
-    "pageCount": 5
-  },
-  "inputs": {
-    "variables": [
-      { "key": "nombre_completo", "pages": [1, 2, 3, 4, 5] }
-    ],
-    "objects": [
-      { "key": "qr_alumno", "type": "qrcode", "pages": [1, 2, 3, 4, 5] }
-    ]
-  }
-}
-```
-
-## Cambios compatibles
-
-| Cambio en plantilla | Impacto externo | Recomendacion |
-| --- | --- | --- |
-| Mover un campo | Bajo | Mantener las mismas claves. |
-| Cambiar fuente, color o tamaño | Bajo | No requiere cambio de API. |
-| Agregar variable requerida | Alto | Avisar y actualizar payload del consumidor. |
-| Renombrar variable | Alto | Evitar si ya hay integraciones. |
-| Cambiar `#qr_alumno` por `#qr_estudiante` | Alto | Cambia la clave esperada. |
-| Duplicar paginas con sufijos compatibles | Bajo | Mantener el mismo nombre base. |
+1. Confirma que cada contenedor tenga un nombre único.
+2. Reutiliza exactamente la misma variable cuando un dato se repita.
+3. Usa modo simple si toda la caja tiene un solo estilo.
+4. Usa Markdown únicamente en cajas que necesiten formato parcial o enlaces.
+5. Configura variantes reales de fuente para negrita y cursiva.
+6. Nombra con `#` solo los objetos que deban cambiar por API.
+7. Usa sufijos reconocidos para repetir objetos en varias páginas.
+8. Revisa **Variables y objetos** y prueba el JSON generado.
+9. Verifica todas las páginas en vista previa.
+10. Publica como `ACTIVE` antes de conectarla a producción.
